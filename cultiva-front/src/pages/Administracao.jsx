@@ -3,9 +3,12 @@ import { userService, authService } from '../services/api';
 import '../App.css';
 import {
     UserPlus, Trash2, Search, Edit, Ban, CheckCircle,
-    X, ShieldAlert, FileText, Key,
+    X, ShieldAlert, FileText, Key, AlertCircle,
     Users, Activity, Lock, ChevronDown, ChevronUp, Calendar
 } from 'lucide-react';
+
+// Importação do sistema de notificações
+import { useNotify } from "../context/NotificationContext";
 
 const TIPOS_USUARIO = {
     ADMINISTRADOR: "Administrador",
@@ -16,6 +19,7 @@ const TIPOS_USUARIO = {
 };
 
 const Administracao = () => {
+    const notify = useNotify(); // Inicialização do hook de notificações
     const searchInputRef = useRef(null);
 
     // --- ESTADOS ---
@@ -34,6 +38,10 @@ const Administracao = () => {
     const [logs, setLogs] = useState([]);
     const [modalLogsOpen, setModalLogsOpen] = useState(false);
     const [loadingLogs, setLoadingLogs] = useState(false);
+
+    // Estados para Modais de Confirmação Customizados
+    const [confirmacaoExclusao, setConfirmacaoExclusao] = useState({ aberta: false, id: null, nome: '' });
+    const [confirmacaoLogoutGeral, setConfirmacaoLogoutGeral] = useState(false);
 
     // Filtros
     const [filtroLogUsuario, setFiltroLogUsuario] = useState('');
@@ -56,18 +64,18 @@ const Administracao = () => {
             setUsuarios(dadosFormatados);
         } catch (error) {
             console.error("Erro ao buscar usuários:", error);
+            notify("Erro ao carregar lista de usuários.", "error");
         } finally {
             setLoading(false);
         }
     };
 
-    // --- BUSCAR LOGS (COM TRATAMENTO DE ERRO DE FUNÇÃO) ---
+    // --- BUSCAR LOGS ---
     const fetchLogs = async () => {
         setLoadingLogs(true);
         try {
             let dadosLogs = [];
 
-            // Verificação de segurança para o erro "is not a function"
             if (userService && typeof userService.listarLogs === 'function') {
                 const rawLogs = await userService.listarLogs();
                 dadosLogs = rawLogs.map(log => ({
@@ -77,19 +85,16 @@ const Administracao = () => {
                     acao: log.acao || log.descricao || 'Ação registrada'
                 }));
             } else {
-                console.error("Erro: userService.listarLogs não está definido no seu api.js");
-                alert("O serviço de logs ainda não foi implementado ou mapeado na API.");
+                notify("O serviço de logs ainda não foi implementado na API.", "info");
                 return;
             }
 
-            // Ordenar: Mais recente primeiro
             dadosLogs.sort((a, b) => {
                 const dataA = new Date(Array.isArray(a.dataHora) ? new Date(a.dataHora[0], a.dataHora[1]-1, a.dataHora[2], a.dataHora[3]||0, a.dataHora[4]||0) : a.dataHora);
                 const dataB = new Date(Array.isArray(b.dataHora) ? new Date(b.dataHora[0], b.dataHora[1]-1, b.dataHora[2], b.dataHora[3]||0, b.dataHora[4]||0) : b.dataHora);
                 return dataB - dataA;
             });
 
-            // Limpeza básica (Apenas ruídos reais de sistema, sem ocultar ações de usuários)
             const logsLimpos = dadosLogs.filter((log) => {
                 const acaoLower = log.acao.toLowerCase();
                 const ruidosIgnorar = ['keep-alive', 'heartbeat', 'polling'];
@@ -98,7 +103,6 @@ const Administracao = () => {
 
             setLogs(logsLimpos);
 
-            // Expandir a primeira data automaticamente
             if (logsLimpos.length > 0) {
                 const primeiraData = formatarDataSimples(logsLimpos[0].dataHora);
                 setDatasExpandidas({ [primeiraData]: true });
@@ -106,8 +110,7 @@ const Administracao = () => {
 
             setModalLogsOpen(true);
         } catch (error) {
-            console.error("Erro ao buscar logs:", error);
-            alert("Erro ao carregar o histórico de logs.");
+            notify("Erro ao carregar o histórico de logs.", "error");
         } finally {
             setLoadingLogs(false);
         }
@@ -146,15 +149,12 @@ const Administracao = () => {
     const resolverNomeAtor = (identificador) => {
         if (!identificador) return "Usuário";
         const identStr = String(identificador).toLowerCase();
-
         if (identStr === 'admin' || identStr === 'sistema') return 'Sistema/Admin';
-
         const usuarioEncontrado = usuarios.find(u =>
             String(u.id) === identStr ||
             (u.email && u.email.toLowerCase() === identStr) ||
             (u.nome && u.nome.toLowerCase() === identStr)
         );
-
         return usuarioEncontrado ? usuarioEncontrado.nome : identificador;
     };
 
@@ -162,20 +162,15 @@ const Administracao = () => {
         const regexId = /(?:usuário\s+)?(?:ID:|id)\s*(\d+)/i;
         const match = acao.match(regexId);
         let acaoFormatada = acao;
-
         if (match && usuarios.length > 0) {
             const idAlvo = parseInt(match[1]);
             const usuarioAlvo = usuarios.find(u => u.id === idAlvo);
-            if (usuarioAlvo) {
-                acaoFormatada = acao.replace(match[0], `"${usuarioAlvo.nome}"`);
-            }
+            if (usuarioAlvo) acaoFormatada = acao.replace(match[0], `"${usuarioAlvo.nome}"`);
         }
-
-        acaoFormatada = acaoFormatada.replace(/usuário\s+o\s+usuário/gi, 'o usuário');
-        return acaoFormatada;
+        return acaoFormatada.replace(/usuário\s+o\s+usuário/gi, 'o usuário');
     };
 
-    // --- AGRUPAMENTO (REVISADO) ---
+    // --- AGRUPAMENTO ---
     const logsAgrupados = useMemo(() => {
         return logs.filter(log => {
             let dataLog;
@@ -185,17 +180,13 @@ const Administracao = () => {
                 dataLog = new Date(log.dataHora);
             }
             dataLog.setHours(0,0,0,0);
-
             if (filtroDataInicio && dataLog < new Date(filtroDataInicio + "T00:00:00")) return false;
             if (filtroDataFim && dataLog > new Date(filtroDataFim + "T23:59:59")) return false;
-
             const atorNome = resolverNomeAtor(log.usuarioIdentificador);
             const acaoFormatada = formatarMensagemLog(log.acao);
-
             const matchUser = String(atorNome).toLowerCase().includes(filtroLogUsuario.toLowerCase()) ||
                 String(log.usuarioIdentificador).toLowerCase().includes(filtroLogUsuario.toLowerCase());
             const matchAcao = acaoFormatada.toLowerCase().includes(filtroLogAcao.toLowerCase());
-
             return matchUser && matchAcao;
         }).reduce((grupos, log) => {
             const dataStr = formatarDataSimples(log.dataHora);
@@ -218,7 +209,10 @@ const Administracao = () => {
 
     // --- AÇÕES DO SISTEMA ---
     const handleSalvar = async () => {
-        if (!formData.nome || !formData.email) return alert("Preencha todos os campos obrigatórios.");
+        if (!formData.nome || !formData.email) {
+            notify("Preencha todos os campos obrigatórios.", "error");
+            return;
+        }
 
         try {
             const usuarioParaSalvar = {
@@ -230,41 +224,56 @@ const Administracao = () => {
 
             if (usuarioEmEdicao) {
                 await userService.atualizar(usuarioEmEdicao.id, usuarioParaSalvar);
+                notify("Usuário atualizado com sucesso!", "success");
             } else {
                 usuarioParaSalvar.senha = "123456";
                 await userService.criar(usuarioParaSalvar);
-                alert(`Usuário criado com sucesso! A senha padrão é: CultivaMais@2026`);
+                notify(`Usuário criado! Senha padrão: CultivaMais@2026`, "success");
             }
 
             await fetchUsuarios();
             fecharModal();
         } catch (error) {
-            alert("Erro ao salvar: " + (error.response?.data?.message || error.message));
+            notify("Erro ao salvar: " + (error.response?.data?.message || error.message), "error");
         }
     };
 
     const toggleStatus = async (user) => {
         const usuarioLogado = authService.obterUsuarioLogado();
-        if ((usuarioLogado?.idUsuario || usuarioLogado?.id) === user.id) return alert("Você não pode bloquear a si mesmo.");
+        if ((usuarioLogado?.idUsuario || usuarioLogado?.id) === user.id) {
+            notify("Você não pode bloquear a si mesmo.", "error");
+            return;
+        }
 
         const novoStatus = !user.ativo;
-        const acaoTexto = novoStatus ? 'Desbloquear' : 'Bloquear';
+        const acaoTexto = novoStatus ? 'Desbloqueado' : 'Bloqueado';
 
         try {
             await userService.atualizar(user.id, {
                 ativo: novoStatus,
                 contexto: 'alteracao_status',
-                acaoLog: acaoTexto
+                acaoLog: novoStatus ? 'Desbloquear' : 'Bloquear'
             });
+            notify(`Usuário ${user.nome} ${acaoTexto.toLowerCase()}!`, "info");
             fetchUsuarios();
         } catch (error) {
-            alert(`Erro ao ${acaoTexto.toLowerCase()} usuário.`);
+            notify(`Erro ao alterar status do usuário.`, "error");
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Remover usuário permanentemente?')) return;
-        try { await userService.excluir(id); fetchUsuarios(); } catch (error) { alert("Erro ao excluir usuário."); }
+    const abrirConfirmacaoExclusao = (id, nome) => {
+        setConfirmacaoExclusao({ aberta: true, id, nome });
+    };
+
+    const executarExclusao = async () => {
+        try {
+            await userService.excluir(confirmacaoExclusao.id);
+            notify(`Usuário ${confirmacaoExclusao.nome} removido.`, "success");
+            setConfirmacaoExclusao({ aberta: false, id: null, nome: '' });
+            fetchUsuarios();
+        } catch (error) {
+            notify("Erro ao excluir usuário.", "error");
+        }
     };
 
     const handleGerarCodigoSenha = async (user) => {
@@ -273,10 +282,16 @@ const Administracao = () => {
             setCodigoGerado(typeof resposta === 'object' ? resposta.codigo : resposta);
             setUsuarioNomeCodigo(user.nome);
             setModalCodigo(true);
-        } catch (error) { alert("Erro ao gerar código."); }
+            notify("Código de recuperação gerado.", "success");
+        } catch (error) {
+            notify("Erro ao gerar código.", "error");
+        }
     };
 
-    const handleLogoutGeral = () => { if(window.confirm("Desconectar TODOS os usuários?")) alert("Comando enviado."); };
+    const executarLogoutGeral = () => {
+        setConfirmacaoLogoutGeral(false);
+        notify("Comando de logout global enviado com sucesso.", "success");
+    };
 
     const usuariosFiltrados = usuarios.filter(u =>
         (u.nome && u.nome.toLowerCase().includes(termoBusca.toLowerCase())) ||
@@ -303,7 +318,7 @@ const Administracao = () => {
                         <div style={{ background: '#dcfce7', padding: '10px', borderRadius: '50%', color: '#16a34a' }}><Activity size={24} /></div>
                     </div>
                 </div>
-                <div onClick={handleLogoutGeral} className="hover:shadow-lg hover:scale-[1.02]" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderLeft: '4px solid #f97316', cursor: 'pointer', transition: 'transform 0.2s' }}>
+                <div onClick={() => setConfirmacaoLogoutGeral(true)} className="hover:shadow-lg hover:scale-[1.02]" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderLeft: '4px solid #f97316', cursor: 'pointer', transition: 'transform 0.2s' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div><h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#334155', margin: 0 }}>Segurança Global</h3><p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '4px' }}>Controle de sessão.</p></div>
                         <div style={{ background: '#ffedd5', padding: '10px', borderRadius: '50%', color: '#ea580c' }}><Lock size={24} /></div>
@@ -320,7 +335,7 @@ const Administracao = () => {
                 <div className="users-grid">
                     {usuariosFiltrados.map((user) => (
                         <div key={user.id} className="user-card" style={{ opacity: user.ativo ? 1 : 0.6 }}>
-                            <button className="btn-delete-user" onClick={() => handleDelete(user.id)} title="Excluir"><Trash2 size={18} /></button>
+                            <button className="btn-delete-user" onClick={() => abrirConfirmacaoExclusao(user.id, user.nome)} title="Excluir"><Trash2 size={18} /></button>
                             <div className={`user-avatar-lg ${user.tipo === 'ADMINISTRADOR' ? 'avatar-admin' : 'avatar-tecnico'}`}>{getIniciais(user.nome)}</div>
                             <div className="user-info-content" style={{ width: '100%' }}>
                                 <h3>{user.nome}</h3>
@@ -337,6 +352,40 @@ const Administracao = () => {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO CUSTOMIZADO */}
+            {confirmacaoExclusao.aberta && (
+                <div className="modal-modern-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-modern-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+                        <div style={{ background: '#fee2e2', color: '#dc2626', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+                            <AlertCircle size={32} />
+                        </div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>Excluir Usuário?</h3>
+                        <p style={{ color: '#64748b', marginBottom: '24px' }}>Deseja realmente remover o usuário <strong>{confirmacaoExclusao.nome}</strong>? Esta ação não pode ser desfeita.</p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button className="btn-outline" style={{ flex: 1 }} onClick={() => setConfirmacaoExclusao({ aberta: false, id: null, nome: '' })}>Cancelar</button>
+                            <button className="btn-primary" style={{ flex: 1, backgroundColor: '#dc2626', borderColor: '#dc2626' }} onClick={executarExclusao}>Sim, Excluir</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE CONFIRMAÇÃO LOGOUT GERAL CUSTOMIZADO */}
+            {confirmacaoLogoutGeral && (
+                <div className="modal-modern-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-modern-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+                        <div style={{ background: '#ffedd5', color: '#ea580c', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+                            <Lock size={32} />
+                        </div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>Logout Global</h3>
+                        <p style={{ color: '#64748b', marginBottom: '24px' }}>Deseja desconectar todos os usuários ativos no sistema agora?</p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button className="btn-outline" style={{ flex: 1 }} onClick={() => setConfirmacaoLogoutGeral(false)}>Cancelar</button>
+                            <button className="btn-primary" style={{ flex: 1, backgroundColor: '#f97316', borderColor: '#f97316' }} onClick={executarLogoutGeral}>Confirmar</button>
+                        </div>
+                    </div>
                 </div>
             )}
 

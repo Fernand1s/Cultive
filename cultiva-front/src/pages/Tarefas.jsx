@@ -4,8 +4,11 @@ import {
     Plus, Calendar, Trash2, ListTodo, User,
     CheckCircle2, AlertTriangle, Edit2, Ban, StickyNote, ClipboardList
 } from 'lucide-react';
+import { useNotify } from "../context/NotificationContext"; // Importação do sistema de notificações
 
 const Tarefas = () => {
+    const notify = useNotify(); // Inicialização do hook de notificações
+
     // --- 1. ESTADOS ---
 
     const [usuarioLogado] = useState(() => {
@@ -60,6 +63,7 @@ const Tarefas = () => {
             .catch(err => {
                 console.error("Erro ao buscar tarefas:", err);
                 setTarefas([]);
+                notify("Não foi possível carregar a lista de tarefas.", "error");
             });
 
         fetch('http://localhost:8090/api/usuarios')
@@ -67,7 +71,9 @@ const Tarefas = () => {
             .then(data => {
                 if(Array.isArray(data)) setUsuarios(data);
             })
-            .catch(console.error);
+            .catch(err => {
+                console.error("Erro ao buscar usuários:", err);
+            });
     };
 
     if (!usuarioLogado) {
@@ -88,8 +94,11 @@ const Tarefas = () => {
                 setModalObsAberto(false);
                 setTarefaParaConcluir(null);
                 setObsTexto('');
+                notify("Tarefa concluída com sucesso!", "success");
+            } else {
+                notify("Erro ao concluir tarefa.", "error");
             }
-        });
+        }).catch(() => notify("Erro de conexão.", "error"));
     };
 
     const handleCheckConclusao = (tarefa) => {
@@ -114,9 +123,13 @@ const Tarefas = () => {
             fetch(`http://localhost:8090/api/tarefas/${id}/cancelar?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
                 method: 'PUT'
             }).then(res => {
-                if(res.ok) carregarDados();
-                else alert("Apenas o Criador ou Admin pode cancelar.");
-            });
+                if(res.ok) {
+                    carregarDados();
+                    notify("Tarefa cancelada.", "info");
+                } else {
+                    notify("Apenas o Criador ou Admin pode cancelar.", "error");
+                }
+            }).catch(() => notify("Erro de conexão.", "error"));
         }
     };
 
@@ -124,9 +137,13 @@ const Tarefas = () => {
         if (window.confirm('Excluir definitivamente?')) {
             fetch(`http://localhost:8090/api/tarefas/${id}?idUsuarioLogado=${usuarioLogado.idUsuario}`, { method: 'DELETE' })
                 .then(res => {
-                    if(res.ok) carregarDados();
-                    else alert("Permissão negada.");
-                });
+                    if(res.ok) {
+                        carregarDados();
+                        notify("Tarefa excluída permanentemente.", "success");
+                    } else {
+                        notify("Permissão negada para excluir.", "error");
+                    }
+                }).catch(() => notify("Erro de conexão.", "error"));
         }
     };
 
@@ -135,9 +152,6 @@ const Tarefas = () => {
         const responsavelFinal = novaTarefa.idResponsavel || usuarioLogado.idUsuario;
         let url, method;
 
-        // --- CORREÇÃO AQUI ---
-        // Se tiver data, adiciona o horário final do dia (T23:59:59)
-        // Isso satisfaz o LocalDateTime do Java sem mudar o visual do Frontend
         let dataFormatadaParaBackend = novaTarefa.dataPrazo;
         if (dataFormatadaParaBackend && !dataFormatadaParaBackend.includes('T')) {
             dataFormatadaParaBackend = dataFormatadaParaBackend + 'T23:59:59';
@@ -148,7 +162,7 @@ const Tarefas = () => {
             descricao: novaTarefa.descricao,
             prioridade: novaTarefa.prioridade,
             categoria: novaTarefa.categoria,
-            dataPrazo: dataFormatadaParaBackend, // Envia a data com hora mágica
+            dataPrazo: dataFormatadaParaBackend,
             responsavel: { idUsuario: responsavelFinal }
         };
 
@@ -165,14 +179,17 @@ const Tarefas = () => {
                 if (res.ok) {
                     carregarDados();
                     setModalAberto(false);
+                    notify(modoEdicao ? "Tarefa atualizada!" : "Nova tarefa criada!", "success");
                 } else {
-                    // Mostra o erro real que veio do Java se não for 500 genérico
                     const erro = await res.text();
                     console.error("Erro API:", erro);
-                    alert("Erro ao salvar: Verifique se todos os campos estão preenchidos.");
+                    notify("Erro ao salvar: Verifique os campos obrigatórios.", "error");
                 }
             })
-            .catch(err => console.error("Erro de rede:", err));
+            .catch(err => {
+                console.error("Erro de rede:", err);
+                notify("Erro de conexão ao servidor.", "error");
+            });
     };
 
     // --- UTILS DE PREPARAÇÃO ---
@@ -186,7 +203,6 @@ const Tarefas = () => {
         setModoEdicao(true);
         setIdTarefaEditando(tarefa.id);
 
-        // ALTERAÇÃO: Pega apenas a parte da data (YYYY-MM-DD) para o input type="date"
         let dataFormatada = '';
         if (tarefa.dataPrazo) {
             dataFormatada = tarefa.dataPrazo.split('T')[0];
@@ -214,17 +230,10 @@ const Tarefas = () => {
         return 'prio-baixa';
     };
 
-    // ALTERAÇÃO: isAtrasada agora ignora horas. Compara apenas datas.
     const isAtrasada = (t) => {
         if (t.cancelada || t.concluida || !t.dataPrazo) return false;
-
-        // Data de Hoje (YYYY-MM-DD)
         const hoje = new Date().toISOString().split('T')[0];
-        // Data do Prazo (YYYY-MM-DD)
         const prazo = t.dataPrazo.split('T')[0];
-
-        // Se Prazo for menor que Hoje (Ex: 20 < 21), está atrasada.
-        // Se for Igual (21 == 21), NÃO está atrasada.
         return prazo < hoje;
     };
 
@@ -268,8 +277,6 @@ const Tarefas = () => {
                     )}
 
                     <div className="task-meta" style={{ flexWrap: 'wrap', gap: '12px', marginTop: '8px' }}>
-
-                        {/* ALTERAÇÃO: Exibe apenas a data (sem hora) */}
                         <span className="meta-tag">
                             <Calendar size={14}/>
                             {tarefa.dataPrazo
@@ -356,8 +363,8 @@ const Tarefas = () => {
                     <div className="modal-modern-content">
                         <h2>{modoEdicao ? 'Editar' : 'Nova'} Tarefa</h2>
                         <form onSubmit={salvarTarefa}>
-                            <div className="form-group"><label>Título</label><input className="form-input" value={novaTarefa.titulo} onChange={e => setNovaTarefa({...novaTarefa, titulo: e.target.value})} required /></div>
-                            <div className="form-group"><label>Descrição</label><textarea className="form-input" value={novaTarefa.descricao} onChange={e => setNovaTarefa({...novaTarefa, descricao: e.target.value})} /></div>
+                            <div className="form-group"><label>Título</label><input className="form-input" placeholder="Digite o nome da tarefa" value={novaTarefa.titulo} onChange={e => setNovaTarefa({...novaTarefa, titulo: e.target.value})} required /></div>
+                            <div className="form-group"><label>Descrição</label><textarea className="form-input" placeholder="Detalhes sobre o que deve ser feito" value={novaTarefa.descricao} onChange={e => setNovaTarefa({...novaTarefa, descricao: e.target.value})} /></div>
                             <div className="form-group"><label>Responsável</label>
                                 <select className="form-select" value={novaTarefa.idResponsavel} onChange={e => setNovaTarefa({...novaTarefa, idResponsavel: e.target.value})}>
                                     <option value={usuarioLogado.idUsuario}>Eu mesmo</option>
@@ -365,23 +372,20 @@ const Tarefas = () => {
                                 </select>
                             </div>
                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
-
-                                {/* ALTERAÇÃO: Input type="date" (sem hora) */}
                                 <div className="form-group">
                                     <label>Prazo (Data)</label>
                                     <input type="date" className="form-input" value={novaTarefa.dataPrazo} onChange={e => setNovaTarefa({...novaTarefa, dataPrazo: e.target.value})} required />
                                 </div>
-
                                 <div className="form-group"><label>Prioridade</label>
                                     <select className="form-select" value={novaTarefa.prioridade} onChange={e => setNovaTarefa({...novaTarefa, prioridade: e.target.value})}>
                                         <option value="MEDIA">Média</option><option value="ALTA">Alta</option><option value="BAIXA">Baixa</option>
                                     </select>
                                 </div>
                             </div>
-                            <div className="form-group"><label>Categoria</label><input className="form-input" value={novaTarefa.categoria} onChange={e => setNovaTarefa({...novaTarefa, categoria: e.target.value})} /></div>
+                            <div className="form-group"><label>Categoria</label><input className="form-input" placeholder="Ex: Plantação, Administrativo..." value={novaTarefa.categoria} onChange={e => setNovaTarefa({...novaTarefa, categoria: e.target.value})} /></div>
                             <div className="modal-footer">
                                 <button type="button" onClick={() => setModalAberto(false)} className="btn-outline">Cancelar</button>
-                                <button type="submit" className="btn-primary">Salvar</button>
+                                <button type="submit" className="btn-primary">Salvar Tarefa</button>
                             </div>
                         </form>
                     </div>
@@ -402,7 +406,7 @@ const Tarefas = () => {
                         <form onSubmit={confirmarConclusaoModal}>
                             <div className="form-group">
                                 <label>Observação (Opcional)</label>
-                                <textarea className="form-input" rows="3" placeholder="Ex: Material utilizado, dificuldades..." value={obsTexto} onChange={e => setObsTexto(e.target.value)} />
+                                <textarea className="form-input" rows="3" placeholder="Ex: Material utilizado, dificuldades, tempo gasto..." value={obsTexto} onChange={e => setObsTexto(e.target.value)} />
                             </div>
                             <div className="modal-footer">
                                 <button type="button" onClick={() => setModalObsAberto(false)} className="btn-outline">Cancelar</button>

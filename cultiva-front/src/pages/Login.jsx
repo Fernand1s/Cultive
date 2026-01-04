@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService, userService } from "../services/api";
 import { LogIn, Key, ArrowLeft, CheckCircle, Check, Eye, EyeOff } from 'lucide-react';
+import { useNotify } from "../context/NotificationContext"; // Importação do contexto de notificações
 import '../css/login.css';
 
 export function Login() {
     const navigate = useNavigate();
+    const notify = useNotify(); // Inicialização do toast
 
     // Estados Gerais
     const [loading, setLoading] = useState(false);
-    const [erro, setErro] = useState('');
-    const [sucesso, setSucesso] = useState('');
 
     // Estado para controlar visibilidade da senha
     const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -35,17 +35,13 @@ export function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setErro('');
 
         try {
             const dadosDoBanco = await authService.login(email, senha);
 
-            // Log de diagnóstico mantido para conferência
+            // Log de diagnóstico
             console.log("Conexão estabelecida. Dados recebidos:", dadosDoBanco);
 
-            // VERIFICAÇÃO RIGOROSA:
-            // Se o seu sistema usa Token para proteger rotas, precisamos salvar algo no 'token'
-            // Se o Java não enviou, usamos o e-mail ou um valor genérico para não barrar o redirecionamento
             const tokenParaSalvar = dadosDoBanco.token || "token-temporario-validado";
             localStorage.setItem('token', tokenParaSalvar);
 
@@ -57,15 +53,16 @@ export function Login() {
                 ativo: dadosDoBanco.ativo
             };
 
-            // Salvando o objeto de usuário exatamente como o sistema espera
             localStorage.setItem('usuarioLogado', JSON.stringify(usuarioParaSalvar));
 
-            // Se chegamos aqui, os dados foram salvos. Agora forçamos o redirecionamento.
+            // Feedback de sucesso antes de navegar
+            notify(`Bem-vindo, ${usuarioParaSalvar.nomeUsuario}!`, "success");
+
             navigate('/dashboard');
 
         } catch (error) {
             console.error("Erro no login:", error);
-            setErro("E-mail ou senha incorretos.");
+            notify("E-mail ou senha incorretos.", "error");
         } finally {
             setLoading(false);
         }
@@ -75,32 +72,30 @@ export function Login() {
     const handleResetSenha = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setErro('');
-        setSucesso('');
 
         if (!isSenhaValida) {
-            setErro("A senha não atende aos requisitos de segurança.");
+            notify("A senha não atende aos requisitos de segurança.", "error");
             setLoading(false);
             return;
         }
 
         try {
             await userService.redefinirSenha(email, codigo, novaSenha);
-            setSucesso("Senha alterada com sucesso! Redirecionando...");
+            notify("Senha alterada com sucesso!", "success");
 
+            // Pequeno delay para o usuário ler a mensagem antes de voltar ao login
             setTimeout(() => {
                 setIsResetMode(false);
-                setSucesso('');
                 setSenha('');
                 setCodigo('');
                 setNovaSenha('');
-                setErro('');
                 setMostrarSenha(false);
-            }, 3000);
+            }, 2000);
 
         } catch (error) {
             console.error("Erro no reset:", error);
-            setErro(error.response?.data?.message || "Erro ao redefinir. Verifique o código.");
+            const msgErro = error.response?.data?.message || "Erro ao redefinir. Verifique o código.";
+            notify(msgErro, "error");
         } finally {
             setLoading(false);
         }
@@ -215,13 +210,6 @@ export function Login() {
                         </>
                     )}
 
-                    {erro && <div className="error-msg">{erro}</div>}
-                    {sucesso && (
-                        <div className="success-msg">
-                            <CheckCircle size={16} /> {sucesso}
-                        </div>
-                    )}
-
                     <button
                         type="submit"
                         className="btn-login"
@@ -244,8 +232,6 @@ export function Login() {
                             className="link-action"
                             onClick={() => {
                                 setIsResetMode(false);
-                                setErro('');
-                                setSucesso('');
                                 setNovaSenha('');
                                 setMostrarSenha(false);
                             }}
@@ -260,8 +246,6 @@ export function Login() {
                                 className="link-action"
                                 onClick={() => {
                                     setIsResetMode(true);
-                                    setErro('');
-                                    setSucesso('');
                                     setMostrarSenha(false);
                                 }}
                             >

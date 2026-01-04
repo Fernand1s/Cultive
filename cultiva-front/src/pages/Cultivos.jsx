@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react';
 import '../App.css';
 import {
     Trash2, Plus, Calendar, Activity, Pencil, Droplets,
-    Bug, Sprout, MapPin, Flag, CheckCircle2, AlertTriangle, X, Save, TrendingUp, Clock
+    Bug, Sprout, MapPin, Flag, CheckCircle2, AlertTriangle, X, Save, TrendingUp, Clock, AlertCircle
 } from 'lucide-react';
 
+// Importação do sistema de notificações
+import { useNotify } from "../context/NotificationContext";
+
 const Cultivos = () => {
+    const notify = useNotify();
+
     // === ESTADOS ===
     const [cultivos, setCultivos] = useState([]);
     const [areas, setAreas] = useState([]);
@@ -13,6 +18,9 @@ const Cultivos = () => {
 
     const [modalAberto, setModalAberto] = useState(false);
     const [editandoId, setEditandoId] = useState(null);
+
+    // Estado para modal de confirmação de exclusão
+    const [confirmacaoExclusao, setConfirmacaoExclusao] = useState({ aberta: false, id: null });
 
     const [formCultivo, setFormCultivo] = useState({
         idArea: '', idPlanta: '', quantidadePlantada: '', dataPlantio: '',
@@ -27,9 +35,9 @@ const Cultivos = () => {
 
     // === 1. CARREGAMENTO ===
     const carregarTudo = () => {
-        fetch('http://localhost:8090/api/areas').then(r => r.json()).then(setAreas).catch(console.error);
-        fetch('http://localhost:8090/api/plantas').then(r => r.json()).then(setPlantas).catch(console.error);
-        fetch('http://localhost:8090/api/cultivos').then(r => r.json()).then(setCultivos).catch(console.error);
+        fetch('http://localhost:8090/api/areas').then(r => r.json()).then(setAreas).catch(() => notify("Erro ao carregar áreas", "error"));
+        fetch('http://localhost:8090/api/plantas').then(r => r.json()).then(setPlantas).catch(() => notify("Erro ao carregar plantas", "error"));
+        fetch('http://localhost:8090/api/cultivos').then(r => r.json()).then(setCultivos).catch(() => notify("Erro ao carregar cultivos", "error"));
     };
 
     useEffect(() => {
@@ -54,7 +62,6 @@ const Cultivos = () => {
                 estadoPlanta: cultivo.estadoPlanta,
                 observacaoCultivo: cultivo.observacaoCultivo || '',
                 quantidadeColhida: cultivo.quantidadeColhida || 0,
-                // Garante que a data venha formatada corretamente caso venha do backend
                 dataColheitaFinal: cultivo.dataColheitaFinal || ''
             });
         } else {
@@ -73,65 +80,41 @@ const Cultivos = () => {
         setEditandoId(null);
     };
 
-    // === 3. SALVAR CULTIVO (VERSÃO BLINDADA) ===
+    // === 3. SALVAR CULTIVO ===
     const salvarCultivo = async (e) => {
         e.preventDefault();
 
-        // 1. CONVERSÃO SEGURA DE NÚMEROS E DATAS
-        // O Java odeia string vazia "" em campos numéricos ou datas.
-
-        // Garante que IDs sejam números inteiros
         const idAreaNum = parseInt(formCultivo.idArea);
         const idPlantaNum = parseInt(formCultivo.idPlanta);
-
-        // Garante que quantidade plantada seja número
         const qtdPlantadaNum = formCultivo.quantidadePlantada ? parseFloat(formCultivo.quantidadePlantada) : 0;
-
-        // Se quantidade colhida for vazia, manda null (ou 0 se preferir)
         const qtdColhidaNum = formCultivo.quantidadeColhida && formCultivo.quantidadeColhida !== ""
             ? parseFloat(formCultivo.quantidadeColhida)
             : null;
-
-        // Se data colheita for vazia, manda null
         const dataColheitaSegura = formCultivo.dataColheitaFinal === "" ? null : formCultivo.dataColheitaFinal;
 
         const payload = {
-            // Se estiver editando, é bom mandar o ID do próprio cultivo também
             idCultivo: editandoId ? parseInt(editandoId) : null,
-
             quantidadePlantada: qtdPlantadaNum,
             dataPlantio: formCultivo.dataPlantio,
-            statusCultivo: formCultivo.statusCultivo, // Ex: "ATIVO"
-            estadoPlanta: formCultivo.estadoPlanta,   // Ex: "SAUDAVEL"
+            statusCultivo: formCultivo.statusCultivo,
+            estadoPlanta: formCultivo.estadoPlanta,
             observacaoCultivo: formCultivo.observacaoCultivo,
-
             quantidadeColhida: qtdColhidaNum,
             dataColheitaFinal: dataColheitaSegura,
-
-            // OBJETOS RELACIONADOS
-            // Importante: No Java, Area e Planta devem ser objetos com ID
             plantaCultivada: { idPlanta: idPlantaNum },
             areaCultivo: { idArea: idAreaNum }
         };
-
-        console.log("Enviando Payload:", JSON.stringify(payload));
 
         try {
             const url = editandoId
                 ? `http://localhost:8090/api/cultivos/${editandoId}`
                 : `http://localhost:8090/api/cultivos?idPlanta=${idPlantaNum}&idArea=${idAreaNum}&quantidadePlantada=${qtdPlantadaNum}&dataPlantio=${formCultivo.dataPlantio}`;
 
-            // Nota: No POST você usava query params na URL, no PUT usa corpo JSON.
-            // Mantive a lógica original do seu POST, mas ajustei o PUT.
-
             const options = {
                 method: editandoId ? 'PUT' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Content-Type': 'application/json' }
             };
 
-            // Se for PUT, adiciona o corpo. Se for POST do jeito antigo (query param), não precisa body
             if (editandoId) {
                 options.body = JSON.stringify(payload);
             }
@@ -141,33 +124,32 @@ const Cultivos = () => {
             if (response.ok) {
                 carregarTudo();
                 fecharModal();
-                alert("Salvo com sucesso!");
+                notify(editandoId ? "Cultivo atualizado com sucesso!" : "Novo cultivo iniciado!", "success");
             } else {
-                const errorText = await response.text();
-                console.error("Erro no servidor:", errorText);
-                alert(`Erro ao salvar: ${response.status}`);
+                notify("Erro ao salvar cultivo. Verifique os dados.", "error");
             }
         } catch (error) {
-            console.error("Erro de rede:", error);
-            alert("Erro de conexão com o servidor.");
-        }
-    };
-
-    const handleResponse = (res) => {
-        if (res.ok) {
-            carregarTudo();
-            fecharModal();
-        } else {
-            alert('Erro ao salvar. Verifique os dados.');
+            notify("Erro de conexão com o servidor.", "error");
         }
     };
 
     // === 4. EXCLUIR ===
-    const excluirCultivo = (id) => {
-        if (confirm("Tem a certeza que deseja remover este cultivo? Todo o histórico será apagado.")) {
-            fetch(`http://localhost:8090/api/cultivos/${id}`, { method: 'DELETE' })
-                .then(res => { if (res.ok) carregarTudo(); });
-        }
+    const confirmarExclusao = (id) => {
+        setConfirmacaoExclusao({ aberta: true, id });
+    };
+
+    const executarExclusao = () => {
+        fetch(`http://localhost:8090/api/cultivos/${confirmacaoExclusao.id}`, { method: 'DELETE' })
+            .then(res => {
+                if (res.ok) {
+                    carregarTudo();
+                    notify("Cultivo removido com sucesso.", "success");
+                } else {
+                    notify("Erro ao excluir cultivo.", "error");
+                }
+                setConfirmacaoExclusao({ aberta: false, id: null });
+            })
+            .catch(() => notify("Erro de conexão.", "error"));
     };
 
     // === 5. EVENTOS ===
@@ -190,10 +172,13 @@ const Cultivos = () => {
 
         fetch(url, { method: 'POST' }).then(res => {
             if (res.ok) {
-                alert(acaoEvento.tipo === 'IRRIGACAO' ? 'Rega registrada!' : 'Praga registrada!');
+                notify(acaoEvento.tipo === 'IRRIGACAO' ? 'Irrigação registrada com sucesso!' : 'Ocorrência de praga registrada.', "success");
                 setAcaoEvento(null);
                 setDadosEvento({ volume: '', metodo: 'GOTEJAMENTO', nome: '', nivel: 'BAIXO', obs: '', dataHora: '' });
-            } else alert('Erro ao registrar evento.');
+                carregarTudo();
+            } else {
+                notify('Erro ao registrar evento.', "error");
+            }
         });
     };
 
@@ -209,11 +194,9 @@ const Cultivos = () => {
         return { icon: Bug, text: 'Com Praga', color: '#ef4444' };
     };
 
-    // Função auxiliar para formatar datas com segurança
     const formatarData = (dataString) => {
         if (!dataString) return '--/--/----';
         const partes = dataString.split('-');
-        // Garante que não haja problema de fuso horário ao criar a data apenas para visualização
         if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
         return new Date(dataString).toLocaleDateString('pt-BR');
     };
@@ -273,9 +256,9 @@ const Cultivos = () => {
                                 <div className="cultivo-header">
                                     <div>
                                         <div style={{display:'flex', gap:'8px', marginBottom:'6px'}}>
-                                <span className={`status-badge ${cultivo.statusCultivo === 'ATIVO' ? 'status-ativo' : 'status-colhido'}`}>
-                                    {cultivo.statusCultivo}
-                                </span>
+                                            <span className={`status-badge ${cultivo.statusCultivo === 'ATIVO' ? 'status-ativo' : 'status-colhido'}`}>
+                                                {cultivo.statusCultivo}
+                                            </span>
                                         </div>
                                         <h3 className="cultivo-title">
                                             {cultivo.plantaCultivada ? cultivo.plantaCultivada.nomePopular : 'Planta Removida'}
@@ -289,7 +272,7 @@ const Cultivos = () => {
                                         <button onClick={() => abrirModal(cultivo)} className="btn-icon-sm" title="Editar">
                                             <Pencil size={16} />
                                         </button>
-                                        <button onClick={() => excluirCultivo(cultivo.idCultivo)} className="btn-icon-sm danger" title="Excluir">
+                                        <button onClick={() => confirmarExclusao(cultivo.idCultivo)} className="btn-icon-sm danger" title="Excluir">
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
@@ -310,34 +293,28 @@ const Cultivos = () => {
                                     <span>Qtd Plantada: <strong>{cultivo.quantidadePlantada}</strong></span>
                                 </div>
 
-                                {/* --- VISUALIZAÇÃO DAS DATAS CORRIGIDA --- */}
-
-                                {/* CASO 1: CULTIVO ATIVO (Mostra Previsão) */}
                                 {cultivo.statusCultivo === 'ATIVO' && cultivo.previsaoColheita && (
                                     <div className="cultivo-info-row" style={{ marginTop: '8px' }}>
                                         <Clock size={16} className="text-blue-500" />
                                         <span style={{ color: '#334155' }}>
-                                Previsão: <strong>{formatarData(cultivo.previsaoColheita)}</strong>
-                            </span>
+                                            Previsão: <strong>{formatarData(cultivo.previsaoColheita)}</strong>
+                                        </span>
                                     </div>
                                 )}
 
-                                {/* CASO 2: CULTIVO COLHIDO (Mostra Data Real e Quantidade) */}
                                 {cultivo.statusCultivo === 'COLHIDO' && (
                                     <div style={{ marginTop: '12px', padding: '10px', background: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
                                         <div className="cultivo-info-row" style={{marginBottom: '4px'}}>
                                             <TrendingUp size={16} className="text-green-600" />
                                             <span style={{color: '#15803d', fontWeight: 600}}>
-                                    Colhido: {cultivo.quantidadeColhida}
-                                </span>
+                                                Colhido: {cultivo.quantidadeColhida}
+                                            </span>
                                         </div>
-
-                                        {/* AQUI ESTÁ A DATA DA COLHEITA */}
                                         <div className="cultivo-info-row">
                                             <Flag size={16} className="text-green-600" />
                                             <span style={{color: '#15803d', fontSize: '0.9rem'}}>
-                                    Data: <strong>{formatarData(cultivo.dataColheitaFinal)}</strong>
-                                </span>
+                                                Data: <strong>{formatarData(cultivo.dataColheitaFinal)}</strong>
+                                            </span>
                                         </div>
                                     </div>
                                 )}
@@ -366,13 +343,12 @@ const Cultivos = () => {
                                 </button>
                             </div>
 
-                            {/* GAVETA DE EVENTOS */}
                             {acaoEvento && acaoEvento.id === cultivo.idCultivo && (
                                 <div className={`event-drawer ${acaoEvento.tipo === 'IRRIGACAO' ? 'water-theme' : 'pest-theme'}`}>
                                     <div className="drawer-header">
-                            <span className={acaoEvento.tipo === 'IRRIGACAO' ? 'text-water' : 'text-pest'}>
-                                {acaoEvento.tipo === 'IRRIGACAO' ? 'Registrar Irrigação' : 'Registrar Praga'}
-                            </span>
+                                        <span className={acaoEvento.tipo === 'IRRIGACAO' ? 'text-water' : 'text-pest'}>
+                                            {acaoEvento.tipo === 'IRRIGACAO' ? 'Registrar Irrigação' : 'Registrar Praga'}
+                                        </span>
                                         <button className="btn-close-drawer" onClick={() => setAcaoEvento(null)}>
                                             <X size={18} />
                                         </button>
@@ -425,7 +401,24 @@ const Cultivos = () => {
                 })}
             </div>
 
-            {/* --- MODAL DE CADASTRO/EDIÇÃO --- */}
+            {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
+            {confirmacaoExclusao.aberta && (
+                <div className="modal-modern-overlay" style={{zIndex: 10001}}>
+                    <div className="modal-modern-content" style={{maxWidth: '400px', textAlign: 'center'}}>
+                        <div style={{background: '#fee2e2', color: '#dc2626', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto'}}>
+                            <AlertCircle size={32} />
+                        </div>
+                        <h3 style={{fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px'}}>Excluir Cultivo?</h3>
+                        <p style={{color: '#64748b', marginBottom: '24px'}}>Esta ação removerá todo o histórico de irrigação e eventos deste plantio. Deseja continuar?</p>
+                        <div style={{display: 'flex', gap: '12px'}}>
+                            <button className="btn-outline" style={{flex: 1}} onClick={() => setConfirmacaoExclusao({aberta: false, id: null})}>Cancelar</button>
+                            <button className="btn-primary" style={{flex: 1, backgroundColor: '#dc2626', borderColor: '#dc2626'}} onClick={executarExclusao}>Sim, Excluir</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE CADASTRO/EDIÇÃO */}
             {modalAberto && (
                 <div className="modal-modern-overlay">
                     <div className="modal-modern-content">

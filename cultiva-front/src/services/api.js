@@ -79,6 +79,15 @@ export const userService = {
         return await response.json();
     },
 
+    // --- FUNÇÃO ADICIONADA PARA O HISTÓRICO ---
+    listarLogs: async () => {
+        const response = await fetch(ENDPOINT_LOGS, {
+            headers: getHeaders()
+        });
+        if (!response.ok) throw new Error("Erro ao buscar logs de atividades");
+        return await response.json();
+    },
+
     registrarLog: async (acao, detalhes, usuarioId) => {
         try {
             const payload = {

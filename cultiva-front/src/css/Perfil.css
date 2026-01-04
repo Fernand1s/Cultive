@@ -52,29 +52,6 @@
     text-transform: uppercase;
 }
 
-/* Mensagens */
-.mensagem-box {
-    padding: 14px 16px;
-    border-radius: 8px;
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 500;
-}
-
-.mensagem-box.sucesso {
-    background-color: #f0fdf4;
-    color: #166534;
-    border: 1px solid #bbf7d0;
-}
-
-.mensagem-box.erro {
-    background-color: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fecaca;
-}
-
 /* Grid Layout */
 .perfil-grid {
     display: grid;
@@ -155,46 +132,81 @@
     color: #334155;
 }
 
+/* Container do Input com Ícones */
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
 .input-icon {
     position: relative;
     display: flex;
     align-items: center;
+    flex: 1;
 }
 
-/* 1. Regra geral para posicionar verticalmente qualquer ícone dentro do input */
 .input-icon svg {
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%); /* Centraliza perfeitamente na altura */
+    left: 12px;
     color: #94a3b8;
     pointer-events: none;
 }
 
-/* 2. Regra específica para o ícone da ESQUERDA (Escudo, User, Mail, etc) */
-/* Aplica-se apenas ao primeiro SVG encontrado dentro da div */
-.input-icon svg:first-of-type {
-    left: 12px;
-}
-
-/* 3. Regra específica para o ícone da DIREITA (Cadeado) */
-.lock-icon {
-    right: 12px !important; /* Força ficar na direita */
-    left: auto !important;  /* Garante que não fique na esquerda */
-}
-
 .input-icon input {
     width: 100%;
-    padding: 10px 12px 10px 40px;
+    padding: 10px 40px 10px 40px; /* Espaço para ícone na esquerda e olho na direita */
     border: 1px solid #cbd5e1;
     border-radius: 6px;
     font-size: 0.95rem;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
 }
 
 .input-icon input:focus {
     outline: none;
     border-color: #22c55e;
     box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+/* Botão de Ver/Ocultar Senha */
+.btn-toggle-view {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border-radius: 4px;
+    transition: color 0.2s;
+}
+
+.btn-toggle-view:hover {
+    color: #166534;
+}
+
+/* Requisitos de Senha */
+.password-requirements {
+    margin-top: 10px;
+    padding: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.password-requirements div {
+    transition: all 0.2s;
+}
+
+/* Ícone de Cadeado de Leitura */
+.lock-icon {
+    position: absolute !important;
+    right: 12px !important;
+    left: auto !important;
 }
 
 .form-group.disabled .input-icon input {
@@ -205,7 +217,7 @@
 
 .form-group small {
     display: block;
-    margin-top: 6px;
+    margin-top: 8px;
     font-size: 0.8rem;
     color: #94a3b8;
 }
@@ -217,38 +229,32 @@
 }
 
 /* Botões */
-.btn-primary {
-    background-color: #166534;
-    color: white;
-    border: none;
+.btn-primary, .btn-warning {
     padding: 10px 24px;
     border-radius: 6px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.btn-primary:hover {
-    background-color: #14532d;
-}
-
-.btn-warning {
-    background-color: #ca8a04;
-    color: white;
     border: none;
-    padding: 10px 24px;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    transition: transform 0.1s, opacity 0.2s;
 }
 
-.btn-warning:hover {
-    background-color: #a16207;
+.btn-primary { background-color: #166534; color: white; }
+.btn-primary:hover { background-color: #14532d; }
+
+.btn-warning { background-color: #ca8a04; color: white; }
+.btn-warning:hover { background-color: #a16207; }
+
+.btn-primary:disabled, .btn-warning:disabled {
+    background-color: #cbd5e1;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-primary:active, .btn-warning:active {
+    transform: scale(0.98);
 }
 
 /* Empty State */
@@ -268,37 +274,19 @@
     color: #94a3b8;
 }
 
-.empty-state p {
-    max-width: 300px;
-    margin-top: 16px;
-}
-
-/* Animação */
+/* Animações */
 .fade-in {
     animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 768px) {
-    .perfil-grid {
-        grid-template-columns: 1fr;
-    }
-    .perfil-sidebar {
-        flex-direction: row;
-        overflow-x: auto;
-    }
-    .menu-btn {
-        white-space: nowrap;
-        border-left: none;
-        border-bottom: 3px solid transparent;
-        justify-content: center;
-    }
-    .menu-btn.ativo {
-        border-left: none;
-        border-bottom-color: #166534;
-    }
+    .perfil-grid { grid-template-columns: 1fr; }
+    .perfil-sidebar { flex-direction: row; overflow-x: auto; }
+    .menu-btn { white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; }
+    .menu-btn.ativo { border-bottom-color: #166534; }
 }

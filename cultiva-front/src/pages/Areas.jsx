@@ -2,13 +2,17 @@ import { useState, useEffect } from 'react';
 import '../App.css';
 import {
     Trash2, Pencil, Plus, MapPin, Sprout, Ruler,
-    X, Tractor, Globe, Sun, Cloud, CloudSun
+    X, Tractor, Globe, Sun, Cloud, CloudSun,
+    AlertCircle
 } from 'lucide-react';
 
 // --- IMPORTS DO MAPA ---
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+
+// Imports para notificações globais
+import { useNotify } from "../context/NotificationContext";
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -22,17 +26,23 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 const Areas = () => {
+    const notify = useNotify(); // Inicialização do sistema global de notificações
+
+    // --- ESTADOS ---
     const [areas, setAreas] = useState([]);
     const [modalAberto, setModalAberto] = useState(false);
     const [editandoId, setEditandoId] = useState(null);
     const [idAreaSelecionada, setIdAreaSelecionada] = useState(null);
     const [cultivos, setCultivos] = useState([]);
 
+    // Estado para o Modal de Confirmação customizado (Substitui o window.confirm)
+    const [confirmacaoExclusao, setConfirmacaoExclusao] = useState({ aberta: false, id: null, nome: '' });
+
     const estadoInicial = {
         nomeArea: '',
         localizacaoArea: '',
         tamanhoArea: '',
-        tipoSolo: 'ARGILOSO', // Valor padrão seguro
+        tipoSolo: 'ARGILOSO',
         quantidadeLuz: 'PLENO_SOL',
         latitudeArea: -14.235,
         longitudeArea: -51.925
@@ -40,7 +50,7 @@ const Areas = () => {
 
     const [novaArea, setNovaArea] = useState(estadoInicial);
 
-    // --- LISTA DE SOLOS (SINCRONIZADA COM O JAVA E PLANTAS.JSX) ---
+    // --- LISTA DE SOLOS ---
     const CATEGORIAS_SOLO = {
         "Textura e Composição": [
             "ARGILOSO", "ARENOSO", "SILTOSO", "HUMOSO", "CALCARIO"
@@ -68,33 +78,23 @@ const Areas = () => {
         ) : null;
     }
 
-    // Função auxiliar para formatar texto (Ex: TERRA_ROXA -> Terra Roxa)
     const formatarTexto = (texto) => {
         if(!texto) return '';
         return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase().replace(/_/g, ' ');
     };
 
-    // Gera cores dinâmicas para os novos solos sem precisar criar CSS para cada um
     const getBadgeStyle = (solo) => {
         const tipo = solo ? solo.toUpperCase() : '';
-
-        // Cores baseadas no tipo de solo
         if (tipo.includes('ARGIL') || tipo === 'TERRA_ROXA' || tipo === 'NITOSSOLO')
-            return { bg: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }; // Vermelho terra
-
+            return { bg: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' };
         if (tipo.includes('ARENOSO') || tipo === 'NEOSSOLO')
-            return { bg: '#fffbeb', color: '#92400e', border: '1px solid #fde68a' }; // Amarelo areia
-
+            return { bg: '#fffbeb', color: '#92400e', border: '1px solid #fde68a' };
         if (tipo.includes('HUM') || tipo === 'CHERNOSSOLO' || tipo === 'MASSAPE')
-            return { bg: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }; // Escuro orgânico
-
+            return { bg: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' };
         if (tipo === 'CALCARIO' || tipo === 'MISTO')
-            return { bg: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0' }; // Cinza claro
-
+            return { bg: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0' };
         if (tipo === 'VARZEA' || tipo === 'GLEISSOLO')
-            return { bg: '#ecfeff', color: '#155e75', border: '1px solid #a5f3fc' }; // Azulado (água)
-
-        // Padrão
+            return { bg: '#ecfeff', color: '#155e75', border: '1px solid #a5f3fc' };
         return { bg: '#f3f4f6', color: '#4b5563', border: '1px solid #e5e7eb' };
     };
 
@@ -106,6 +106,7 @@ const Areas = () => {
         }
     };
 
+    // --- CARREGAR DADOS ---
     const carregarAreas = () => {
         fetch('http://localhost:8090/api/areas')
             .then(res => {
@@ -113,7 +114,10 @@ const Areas = () => {
                 return res.json();
             })
             .then(dados => setAreas(dados))
-            .catch(err => console.error("Erro:", err));
+            .catch(err => {
+                console.error("Erro:", err);
+                notify("Não foi possível carregar as áreas de cultivo.", "error");
+            });
     };
 
     useEffect(() => { carregarAreas(); }, []);
@@ -142,6 +146,7 @@ const Areas = () => {
         setEditandoId(null);
     };
 
+    // --- SALVAR ÁREA ---
     const salvarArea = (e) => {
         e.preventDefault();
         const url = editandoId
@@ -161,18 +166,35 @@ const Areas = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         }).then(res => {
-            if (res.ok) { carregarAreas(); fecharModal(); }
-            else {
-                res.text().then(t => alert(`Erro ao salvar: ${t}`));
+            if (res.ok) {
+                carregarAreas();
+                fecharModal();
+                notify(editandoId ? "Área atualizada com sucesso!" : "Área cadastrada com sucesso!", "success");
             }
-        });
+            else {
+                res.text().then(t => notify(`Erro ao salvar: ${t}`, "error"));
+            }
+        }).catch(() => notify("Erro de conexão com o servidor.", "error"));
     };
 
-    const excluirArea = (id, nome) => {
-        if (confirm(`Apagar a área "${nome}"?`)) {
-            fetch(`http://localhost:8090/api/areas/${id}`, { method: 'DELETE' })
-                .then(res => { if (res.ok) carregarAreas(); });
-        }
+    // --- EXCLUSÃO COM MODAL CUSTOMIZADO ---
+    const abrirConfirmacaoExclusao = (id, nome) => {
+        setConfirmacaoExclusao({ aberta: true, id, nome });
+    };
+
+    const executarExclusao = () => {
+        const { id, nome } = confirmacaoExclusao;
+        fetch(`http://localhost:8090/api/areas/${id}`, { method: 'DELETE' })
+            .then(res => {
+                if (res.ok) {
+                    carregarAreas();
+                    notify(`Área "${nome}" removida com sucesso.`, "success");
+                    setConfirmacaoExclusao({ aberta: false, id: null, nome: '' });
+                } else {
+                    notify("Não foi possível excluir a área.", "error");
+                }
+            })
+            .catch(() => notify("Erro ao tentar excluir área.", "error"));
     };
 
     const verCultivos = (idArea) => {
@@ -188,15 +210,17 @@ const Areas = () => {
                 const cultivosDaArea = todosCultivos.filter(c => c.areaCultivo && c.areaCultivo.idArea === idArea);
                 setCultivos(cultivosDaArea);
                 setIdAreaSelecionada(idArea);
+                if(cultivosDaArea.length === 0) {
+                    notify("Nenhum cultivo ativo nesta área.", "info");
+                }
             })
-            .catch(err => {
-                console.error("Erro ao buscar cultivos", err);
-                alert("Erro ao carregar cultivos.");
-            });
+            .catch(() => notify("Erro ao carregar lista de cultivos.", "error"));
     };
 
     return (
         <div className="animate-fade-in" style={{ padding: '0 10px' }}>
+
+            {/* HEADER */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
                 <div>
                     <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>Áreas de Cultivo</h1>
@@ -207,6 +231,7 @@ const Areas = () => {
                 </button>
             </div>
 
+            {/* KPI STATS */}
             <div className="kpi-grid" style={{ marginBottom: '32px' }}>
                 <div className="kpi-card">
                     <div className="kpi-header"><span className="kpi-title">Total de Áreas</span><div className="icon-box bg-green-light"><MapPin size={20} /></div></div>
@@ -222,6 +247,7 @@ const Areas = () => {
                 </div>
             </div>
 
+            {/* GRID DE ÁREAS */}
             <div className="areas-grid">
                 {areas.map(area => {
                     const luzConfig = getLuzConfig(area.quantidadeLuz);
@@ -232,7 +258,6 @@ const Areas = () => {
                         <div key={area.idArea} className="area-card">
                             <div className="area-card-header">
                                 <div className="area-title">{area.nomeArea}</div>
-                                {/* Badge de Solo Atualizado */}
                                 <span style={{
                                     fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '12px',
                                     backgroundColor: badgeStyle.bg, color: badgeStyle.color, border: badgeStyle.border,
@@ -268,7 +293,6 @@ const Areas = () => {
                                 </div>
                             </div>
 
-                            {/* EXIBIÇÃO DA LISTA DE CULTIVOS */}
                             {idAreaSelecionada === area.idArea && (
                                 <div className="cultivos-list-container" style={{background: '#f8fafc', padding: '10px', marginTop: '10px', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
                                     <h4 style={{margin: '0 0 10px 0', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold'}}>
@@ -297,13 +321,31 @@ const Areas = () => {
                                     {idAreaSelecionada === area.idArea ? 'Ocultar' : 'Ver Cultivos'}
                                 </button>
                                 <button className="btn-icon-action" onClick={() => abrirModal(area)}><Pencil size={16} /></button>
-                                <button className="btn-icon-action danger" onClick={() => excluirArea(area.idArea, area.nomeArea)}><Trash2 size={16} /></button>
+                                <button className="btn-icon-action danger" onClick={() => abrirConfirmacaoExclusao(area.idArea, area.nomeArea)}><Trash2 size={16} /></button>
                             </div>
                         </div>
                     );
                 })}
             </div>
 
+            {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO CUSTOMIZADO */}
+            {confirmacaoExclusao.aberta && (
+                <div className="modal-modern-overlay" style={{ zIndex: 10000 }}>
+                    <div className="modal-modern-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+                        <div style={{ background: '#fee2e2', color: '#dc2626', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+                            <AlertCircle size={32} />
+                        </div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>Excluir Área?</h3>
+                        <p style={{ color: '#64748b', marginBottom: '24px' }}>Deseja realmente apagar a área <strong>{confirmacaoExclusao.nome}</strong>? Esta ação não pode ser desfeita.</p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button className="btn-outline" style={{ flex: 1 }} onClick={() => setConfirmacaoExclusao({ aberta: false, id: null, nome: '' })}>Cancelar</button>
+                            <button className="btn-primary" style={{ flex: 1, backgroundColor: '#dc2626', borderColor: '#dc2626' }} onClick={executarExclusao}>Sim, Excluir</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE CADASTRO/EDIÇÃO */}
             {modalAberto && (
                 <div className="modal-modern-overlay">
                     <div className="modal-modern-content" style={{maxWidth: '800px'}}>
@@ -324,7 +366,6 @@ const Areas = () => {
                                         <input type="number" step="0.1" className="form-input" placeholder="0.0" value={novaArea.tamanhoArea} onChange={e => setNovaArea({...novaArea, tamanhoArea: e.target.value})} required />
                                     </div>
 
-                                    {/* SELETOR DE SOLOS ATUALIZADO (AGRUPADO) */}
                                     <div className="form-group">
                                         <label className="form-label">Tipo de Solo</label>
                                         <select className="form-select" value={novaArea.tipoSolo} onChange={e => setNovaArea({...novaArea, tipoSolo: e.target.value})}>

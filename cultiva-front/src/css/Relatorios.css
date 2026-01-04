@@ -1,0 +1,227 @@
+/* Relatorios.css */
+
+/* Estrutura de Navegação por Abas */
+.tabs-container {
+    margin-top: 10px;
+}
+
+.tab-btn {
+    padding: 12px 24px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-btn:hover {
+    color: #0f172a;
+    background-color: #f8fafc;
+}
+
+.tab-btn.active {
+    color: #16a34a;
+    border-bottom-color: #16a34a;
+    background-color: #f0fdf4;
+}
+
+/* Grid Detalhado */
+.report-detailed-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+/* Filtros Laterais */
+.sidebar-filters {
+    position: sticky;
+    top: 20px;
+}
+
+.cultivo-list-scroll {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+/* Custom Scrollbar para a lista */
+.cultivo-list-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.cultivo-list-scroll::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+.cultivo-list-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+/* Card de Cultivo na Lista */
+.cultivo-item-card {
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.cultivo-item-card:hover {
+    border-color: #bbf7d0;
+    transform: translateX(4px);
+    background: #f8fafc;
+}
+
+.cultivo-item-card.active {
+    border-color: #16a34a;
+    background: #f0fdf4;
+    box-shadow: 0 4px 6px -1px rgba(22, 101, 52, 0.1);
+}
+
+.cultivo-item-info strong {
+    display: block;
+    font-size: 0.95rem;
+    color: #1e293b;
+}
+
+.cultivo-item-info span {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+/* Estilo do Gráfico e Tooltip */
+.chart-tooltip-custom {
+    background: #ffffff;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip-label {
+    margin: 0;
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.9rem;
+}
+
+.tooltip-value {
+    margin: 4px 0 0;
+    color: #16a34a;
+    font-weight: 500;
+}
+
+/* Timeline de Pragas Moderno */
+.pest-item-modern {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+}
+
+.pest-item-modern:hover {
+    border-color: #fee2e2;
+}
+
+.pest-date-badge {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 10px;
+    border-radius: 8px;
+    min-width: 85px;
+    height: fit-content;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.pest-details h4 {
+    margin: 0 0 6px 0;
+    color: #991b1b;
+    font-size: 1rem;
+}
+
+.pest-details p {
+    margin: 0 0 12px 0;
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Tags de Nível de Afetação */
+.level-tag {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.level-1 { background: #dcfce7; color: #166534; }
+.level-2 { background: #fef9c3; color: #854d0e; }
+.level-3 { background: #ffedd5; color: #9a3412; }
+.level-4 { background: #fee2e2; color: #991b1b; }
+.level-5 { background: #450a0a; color: #ffffff; }
+
+/* Sub-estados e loadings */
+.empty-substate {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    border: 2px dashed #e2e8f0;
+    border-radius: 10px;
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+    .report-detailed-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar-filters {
+        position: static;
+    }
+
+    .cultivo-list-scroll {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+
+    .cultivo-item-card {
+        min-width: 250px;
+    }
+}
