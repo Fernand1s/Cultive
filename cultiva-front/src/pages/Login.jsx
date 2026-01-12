@@ -1,24 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService, userService } from "../services/api";
-import { LogIn, Key, ArrowLeft, CheckCircle, Check, Eye, EyeOff } from 'lucide-react';
-import { useNotify } from "../context/NotificationContext"; // Importação do contexto de notificações
+import { LogIn, Key, ArrowLeft, Check, Eye, EyeOff } from 'lucide-react';
+import { useNotify } from "../context/NotificationContext";
 import '../css/login.css';
 
 export function Login() {
     const navigate = useNavigate();
-    const notify = useNotify(); // Inicialização do toast
+    const notify = useNotify();
 
-    // Estados Gerais
     const [loading, setLoading] = useState(false);
-
-    // Estado para controlar visibilidade da senha
     const [mostrarSenha, setMostrarSenha] = useState(false);
     const [isResetMode, setIsResetMode] = useState(false);
 
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
-
     const [codigo, setCodigo] = useState('');
     const [novaSenha, setNovaSenha] = useState('');
 
@@ -28,19 +24,13 @@ export function Login() {
     const temMinuscula = /[a-z]/.test(novaSenha);
     const temNumero = /[0-9]/.test(novaSenha);
     const temEspecial = /[@#$%^&+=!]/.test(novaSenha);
-
     const isSenhaValida = temTamanho && temMaiuscula && temMinuscula && temNumero && temEspecial;
 
-    // --- LÓGICA DE LOGIN ---
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
-
         try {
             const dadosDoBanco = await authService.login(email, senha);
-
-            // Log de diagnóstico
-            console.log("Conexão estabelecida. Dados recebidos:", dadosDoBanco);
 
             const tokenParaSalvar = dadosDoBanco.token || "token-temporario-validado";
             localStorage.setItem('token', tokenParaSalvar);
@@ -54,48 +44,34 @@ export function Login() {
             };
 
             localStorage.setItem('usuarioLogado', JSON.stringify(usuarioParaSalvar));
-
-            // Feedback de sucesso antes de navegar
             notify(`Bem-vindo, ${usuarioParaSalvar.nomeUsuario}!`, "success");
-
             navigate('/dashboard');
-
         } catch (error) {
-            console.error("Erro no login:", error);
             notify("E-mail ou senha incorretos.", "error");
         } finally {
             setLoading(false);
         }
     };
 
-    // --- LÓGICA DE RESET ---
     const handleResetSenha = async (e) => {
         e.preventDefault();
         setLoading(true);
-
         if (!isSenhaValida) {
-            notify("A senha não atende aos requisitos de segurança.", "error");
+            notify("A senha não atende aos requisitos.", "error");
             setLoading(false);
             return;
         }
-
         try {
             await userService.redefinirSenha(email, codigo, novaSenha);
             notify("Senha alterada com sucesso!", "success");
-
-            // Pequeno delay para o usuário ler a mensagem antes de voltar ao login
             setTimeout(() => {
                 setIsResetMode(false);
                 setSenha('');
                 setCodigo('');
                 setNovaSenha('');
-                setMostrarSenha(false);
             }, 2000);
-
         } catch (error) {
-            console.error("Erro no reset:", error);
-            const msgErro = error.response?.data?.message || "Erro ao redefinir. Verifique o código.";
-            notify(msgErro, "error");
+            notify("Erro ao redefinir. Verifique o código.", "error");
         } finally {
             setLoading(false);
         }
@@ -105,25 +81,24 @@ export function Login() {
         <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '0.8rem',
-            color: valido ? '#16a34a' : '#9ca3af',
-            marginBottom: '2px'
+            gap: '8px',
+            fontSize: '0.75rem',
+            color: valido ? '#16a34a' : '#94a3b8',
+            marginBottom: '4px'
         }}>
-            {valido ? <Check size={14} /> : <div style={{width: 14, height: 14, borderRadius: '50%', border: '1px solid #d1d5db'}} />}
-            <span style={{ textDecoration: valido ? 'line-through' : 'none' }}>{texto}</span>
+            {valido ? <Check size={14} strokeWidth={3} /> : <div style={{width: 6, height: 6, borderRadius: '50%', background: '#cbd5e1', marginLeft: 4}} />}
+            <span style={{ fontWeight: valido ? '600' : '400' }}>{texto}</span>
         </div>
     );
 
     return (
         <div className="login-container">
             <div className="login-card">
-
                 <h1 className="login-title">
                     {isResetMode ? 'Nova Senha' : 'Cultiva+'}
                 </h1>
                 <p className="login-subtitle">
-                    {isResetMode ? 'Defina sua nova senha de acesso.' : 'Bem-vindo de volta!'}
+                    {isResetMode ? 'Defina sua nova senha de acesso.' : 'Acesse o painel de gestão agrícola.'}
                 </p>
 
                 <form className="login-form" onSubmit={isResetMode ? handleResetSenha : handleLogin}>
@@ -135,12 +110,12 @@ export function Login() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="login-input"
-                            placeholder="seu@fazenda.com"
+                            placeholder="exemplo@cultiva.com"
                             required
                         />
                     </div>
 
-                    {!isResetMode && (
+                    {!isResetMode ? (
                         <div className="input-group">
                             <label className="input-label">Senha</label>
                             <div className="input-wrapper">
@@ -149,7 +124,7 @@ export function Login() {
                                     value={senha}
                                     onChange={(e) => setSenha(e.target.value)}
                                     className="login-input"
-                                    placeholder="********"
+                                    placeholder="••••••••"
                                     required
                                 />
                                 <button
@@ -161,9 +136,7 @@ export function Login() {
                                 </button>
                             </div>
                         </div>
-                    )}
-
-                    {isResetMode && (
+                    ) : (
                         <>
                             <div className="input-group">
                                 <label className="input-label">Código de Autorização</label>
@@ -186,7 +159,7 @@ export function Login() {
                                         value={novaSenha}
                                         onChange={(e) => setNovaSenha(e.target.value)}
                                         className="login-input"
-                                        placeholder="Sua nova senha"
+                                        placeholder="Digite a nova senha"
                                         required
                                     />
                                     <button
@@ -199,7 +172,7 @@ export function Login() {
                                 </div>
 
                                 <div className="requisitos-container">
-                                    <p className="requisitos-titulo">A senha deve conter:</p>
+                                    <p className="requisitos-titulo">Segurança da Senha:</p>
                                     <RequisitoSenha valido={temTamanho} texto="Mínimo de 8 caracteres" />
                                     <RequisitoSenha valido={temMaiuscula} texto="Uma letra maiúscula" />
                                     <RequisitoSenha valido={temMinuscula} texto="Uma letra minúscula" />
@@ -215,9 +188,9 @@ export function Login() {
                         className="btn-login"
                         disabled={loading || (isResetMode && !isSenhaValida)}
                     >
-                        {loading ? 'Processando...' : (
+                        {loading ? 'Validando...' : (
                             isResetMode ? (
-                                <><Key size={18} /> Alterar Senha</>
+                                <><Key size={18} /> Redefinir Senha</>
                             ) : (
                                 <><LogIn size={18} /> Entrar no Sistema</>
                             )
@@ -230,31 +203,23 @@ export function Login() {
                         <button
                             type="button"
                             className="link-action"
-                            onClick={() => {
-                                setIsResetMode(false);
-                                setNovaSenha('');
-                                setMostrarSenha(false);
-                            }}
+                            onClick={() => setIsResetMode(false)}
                         >
                             <ArrowLeft size={16} /> Voltar para o Login
                         </button>
                     ) : (
                         <>
-                            <p className="footer-text">Esqueceu sua senha?</p>
+                            <p className="footer-text">Problemas com acesso?</p>
                             <button
                                 type="button"
                                 className="link-action"
-                                onClick={() => {
-                                    setIsResetMode(true);
-                                    setMostrarSenha(false);
-                                }}
+                                onClick={() => setIsResetMode(true)}
                             >
-                                Tenho um código de acesso
+                                <Key size={16} /> Redefinir minha senha
                             </button>
                         </>
                     )}
                 </div>
-
             </div>
         </div>
     );

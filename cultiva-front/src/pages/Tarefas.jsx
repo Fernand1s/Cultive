@@ -1,104 +1,50 @@
 import { useState, useEffect } from 'react';
 import '../App.css';
+import '../css/tarefas.css';
 import {
-    Plus, Calendar, Trash2, ListTodo, User,
-    CheckCircle2, AlertTriangle, Edit2, Ban, StickyNote, ClipboardList
+    Plus, Calendar, Trash2, User,
+    CheckCircle2, AlertTriangle, Edit2, Ban, StickyNote, ClipboardList, X, Clock
 } from 'lucide-react';
-import { useNotify } from "../context/NotificationContext"; // Importação do sistema de notificações
+import { useNotify } from "../context/NotificationContext";
 
 const Tarefas = () => {
-    const notify = useNotify(); // Inicialização do hook de notificações
-
-    // --- 1. ESTADOS ---
+    const notify = useNotify();
 
     const [usuarioLogado] = useState(() => {
         try {
             const dados = localStorage.getItem('usuarioLogado');
             return dados ? JSON.parse(dados) : null;
-        } catch (e) {
-            console.error(e);
-            return null;
-        }
+        } catch (e) { return null; }
     });
 
     const [tarefas, setTarefas] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
     const [modalAberto, setModalAberto] = useState(false);
-
-    // Estados para o Modal de Observação
     const [modalObsAberto, setModalObsAberto] = useState(false);
     const [obsTexto, setObsTexto] = useState('');
     const [tarefaParaConcluir, setTarefaParaConcluir] = useState(null);
-
     const [modoEdicao, setModoEdicao] = useState(false);
     const [idTarefaEditando, setIdTarefaEditando] = useState(null);
+    const [carregando, setCarregando] = useState(false);
 
-    // ALTERAÇÃO: dataPrazo agora guardará apenas YYYY-MM-DD
     const [novaTarefa, setNovaTarefa] = useState({
         titulo: '', descricao: '', prioridade: 'MEDIA', categoria: '', dataPrazo: '', idResponsavel: ''
     });
 
-    // --- 2. CARREGAMENTO ---
-
     useEffect(() => {
-        if (usuarioLogado && usuarioLogado.idUsuario) {
-            carregarDados();
-        }
+        if (usuarioLogado?.idUsuario) carregarDados();
     }, [usuarioLogado]);
 
-    const carregarDados = () => {
-        if (!usuarioLogado || !usuarioLogado.idUsuario) return;
-
+    const carregarDados = async () => {
         const url = `http://localhost:8090/api/tarefas?idUsuario=${usuarioLogado.idUsuario}&funcao=${usuarioLogado.funcao}`;
-
-        fetch(url)
-            .then(res => {
-                if(!res.ok) throw new Error("Erro na resposta da API");
-                return res.json();
-            })
-            .then(data => {
-                if (Array.isArray(data)) setTarefas(data);
-                else setTarefas([]);
-            })
-            .catch(err => {
-                console.error("Erro ao buscar tarefas:", err);
-                setTarefas([]);
-                notify("Não foi possível carregar a lista de tarefas.", "error");
-            });
-
-        fetch('http://localhost:8090/api/usuarios')
-            .then(r => r.json())
-            .then(data => {
-                if(Array.isArray(data)) setUsuarios(data);
-            })
-            .catch(err => {
-                console.error("Erro ao buscar usuários:", err);
-            });
-    };
-
-    if (!usuarioLogado) {
-        setTimeout(() => window.location.href = '/', 1000);
-        return <div style={{padding:20, color: 'red'}}>Acesso Negado. Redirecionando...</div>;
-    }
-
-    // --- 3. AÇÕES (CRUD) ---
-
-    const executarRequisicaoConclusao = (tarefa, observacao) => {
-        fetch(`http://localhost:8090/api/tarefas/${tarefa.id}/concluir?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ observacao: observacao })
-        }).then(res => {
-            if (res.ok) {
-                carregarDados();
-                setModalObsAberto(false);
-                setTarefaParaConcluir(null);
-                setObsTexto('');
-                notify("Tarefa concluída com sucesso!", "success");
-            } else {
-                notify("Erro ao concluir tarefa.", "error");
-            }
-        }).catch(() => notify("Erro de conexão.", "error"));
+        try {
+            const resT = await fetch(url);
+            const resU = await fetch('http://localhost:8090/api/usuarios');
+            setTarefas(await resT.json());
+            setUsuarios(await resU.json());
+        } catch (err) {
+            notify("Erro ao sincronizar tarefas.", "error");
+        }
     };
 
     const handleCheckConclusao = (tarefa) => {
@@ -111,206 +57,120 @@ const Tarefas = () => {
         }
     };
 
-    const confirmarConclusaoModal = (e) => {
-        e.preventDefault();
-        if (tarefaParaConcluir) {
-            executarRequisicaoConclusao(tarefaParaConcluir, obsTexto);
-        }
+    const executarRequisicaoConclusao = (tarefa, observacao) => {
+        fetch(`http://localhost:8090/api/tarefas/${tarefa.id}/concluir?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ observacao })
+        }).then(res => {
+            if (res.ok) {
+                carregarDados();
+                setModalObsAberto(false);
+                notify("Tarefa concluída!", "success");
+            }
+        });
     };
 
     const cancelarTarefa = (id) => {
-        if (window.confirm('Deseja CANCELAR esta tarefa? Ela ficará inativa no sistema.')) {
-            fetch(`http://localhost:8090/api/tarefas/${id}/cancelar?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
-                method: 'PUT'
-            }).then(res => {
-                if(res.ok) {
-                    carregarDados();
-                    notify("Tarefa cancelada.", "info");
-                } else {
-                    notify("Apenas o Criador ou Admin pode cancelar.", "error");
-                }
-            }).catch(() => notify("Erro de conexão.", "error"));
+        if (window.confirm('Deseja cancelar esta tarefa?')) {
+            fetch(`http://localhost:8090/api/tarefas/${id}/cancelar?idUsuarioLogado=${usuarioLogado.idUsuario}`, { method: 'PUT' })
+                .then(res => res.ok ? carregarDados() : notify("Sem permissão.", "error"));
         }
     };
 
     const excluirTarefa = (id) => {
         if (window.confirm('Excluir definitivamente?')) {
             fetch(`http://localhost:8090/api/tarefas/${id}?idUsuarioLogado=${usuarioLogado.idUsuario}`, { method: 'DELETE' })
-                .then(res => {
-                    if(res.ok) {
-                        carregarDados();
-                        notify("Tarefa excluída permanentemente.", "success");
-                    } else {
-                        notify("Permissão negada para excluir.", "error");
-                    }
-                }).catch(() => notify("Erro de conexão.", "error"));
+                .then(res => res.ok ? carregarDados() : notify("Erro ao excluir.", "error"));
         }
     };
 
     const salvarTarefa = (e) => {
         e.preventDefault();
+        setCarregando(true);
         const responsavelFinal = novaTarefa.idResponsavel || usuarioLogado.idUsuario;
-        let url, method;
-
-        let dataFormatadaParaBackend = novaTarefa.dataPrazo;
-        if (dataFormatadaParaBackend && !dataFormatadaParaBackend.includes('T')) {
-            dataFormatadaParaBackend = dataFormatadaParaBackend + 'T23:59:59';
-        }
+        const dataFormatada = novaTarefa.dataPrazo.includes('T') ? novaTarefa.dataPrazo : `${novaTarefa.dataPrazo}T23:59:59`;
 
         const corpo = {
             titulo: novaTarefa.titulo,
             descricao: novaTarefa.descricao,
             prioridade: novaTarefa.prioridade,
-            categoria: novaTarefa.categoria,
-            dataPrazo: dataFormatadaParaBackend,
+            dataPrazo: dataFormatada,
             responsavel: { idUsuario: responsavelFinal }
         };
 
-        if (modoEdicao) {
-            url = `http://localhost:8090/api/tarefas/${idTarefaEditando}?idUsuarioLogado=${usuarioLogado.idUsuario}`;
-            method = 'PUT';
-        } else {
-            url = `http://localhost:8090/api/tarefas?idResponsavel=${responsavelFinal}&idCriador=${usuarioLogado.idUsuario}`;
-            method = 'POST';
-        }
+        const url = modoEdicao ? `http://localhost:8090/api/tarefas/${idTarefaEditando}?idUsuarioLogado=${usuarioLogado.idUsuario}` : `http://localhost:8090/api/tarefas?idResponsavel=${responsavelFinal}&idCriador=${usuarioLogado.idUsuario}`;
 
-        fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
-            .then(async res => {
+        fetch(url, { method: modoEdicao ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
+            .then(res => {
                 if (res.ok) {
                     carregarDados();
                     setModalAberto(false);
-                    notify(modoEdicao ? "Tarefa atualizada!" : "Nova tarefa criada!", "success");
-                } else {
-                    const erro = await res.text();
-                    console.error("Erro API:", erro);
-                    notify("Erro ao salvar: Verifique os campos obrigatórios.", "error");
+                    notify("Sucesso!", "success");
                 }
             })
-            .catch(err => {
-                console.error("Erro de rede:", err);
-                notify("Erro de conexão ao servidor.", "error");
-            });
-    };
-
-    // --- UTILS DE PREPARAÇÃO ---
-    const abrirModalCriacao = () => {
-        setModoEdicao(false);
-        setNovaTarefa({ titulo: '', descricao: '', prioridade: 'MEDIA', categoria: '', dataPrazo: '', idResponsavel: usuarioLogado.idUsuario });
-        setModalAberto(true);
-    };
-
-    const prepararEdicao = (tarefa) => {
-        setModoEdicao(true);
-        setIdTarefaEditando(tarefa.id);
-
-        let dataFormatada = '';
-        if (tarefa.dataPrazo) {
-            dataFormatada = tarefa.dataPrazo.split('T')[0];
-        }
-
-        setNovaTarefa({
-            titulo: tarefa.titulo,
-            descricao: tarefa.descricao,
-            prioridade: tarefa.prioridade,
-            categoria: tarefa.categoria,
-            dataPrazo: dataFormatada,
-            idResponsavel: tarefa.responsavel ? tarefa.responsavel.idUsuario : usuarioLogado.idUsuario
-        });
-        setModalAberto(true);
-    };
-
-    // --- LÓGICA DE DATA E RENDERIZAÇÃO ---
-    const tarefasPendentes = tarefas.filter(t => !t.concluida && !t.cancelada);
-    const tarefasConcluidas = tarefas.filter(t => t.concluida && !t.cancelada);
-    const tarefasCanceladas = tarefas.filter(t => t.cancelada);
-
-    const getPriorityClass = (prio) => {
-        if (prio === 'ALTA') return 'prio-alta';
-        if (prio === 'MEDIA') return 'prio-media';
-        return 'prio-baixa';
-    };
-
-    const isAtrasada = (t) => {
-        if (t.cancelada || t.concluida || !t.dataPrazo) return false;
-        const hoje = new Date().toISOString().split('T')[0];
-        const prazo = t.dataPrazo.split('T')[0];
-        return prazo < hoje;
+            .finally(() => setCarregando(false));
     };
 
     const renderTarefa = (tarefa, tipo) => {
-        const souCriador = tarefa.criador && tarefa.criador.idUsuario === usuarioLogado.idUsuario;
         const souAdmin = usuarioLogado.funcao.includes('ADMIN') || usuarioLogado.funcao.includes('EMPRESA');
-        const temPermissaoTotal = souCriador || souAdmin;
-        const atrasada = isAtrasada(tarefa);
+        const temPermissao = (tarefa.criador?.idUsuario === usuarioLogado.idUsuario) || souAdmin;
 
-        const estiloCard = tarefa.cancelada
-            ? { opacity: 0.6, background: '#f8fafc', borderLeft: '4px solid #94a3b8' }
-            : { borderLeft: atrasada ? '4px solid #ef4444' : '4px solid transparent' };
+        const hoje = new Date().toISOString().split('T')[0];
+        const prazo = tarefa.dataPrazo?.split('T')[0];
+        const atrasada = !tarefa.concluida && !tarefa.cancelada && prazo < hoje;
 
         return (
-            <div key={tarefa.id} className={`task-item ${tipo === 'concluida' ? 'completed' : ''}`} style={estiloCard}>
+            <div key={tarefa.id} className={`task-item ${tipo} ${atrasada ? 'atrasada' : ''}`}>
+                <div className="task-status-indicator" style={{
+                    background: tarefa.cancelada ? '#94a3b8' : (tarefa.concluida ? '#16a34a' : (atrasada ? '#ef4444' : '#e2e8f0'))
+                }} />
 
                 {!tarefa.cancelada && (
-                    <input type="checkbox" className="custom-checkbox"
-                           checked={tarefa.concluida}
-                           onChange={() => handleCheckConclusao(tarefa)}
-                    />
+                    <div className="custom-checkbox-container">
+                        <input type="checkbox" className="custom-checkbox" checked={tarefa.concluida} onChange={() => handleCheckConclusao(tarefa)} />
+                    </div>
                 )}
 
                 <div className="task-content">
-                    <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
-                        <h4 className="task-title" style={{textDecoration: tarefa.cancelada ? 'line-through' : 'none', color: '#1e293b'}}>
-                            {tarefa.titulo}
-                        </h4>
-
-                        {!tarefa.cancelada && <span className={`priority-badge ${getPriorityClass(tarefa.prioridade)}`}>{tarefa.prioridade}</span>}
-                        {atrasada && <span style={{color:'#dc2626', fontSize:'12px', display:'flex', alignItems:'center'}}><AlertTriangle size={12}/> Atrasada</span>}
-                        {tarefa.cancelada && <span style={{background:'#e2e8f0', padding:'2px 6px', borderRadius:'4px', fontSize:'11px', fontWeight:'bold', color:'#64748b'}}>CANCELADA</span>}
+                    <div className="task-main-info">
+                        <h4 className="task-title">{tarefa.titulo}</h4>
+                        {!tarefa.cancelada && <span className={`priority-badge prio-${tarefa.prioridade.toLowerCase()}`}>{tarefa.prioridade}</span>}
+                        {atrasada && <span className="priority-badge" style={{background:'#fee2e2', color:'#ef4444', display:'flex', alignItems:'center', gap:'3px'}}><Clock size={10}/> Atrasada</span>}
                     </div>
 
-                    <p className="task-desc">{tarefa.descricao}</p>
+                    <p className="task-desc">{tarefa.descricao || 'Sem descrição.'}</p>
 
-                    {tarefa.observacaoConclusao && (
-                        <div style={{marginTop:'4px', fontSize:'13px', color:'#059669', display:'flex', alignItems:'center', gap:'4px'}}>
-                            <StickyNote size={12}/> <strong>Obs:</strong> {tarefa.observacaoConclusao}
-                        </div>
-                    )}
-
-                    <div className="task-meta" style={{ flexWrap: 'wrap', gap: '12px', marginTop: '8px' }}>
-                        <span className="meta-tag">
-                            <Calendar size={14}/>
-                            {tarefa.dataPrazo
-                                ? new Date(tarefa.dataPrazo).toLocaleDateString('pt-BR')
-                                : 'S/P'}
-                        </span>
-
-                        <span className="meta-tag" title="Responsável (Executante)">
-                            <User size={14}/>
-                            Resp: <strong>{tarefa.responsavel ? tarefa.responsavel.nomeUsuario : 'N/A'}</strong>
-                        </span>
-
-                        <span className="meta-tag" title="Criador da Tarefa" style={{borderLeft:'1px solid #e2e8f0', paddingLeft:'8px', color:'#64748b'}}>
-                            <span style={{fontSize:'10px', textTransform:'uppercase', marginRight:'3px'}}>Criado por:</span>
-                            {tarefa.criador ? tarefa.criador.nomeUsuario : 'Sistema'}
-                        </span>
+                    <div className="task-meta">
+                        <span className="meta-tag"><Calendar size={12}/> {tarefa.dataPrazo ? new Date(tarefa.dataPrazo).toLocaleDateString() : 'Sem prazo'}</span>
+                        <span className="meta-tag"><User size={12}/> {tarefa.responsavel?.nomeUsuario}</span>
+                        {tarefa.observacaoConclusao && (
+                            <span className="meta-tag" style={{background:'#f0fdf4', color:'#16a34a', border:'1px solid #dcfce7'}}><StickyNote size={12}/> {tarefa.observacaoConclusao}</span>
+                        )}
+                        <span className="meta-tag" style={{opacity: 0.6}}>Criado por: {tarefa.criador?.nomeUsuario || 'Sistema'}</span>
                     </div>
                 </div>
 
-                <div style={{display:'flex', gap:'5px'}}>
-                    {!tarefa.cancelada && !tarefa.concluida && temPermissaoTotal && (
-                        <button onClick={() => prepararEdicao(tarefa)} className="btn-icon-sm" title="Editar">
-                            <Edit2 size={18} />
-                        </button>
+                <div className="task-actions">
+                    {!tarefa.cancelada && !tarefa.concluida && temPermissao && (
+                        <button onClick={() => {
+                            setModoEdicao(true);
+                            setIdTarefaEditando(tarefa.id);
+                            setNovaTarefa({
+                                titulo: tarefa.titulo,
+                                descricao: tarefa.descricao,
+                                prioridade: tarefa.prioridade,
+                                dataPrazo: tarefa.dataPrazo ? tarefa.dataPrazo.split('T')[0] : '',
+                                idResponsavel: tarefa.responsavel?.idUsuario
+                            });
+                            setModalAberto(true);
+                        }} className="btn-icon-sm"><Edit2 size={16}/></button>
                     )}
-                    {!tarefa.cancelada && !tarefa.concluida && temPermissaoTotal && (
-                        <button onClick={() => cancelarTarefa(tarefa.id)} className="btn-icon-sm warning" title="Cancelar Tarefa">
-                            <Ban size={18} color="#f59e0b" />
-                        </button>
+                    {!tarefa.cancelada && !tarefa.concluida && temPermissao && (
+                        <button onClick={() => cancelarTarefa(tarefa.id)} className="btn-icon-sm warning"><Ban size={16}/></button>
                     )}
-                    {temPermissaoTotal && (
-                        <button onClick={() => excluirTarefa(tarefa.id)} className="btn-icon-sm danger" title="Excluir Definitivamente">
-                            <Trash2 size={18} />
-                        </button>
+                    {temPermissao && (
+                        <button onClick={() => excluirTarefa(tarefa.id)} className="btn-icon-sm danger"><Trash2 size={16}/></button>
                     )}
                 </div>
             </div>
@@ -318,41 +178,43 @@ const Tarefas = () => {
     };
 
     return (
-        <div className="animate-fade-in" style={{ padding: '0 10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#1e293b' }}>Minhas Tarefas</h1>
-                <button className="btn-primary" onClick={abrirModalCriacao}><Plus size={20} /> Nova Tarefa</button>
+        <div className="main-content animate-fade-in">
+            <div className="admin-header">
+                <div>
+                    <h1 className="dashboard-title">Centro de Atividades</h1>
+                    <p className="dashboard-subtitle">Acompanhe e execute as demandas da fazenda.</p>
+                </div>
+                <button className="botao-ver" onClick={() => { setModoEdicao(false); setNovaTarefa({titulo:'', descricao:'', prioridade:'MEDIA', dataPrazo:'', idResponsavel: usuarioLogado.idUsuario}); setModalAberto(true); }}>
+                    <Plus size={20} /> Nova Tarefa
+                </button>
             </div>
 
             <div className="task-list-container">
-                {tarefasPendentes.length === 0 ? (
-                    <div style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        padding: '40px 20px', background: '#f8fafc', borderRadius: '12px', border: '2px dashed #e2e8f0'
-                    }}>
-                        <ClipboardList size={48} color="#cbd5e1" strokeWidth={1.5} style={{marginBottom:'16px'}} />
-                        <h3 style={{color:'#64748b', fontSize:'1.1rem', marginBottom:'4px'}}>Tudo limpo por aqui!</h3>
-                        <p style={{color:'#94a3b8', fontSize:'0.9rem'}}>Nenhuma tarefa pendente no momento.</p>
+                {tarefas.filter(t => !t.concluida && !t.cancelada).length === 0 ? (
+                    <div className="empty-state-tasks">
+                        <ClipboardList size={48} color="#cbd5e1" style={{marginBottom:'16px'}} />
+                        <h3 style={{color:'#64748b'}}>Tudo em dia!</h3>
+                        <p style={{color:'#94a3b8'}}>Você não possui tarefas pendentes para hoje.</p>
                     </div>
                 ) : (
-                    tarefasPendentes.map(t => renderTarefa(t, 'pendente'))
+                    tarefas.filter(t => !t.concluida && !t.cancelada).map(t => renderTarefa(t, 'pendente'))
                 )}
             </div>
 
-            {tarefasConcluidas.length > 0 && (
+            {tarefas.filter(t => t.concluida && !t.cancelada).length > 0 && (
                 <>
-                    <div className="completed-section-title"><CheckCircle2 size={16} /> Concluídas Recentemente</div>
+                    <div className="section-divider"><span>Concluídas</span></div>
                     <div className="task-list-container">
-                        {tarefasConcluidas.map(t => renderTarefa(t, 'concluida'))}
+                        {tarefas.filter(t => t.concluida && !t.cancelada).map(t => renderTarefa(t, 'completed'))}
                     </div>
                 </>
             )}
 
-            {tarefasCanceladas.length > 0 && (
+            {tarefas.filter(t => t.cancelada).length > 0 && (
                 <>
-                    <div className="completed-section-title" style={{color:'#94a3b8'}}><Ban size={16} /> Canceladas</div>
+                    <div className="section-divider"><span>Arquivadas / Canceladas</span></div>
                     <div className="task-list-container">
-                        {tarefasCanceladas.map(t => renderTarefa(t, 'cancelada'))}
+                        {tarefas.filter(t => t.cancelada).map(t => renderTarefa(t, 'cancelled'))}
                     </div>
                 </>
             )}
@@ -361,31 +223,43 @@ const Tarefas = () => {
             {modalAberto && (
                 <div className="modal-modern-overlay">
                     <div className="modal-modern-content">
-                        <h2>{modoEdicao ? 'Editar' : 'Nova'} Tarefa</h2>
-                        <form onSubmit={salvarTarefa}>
-                            <div className="form-group"><label>Título</label><input className="form-input" placeholder="Digite o nome da tarefa" value={novaTarefa.titulo} onChange={e => setNovaTarefa({...novaTarefa, titulo: e.target.value})} required /></div>
-                            <div className="form-group"><label>Descrição</label><textarea className="form-input" placeholder="Detalhes sobre o que deve ser feito" value={novaTarefa.descricao} onChange={e => setNovaTarefa({...novaTarefa, descricao: e.target.value})} /></div>
-                            <div className="form-group"><label>Responsável</label>
-                                <select className="form-select" value={novaTarefa.idResponsavel} onChange={e => setNovaTarefa({...novaTarefa, idResponsavel: e.target.value})}>
-                                    <option value={usuarioLogado.idUsuario}>Eu mesmo</option>
-                                    {usuarios.filter(u => u.idUsuario !== usuarioLogado.idUsuario).map(u => <option key={u.idUsuario} value={u.idUsuario}>{u.nomeUsuario}</option>)}
-                                </select>
+                        <div className="modal-header-premium">
+                            <h2>{modoEdicao ? 'Ajustar Detalhes' : 'Nova Atribuição'}</h2>
+                            <X size={20} onClick={() => setModalAberto(false)} style={{cursor:'pointer'}}/>
+                        </div>
+                        <form onSubmit={salvarTarefa} className="form-premium">
+                            <div className="form-group">
+                                <label className="input-label">Título da Tarefa</label>
+                                <input className="login-input" placeholder="O que precisa ser feito?" value={novaTarefa.titulo} onChange={e => setNovaTarefa({...novaTarefa, titulo: e.target.value})} required />
                             </div>
-                            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
+                            <div className="form-group">
+                                <label className="input-label">Instruções Adicionais</label>
+                                <textarea className="login-input" style={{minHeight:'80px'}} placeholder="Descreva os detalhes..." value={novaTarefa.descricao} onChange={e => setNovaTarefa({...novaTarefa, descricao: e.target.value})} />
+                            </div>
+                            <div className="form-row" style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'15px'}}>
                                 <div className="form-group">
-                                    <label>Prazo (Data)</label>
-                                    <input type="date" className="form-input" value={novaTarefa.dataPrazo} onChange={e => setNovaTarefa({...novaTarefa, dataPrazo: e.target.value})} required />
-                                </div>
-                                <div className="form-group"><label>Prioridade</label>
-                                    <select className="form-select" value={novaTarefa.prioridade} onChange={e => setNovaTarefa({...novaTarefa, prioridade: e.target.value})}>
-                                        <option value="MEDIA">Média</option><option value="ALTA">Alta</option><option value="BAIXA">Baixa</option>
+                                    <label className="input-label">Urgência</label>
+                                    <select className="login-input" value={novaTarefa.prioridade} onChange={e => setNovaTarefa({...novaTarefa, prioridade: e.target.value})}>
+                                        <option value="BAIXA">Baixa</option>
+                                        <option value="MEDIA">Média</option>
+                                        <option value="ALTA">Alta</option>
                                     </select>
                                 </div>
+                                <div className="form-group">
+                                    <label className="input-label">Data Limite</label>
+                                    <input type="date" className="login-input" value={novaTarefa.dataPrazo} onChange={e => setNovaTarefa({...novaTarefa, dataPrazo: e.target.value})} required />
+                                </div>
                             </div>
-                            <div className="form-group"><label>Categoria</label><input className="form-input" placeholder="Ex: Plantação, Administrativo..." value={novaTarefa.categoria} onChange={e => setNovaTarefa({...novaTarefa, categoria: e.target.value})} /></div>
-                            <div className="modal-footer">
-                                <button type="button" onClick={() => setModalAberto(false)} className="btn-outline">Cancelar</button>
-                                <button type="submit" className="btn-primary">Salvar Tarefa</button>
+                            <div className="form-group">
+                                <label className="input-label">Responsável pela Execução</label>
+                                <select className="login-input" value={novaTarefa.idResponsavel} onChange={e => setNovaTarefa({...novaTarefa, idResponsavel: e.target.value})}>
+                                    <option value={usuarioLogado.idUsuario}>Atribuir a mim</option>
+                                    {usuarios.map(u => u.idUsuario !== usuarioLogado.idUsuario && <option key={u.idUsuario} value={u.idUsuario}>{u.nomeUsuario}</option>)}
+                                </select>
+                            </div>
+                            <div className="modal-footer" style={{borderTop:'1px solid #f1f5f9', paddingTop:'20px', marginTop:'20px'}}>
+                                <button type="button" onClick={() => setModalAberto(false)} className="link-action" style={{color:'#64748b'}}>Descartar</button>
+                                <button type="submit" className="btn-login" style={{marginTop:0, padding:'10px 30px'}} disabled={carregando}>{carregando ? "Sincronizando..." : "Confirmar Tarefa"}</button>
                             </div>
                         </form>
                     </div>
@@ -396,21 +270,18 @@ const Tarefas = () => {
             {modalObsAberto && (
                 <div className="modal-modern-overlay">
                     <div className="modal-modern-content" style={{maxWidth: '400px'}}>
-                        <div style={{display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px'}}>
-                            <CheckCircle2 color="#16a34a" size={28} />
-                            <h2 style={{margin:0, fontSize:'1.25rem'}}>Concluir Tarefa</h2>
-                        </div>
-                        <p style={{color:'#64748b', marginBottom:'12px', fontSize:'0.9rem'}}>
-                            Ótimo trabalho! Deseja adicionar alguma observação final?
-                        </p>
-                        <form onSubmit={confirmarConclusaoModal}>
-                            <div className="form-group">
-                                <label>Observação (Opcional)</label>
-                                <textarea className="form-input" rows="3" placeholder="Ex: Material utilizado, dificuldades, tempo gasto..." value={obsTexto} onChange={e => setObsTexto(e.target.value)} />
+                        <div style={{textAlign:'center', marginBottom:'20px'}}>
+                            <div style={{background:'#d1fae5', width:'50px', height:'50px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 15px'}}>
+                                <CheckCircle2 size={24} color="#10b981" />
                             </div>
-                            <div className="modal-footer">
-                                <button type="button" onClick={() => setModalObsAberto(false)} className="btn-outline">Cancelar</button>
-                                <button type="submit" className="btn-primary" style={{background:'#16a34a', borderColor:'#16a34a'}}>Confirmar Conclusão</button>
+                            <h2 style={{fontSize:'1.25rem', margin:0}}>Finalizar Tarefa</h2>
+                            <p style={{color:'#64748b', fontSize:'0.9rem'}}>Adicione uma nota sobre a execução.</p>
+                        </div>
+                        <form onSubmit={(e) => { e.preventDefault(); executarRequisicaoConclusao(tarefaParaConcluir, obsTexto); }}>
+                            <textarea className="login-input" rows="3" placeholder="Ex: Tudo pronto, irrigação verificada." value={obsTexto} onChange={e => setObsTexto(e.target.value)} />
+                            <div className="modal-footer" style={{marginTop:'20px'}}>
+                                <button type="button" onClick={() => setModalObsAberto(false)} className="link-action">Voltar</button>
+                                <button type="submit" className="btn-login" style={{marginTop:0, background:'#10b981'}}>Concluir Agora</button>
                             </div>
                         </form>
                     </div>
@@ -419,4 +290,5 @@ const Tarefas = () => {
         </div>
     );
 };
+
 export default Tarefas;

@@ -27,7 +27,7 @@ public class Planta {
     @Enumerated(EnumType.STRING)
     private QuantidadeAgua aguaRecomendada; // NOVO CAMPO ADICIONADO
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "planta_solos_recomendados", joinColumns = @JoinColumn(name = "planta_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_solo")

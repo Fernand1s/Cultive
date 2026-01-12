@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
 import '../App.css';
+import '../css/Areas.css';
 import {
     Trash2, Pencil, Plus, MapPin, Sprout, Ruler,
     X, Tractor, Globe, Sun, Cloud, CloudSun,
     AlertCircle
 } from 'lucide-react';
 
-// --- IMPORTS DO MAPA ---
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-
-// Imports para notificações globais
 import { useNotify } from "../context/NotificationContext";
 
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -26,16 +24,13 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 const Areas = () => {
-    const notify = useNotify(); // Inicialização do sistema global de notificações
+    const notify = useNotify();
 
-    // --- ESTADOS ---
     const [areas, setAreas] = useState([]);
     const [modalAberto, setModalAberto] = useState(false);
     const [editandoId, setEditandoId] = useState(null);
     const [idAreaSelecionada, setIdAreaSelecionada] = useState(null);
     const [cultivos, setCultivos] = useState([]);
-
-    // Estado para o Modal de Confirmação customizado (Substitui o window.confirm)
     const [confirmacaoExclusao, setConfirmacaoExclusao] = useState({ aberta: false, id: null, nome: '' });
 
     const estadoInicial = {
@@ -50,21 +45,14 @@ const Areas = () => {
 
     const [novaArea, setNovaArea] = useState(estadoInicial);
 
-    // --- LISTA DE SOLOS ---
     const CATEGORIAS_SOLO = {
-        "Textura e Composição": [
-            "ARGILOSO", "ARENOSO", "SILTOSO", "HUMOSO", "CALCARIO"
-        ],
-        "Classificação Técnica (Embrapa)": [
-            "LATOSSOLO", "ARGISSOLO", "CHERNOSSOLO", "NEOSSOLO", "CAMBISSOLO", "GLEISSOLO", "NITOSSOLO"
-        ],
-        "Tipos Regionais / Outros": [
-            "TERRA_ROXA", "MASSAPE", "VARZEA", "MISTO", "OUTRO"
-        ]
+        "Textura e Composição": ["ARGILOSO", "ARENOSO", "SILTOSO", "HUMOSO", "CALCARIO"],
+        "Classificação Técnica (Embrapa)": ["LATOSSOLO", "ARGISSOLO", "CHERNOSSOLO", "NEOSSOLO", "CAMBISSOLO", "GLEISSOLO", "NITOSSOLO"],
+        "Tipos Regionais / Outros": ["TERRA_ROXA", "MASSAPE", "VARZEA", "MISTO", "OUTRO"]
     };
 
     function SeletorMapa() {
-        const map = useMapEvents({
+        useMapEvents({
             click(e) {
                 setNovaArea(prev => ({
                     ...prev,
@@ -73,9 +61,7 @@ const Areas = () => {
                 }));
             },
         });
-        return novaArea.latitudeArea ? (
-            <Marker position={[novaArea.latitudeArea, novaArea.longitudeArea]} />
-        ) : null;
+        return novaArea.latitudeArea ? <Marker position={[novaArea.latitudeArea, novaArea.longitudeArea]} /> : null;
     }
 
     const formatarTexto = (texto) => {
@@ -86,16 +72,12 @@ const Areas = () => {
     const getBadgeStyle = (solo) => {
         const tipo = solo ? solo.toUpperCase() : '';
         if (tipo.includes('ARGIL') || tipo === 'TERRA_ROXA' || tipo === 'NITOSSOLO')
-            return { bg: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' };
+            return { bg: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' };
         if (tipo.includes('ARENOSO') || tipo === 'NEOSSOLO')
             return { bg: '#fffbeb', color: '#92400e', border: '1px solid #fde68a' };
         if (tipo.includes('HUM') || tipo === 'CHERNOSSOLO' || tipo === 'MASSAPE')
             return { bg: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' };
-        if (tipo === 'CALCARIO' || tipo === 'MISTO')
-            return { bg: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0' };
-        if (tipo === 'VARZEA' || tipo === 'GLEISSOLO')
-            return { bg: '#ecfeff', color: '#155e75', border: '1px solid #a5f3fc' };
-        return { bg: '#f3f4f6', color: '#4b5563', border: '1px solid #e5e7eb' };
+        return { bg: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' };
     };
 
     const getLuzConfig = (luz) => {
@@ -106,18 +88,11 @@ const Areas = () => {
         }
     };
 
-    // --- CARREGAR DADOS ---
     const carregarAreas = () => {
         fetch('http://localhost:8090/api/areas')
-            .then(res => {
-                if(!res.ok) throw new Error("Erro ao carregar");
-                return res.json();
-            })
+            .then(res => res.json())
             .then(dados => setAreas(dados))
-            .catch(err => {
-                console.error("Erro:", err);
-                notify("Não foi possível carregar as áreas de cultivo.", "error");
-            });
+            .catch(() => notify("Não foi possível carregar as áreas.", "error"));
     };
 
     useEffect(() => { carregarAreas(); }, []);
@@ -130,7 +105,6 @@ const Areas = () => {
             setEditandoId(area.idArea);
             setNovaArea({
                 ...area,
-                quantidadeLuz: area.quantidadeLuz || 'PLENO_SOL',
                 latitudeArea: Number(area.latitudeArea) || -14.235,
                 longitudeArea: Number(area.longitudeArea) || -51.925
             });
@@ -141,108 +115,71 @@ const Areas = () => {
         setModalAberto(true);
     };
 
-    const fecharModal = () => {
-        setModalAberto(false);
-        setEditandoId(null);
-    };
+    const fecharModal = () => { setModalAberto(false); setEditandoId(null); };
 
-    // --- SALVAR ÁREA ---
     const salvarArea = (e) => {
         e.preventDefault();
-        const url = editandoId
-            ? `http://localhost:8090/api/areas/${editandoId}`
-            : 'http://localhost:8090/api/areas';
-        const metodo = editandoId ? 'PUT' : 'POST';
-
-        const payload = {
-            ...novaArea,
-            tamanhoArea: Number(novaArea.tamanhoArea),
-            latitudeArea: Number(novaArea.latitudeArea),
-            longitudeArea: Number(novaArea.longitudeArea)
-        };
-
+        const url = editandoId ? `http://localhost:8090/api/areas/${editandoId}` : 'http://localhost:8090/api/areas';
         fetch(url, {
-            method: metodo,
+            method: editandoId ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(novaArea)
         }).then(res => {
             if (res.ok) {
                 carregarAreas();
                 fecharModal();
-                notify(editandoId ? "Área atualizada com sucesso!" : "Área cadastrada com sucesso!", "success");
+                notify("Área salva com sucesso!", "success");
             }
-            else {
-                res.text().then(t => notify(`Erro ao salvar: ${t}`, "error"));
-            }
-        }).catch(() => notify("Erro de conexão com o servidor.", "error"));
-    };
-
-    // --- EXCLUSÃO COM MODAL CUSTOMIZADO ---
-    const abrirConfirmacaoExclusao = (id, nome) => {
-        setConfirmacaoExclusao({ aberta: true, id, nome });
+        }).catch(() => notify("Erro ao salvar área.", "error"));
     };
 
     const executarExclusao = () => {
-        const { id, nome } = confirmacaoExclusao;
-        fetch(`http://localhost:8090/api/areas/${id}`, { method: 'DELETE' })
+        fetch(`http://localhost:8090/api/areas/${confirmacaoExclusao.id}`, { method: 'DELETE' })
             .then(res => {
                 if (res.ok) {
                     carregarAreas();
-                    notify(`Área "${nome}" removida com sucesso.`, "success");
+                    notify("Área excluída!", "success");
                     setConfirmacaoExclusao({ aberta: false, id: null, nome: '' });
-                } else {
-                    notify("Não foi possível excluir a área.", "error");
                 }
-            })
-            .catch(() => notify("Erro ao tentar excluir área.", "error"));
+            });
     };
 
     const verCultivos = (idArea) => {
-        if (idArea === idAreaSelecionada) {
-            setIdAreaSelecionada(null);
-            setCultivos([]);
-            return;
-        }
-
+        if (idArea === idAreaSelecionada) { setIdAreaSelecionada(null); return; }
         fetch('http://localhost:8090/api/cultivos')
             .then(res => res.json())
-            .then(todosCultivos => {
-                const cultivosDaArea = todosCultivos.filter(c => c.areaCultivo && c.areaCultivo.idArea === idArea);
-                setCultivos(cultivosDaArea);
+            .then(todos => {
+                const filtrados = todos.filter(c => c.areaCultivo?.idArea === idArea);
+                setCultivos(filtrados);
                 setIdAreaSelecionada(idArea);
-                if(cultivosDaArea.length === 0) {
-                    notify("Nenhum cultivo ativo nesta área.", "info");
-                }
-            })
-            .catch(() => notify("Erro ao carregar lista de cultivos.", "error"));
+            });
     };
 
     return (
-        <div className="animate-fade-in" style={{ padding: '0 10px' }}>
-
+        <div className="main-content animate-fade-in">
             {/* HEADER */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+            <div className="admin-header">
                 <div>
-                    <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>Áreas de Cultivo</h1>
-                    <p style={{ color: '#64748b', marginTop: '4px' }}>Gerencie suas terras, solos e incidência solar.</p>
+                    <h1 className="dashboard-title">Áreas de Cultivo</h1>
+                    <p className="dashboard-subtitle">Monitoramento e gestão de terrenos agrícolas.</p>
                 </div>
-                <button className="btn-primary" onClick={() => abrirModal()}>
+                <button className="botao-ver" onClick={() => abrirModal()}>
                     <Plus size={20} /> Nova Área
                 </button>
             </div>
 
             {/* KPI STATS */}
-            <div className="kpi-grid" style={{ marginBottom: '32px' }}>
+            <div className="kpi-grid">
                 <div className="kpi-card">
-                    <div className="kpi-header"><span className="kpi-title">Total de Áreas</span><div className="icon-box bg-green-light"><MapPin size={20} /></div></div>
+                    <div className="kpi-header"><span className="kpi-title">Total de Setores</span><div className="icon-box bg-green-light"><MapPin size={20} /></div></div>
                     <div className="kpi-value">{areas.length}</div>
                 </div>
                 <div className="kpi-card">
-                    <div className="kpi-header"><span className="kpi-title">Área Total</span><div className="icon-box bg-blue-light"><Ruler size={20} /></div></div>
-                    <div className="kpi-value">{totalHectares} <span style={{fontSize: '1rem', color: '#64748b', fontWeight: 400}}>ha</span></div>
+                    <div className="kpi-header"><span className="kpi-title">Área Mapeada</span><div className="icon-box bg-blue-light"><Ruler size={20} /></div></div>
+                    <div className="kpi-value">{totalHectares} <small>ha</small></div>
                 </div>
                 <div className="kpi-card">
-                    <div className="kpi-header"><span className="kpi-title">Em Produção</span><div className="icon-box bg-orange-light"><Tractor size={20} /></div></div>
+                    <div className="kpi-header"><span className="kpi-title">Cultivos Ativos</span><div className="icon-box bg-orange-light"><Tractor size={20} /></div></div>
                     <div className="kpi-value">{totalCultivosAtivos}</div>
                 </div>
             </div>
@@ -250,177 +187,156 @@ const Areas = () => {
             {/* GRID DE ÁREAS */}
             <div className="areas-grid">
                 {areas.map(area => {
-                    const luzConfig = getLuzConfig(area.quantidadeLuz);
-                    const LuzIcon = luzConfig.icon;
-                    const badgeStyle = getBadgeStyle(area.tipoSolo);
+                    const luz = getLuzConfig(area.quantidadeLuz);
+                    const LuzIcon = luz.icon;
+                    const badge = getBadgeStyle(area.tipoSolo);
 
                     return (
                         <div key={area.idArea} className="area-card">
                             <div className="area-card-header">
                                 <div className="area-title">{area.nomeArea}</div>
-                                <span style={{
-                                    fontSize: '0.7rem', fontWeight: 'bold', padding: '2px 8px', borderRadius: '12px',
-                                    backgroundColor: badgeStyle.bg, color: badgeStyle.color, border: badgeStyle.border,
-                                    textTransform: 'uppercase'
-                                }}>
+                                <span className="role-badge" style={{ backgroundColor: badge.bg, color: badge.color, border: badge.border }}>
                                     {formatarTexto(area.tipoSolo)}
                                 </span>
                             </div>
+
                             <div className="area-card-body">
                                 <div className="area-info-row">
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><MapPin size={16} /> Localização</span>
+                                    <span><MapPin size={16} style={{marginRight: '8px', verticalAlign: 'middle'}}/>Localização</span>
                                     <strong>{area.localizacaoArea}</strong>
                                 </div>
                                 <div className="area-info-row">
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Ruler size={16} /> Tamanho</span>
+                                    <span><Ruler size={16} style={{marginRight: '8px', verticalAlign: 'middle'}}/>Tamanho</span>
                                     <strong>{area.tamanhoArea} ha</strong>
                                 </div>
                                 <div className="area-info-row">
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Sun size={16} /> Incidência</span>
-                                    <span style={{
-                                        display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600,
-                                        color: luzConfig.color, background: luzConfig.bg, padding: '2px 8px', borderRadius: '4px'
-                                    }}>
-                                        <LuzIcon size={14} /> {luzConfig.label}
+                                    <span><Sun size={16} style={{marginRight: '8px', verticalAlign: 'middle'}}/>Incidência</span>
+                                    <span style={{ color: luz.color, display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
+                                        <LuzIcon size={14} /> {luz.label}
                                     </span>
                                 </div>
                                 <div className="area-info-row">
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Globe size={16} /> GPS</span>
-                                    <span style={{fontSize: '0.8rem', color: '#64748b'}}>
-                                        {area.latitudeArea ? Number(area.latitudeArea).toFixed(3) : '0.000'},
-                                        {area.longitudeArea ? Number(area.longitudeArea).toFixed(3) : '0.000'}
-                                    </span>
+                                    <span><Globe size={16} style={{marginRight: '8px', verticalAlign: 'middle'}}/>GPS</span>
+                                    <span style={{fontSize: '0.8rem', color: '#94a3b8'}}>{Number(area.latitudeArea).toFixed(3)}, {Number(area.longitudeArea).toFixed(3)}</span>
                                 </div>
                             </div>
 
                             {idAreaSelecionada === area.idArea && (
-                                <div className="cultivos-list-container" style={{background: '#f8fafc', padding: '10px', marginTop: '10px', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
-                                    <h4 style={{margin: '0 0 10px 0', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold'}}>
-                                        Cultivos nesta área:
-                                    </h4>
-                                    {cultivos.length === 0 ?
-                                        <p style={{color:'#94a3b8', fontSize:'0.85rem', margin: 0, fontStyle: 'italic'}}>Nenhum cultivo ativo encontrado.</p>
-                                        :
-                                        <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                                            {cultivos.map((c, i) => (
-                                                <div key={i} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '6px 10px', borderRadius: '4px', border: '1px solid #e2e8f0'}}>
-                                                    <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                                                        <div style={{background: '#dcfce7', padding: '4px', borderRadius: '4px', color: '#16a34a'}}><Sprout size={14}/></div>
-                                                        <span style={{fontSize: '0.85rem', fontWeight: 500}}>{c.plantaCultivada?.nomePopular}</span>
-                                                    </div>
-                                                    <span style={{fontSize: '0.75rem', color: '#64748b'}}>{c.statusCultivo}</span>
+                                <div className="cultivos-list-container" style={{background: '#f8fafc', padding: '12px', marginTop: '15px', borderRadius: '12px', border: '1px solid #e2e8f0'}}>
+                                    <h4 style={{fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '10px'}}>Ativos na Área:</h4>
+                                    <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                                        {cultivos.length > 0 ? cultivos.map((c, i) => (
+                                            <div key={i} style={{display: 'flex', justifyContent: 'space-between', background: 'white', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+                                                <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem'}}>
+                                                    <Sprout size={14} color="#16a34a"/> {c.plantaCultivada?.nomePopular}
                                                 </div>
-                                            ))}
-                                        </div>
-                                    }
+                                                <span style={{fontSize: '0.75rem', color: '#94a3b8'}}>{c.statusCultivo}</span>
+                                            </div>
+                                        )) : <p style={{fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic'}}>Nenhum cultivo ativo.</p>}
+                                    </div>
                                 </div>
                             )}
 
                             <div className="area-card-actions">
-                                <button className="btn-outline" style={{ flex: 1, justifyContent: 'center' }} onClick={() => verCultivos(area.idArea)}>
+                                <button className="btn-outline-sm" style={{flex: 2}} onClick={() => verCultivos(area.idArea)}>
                                     {idAreaSelecionada === area.idArea ? 'Ocultar' : 'Ver Cultivos'}
                                 </button>
-                                <button className="btn-icon-action" onClick={() => abrirModal(area)}><Pencil size={16} /></button>
-                                <button className="btn-icon-action danger" onClick={() => abrirConfirmacaoExclusao(area.idArea, area.nomeArea)}><Trash2 size={16} /></button>
+                                <button className="btn-icon-action" onClick={() => abrirModal(area)}><Pencil size={18} /></button>
+                                <button className="btn-icon-action danger" onClick={() => setConfirmacaoExclusao({ aberta: true, id: area.idArea, nome: area.nomeArea })}><Trash2 size={18} /></button>
                             </div>
                         </div>
                     );
                 })}
             </div>
 
-            {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO CUSTOMIZADO */}
+            {/* MODAL DE CONFIRMAÇÃO (REUTILIZANDO PADRÃO ADMIN) */}
             {confirmacaoExclusao.aberta && (
-                <div className="modal-modern-overlay" style={{ zIndex: 10000 }}>
-                    <div className="modal-modern-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
-                        <div style={{ background: '#fee2e2', color: '#dc2626', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
-                            <AlertCircle size={32} />
-                        </div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>Excluir Área?</h3>
-                        <p style={{ color: '#64748b', marginBottom: '24px' }}>Deseja realmente apagar a área <strong>{confirmacaoExclusao.nome}</strong>? Esta ação não pode ser desfeita.</p>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button className="btn-outline" style={{ flex: 1 }} onClick={() => setConfirmacaoExclusao({ aberta: false, id: null, nome: '' })}>Cancelar</button>
-                            <button className="btn-primary" style={{ flex: 1, backgroundColor: '#dc2626', borderColor: '#dc2626' }} onClick={executarExclusao}>Sim, Excluir</button>
+                <div className="modal-modern-overlay">
+                    <div className="modal-modern-content confirm-modal" style={{maxWidth: '400px'}}>
+                        <div className="icon-warning-container"><AlertCircle size={40} /></div>
+                        <h3 className="modal-title">Excluir Área?</h3>
+                        <p style={{ color: '#64748b', margin: '15px 0' }}>Deseja apagar <strong>{confirmacaoExclusao.nome}</strong>? Esta ação é irreversível.</p>
+                        <div className="modal-footer-confirm">
+                            <button className="btn-outline" onClick={() => setConfirmacaoExclusao({ aberta: false })}>Cancelar</button>
+                            <button className="btn-danger" onClick={executarExclusao}>Excluir</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* MODAL DE CADASTRO/EDIÇÃO */}
+            {/* MODAL FORMULÁRIO */}
             {modalAberto && (
                 <div className="modal-modern-overlay">
-                    <div className="modal-modern-content" style={{maxWidth: '800px'}}>
-                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+                    <div className="modal-modern-content" style={{maxWidth: '850px'}}>
+                        <div className="modal-header-flex" style={{padding: '0 0 20px 0'}}>
                             <h2 className="modal-title">{editandoId ? 'Editar Área' : 'Nova Área'}</h2>
-                            <button onClick={fecharModal} style={{border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8'}}><X size={24} /></button>
+                            <button className="btn-close-modal" onClick={fecharModal}><X size={20} /></button>
                         </div>
 
                         <form onSubmit={salvarArea}>
-                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px'}}>
-                                <div>
+                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px'}}>
+                                <div className="form-column">
                                     <div className="form-group">
                                         <label className="form-label">Nome da Área</label>
-                                        <input className="form-input" placeholder="Ex: Setor Norte" value={novaArea.nomeArea} onChange={e => setNovaArea({...novaArea, nomeArea: e.target.value})} required />
+                                        <input className="form-input" value={novaArea.nomeArea} onChange={e => setNovaArea({...novaArea, nomeArea: e.target.value})} required />
                                     </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Tamanho (ha)</label>
-                                        <input type="number" step="0.1" className="form-input" placeholder="0.0" value={novaArea.tamanhoArea} onChange={e => setNovaArea({...novaArea, tamanhoArea: e.target.value})} required />
+                                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+                                        <div className="form-group">
+                                            <label className="form-label">Hectares (ha)</label>
+                                            <input type="number" step="0.1" className="form-input" value={novaArea.tamanhoArea} onChange={e => setNovaArea({...novaArea, tamanhoArea: e.target.value})} required />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Luz Solar</label>
+                                            <select className="form-select" value={novaArea.quantidadeLuz} onChange={e => setNovaArea({...novaArea, quantidadeLuz: e.target.value})}>
+                                                <option value="PLENO_SOL">Sol Pleno</option>
+                                                <option value="MEIA_SOMBRA">Meia Sombra</option>
+                                                <option value="SOMBRA">Sombra</option>
+                                            </select>
+                                        </div>
                                     </div>
-
                                     <div className="form-group">
                                         <label className="form-label">Tipo de Solo</label>
                                         <select className="form-select" value={novaArea.tipoSolo} onChange={e => setNovaArea({...novaArea, tipoSolo: e.target.value})}>
-                                            {Object.entries(CATEGORIAS_SOLO).map(([categoria, solos]) => (
-                                                <optgroup key={categoria} label={categoria}>
-                                                    {solos.map(solo => (
-                                                        <option key={solo} value={solo}>
-                                                            {formatarTexto(solo)}
-                                                        </option>
-                                                    ))}
+                                            {Object.entries(CATEGORIAS_SOLO).map(([cat, solos]) => (
+                                                <optgroup key={cat} label={cat}>
+                                                    {solos.map(s => <option key={s} value={s}>{formatarTexto(s)}</option>)}
                                                 </optgroup>
                                             ))}
                                         </select>
                                     </div>
-
                                     <div className="form-group">
-                                        <label className="form-label">Incidência Solar</label>
-                                        <select className="form-select" value={novaArea.quantidadeLuz} onChange={e => setNovaArea({...novaArea, quantidadeLuz: e.target.value})}>
-                                            <option value="PLENO_SOL">Sol Pleno (6h+)</option>
-                                            <option value="MEIA_SOMBRA">Meia Sombra (3h-5h)</option>
-                                            <option value="SOMBRA">Sombra</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Referência</label>
-                                        <input className="form-input" placeholder="Ex: Perto do rio..." value={novaArea.localizacaoArea} onChange={e => setNovaArea({...novaArea, localizacaoArea: e.target.value})} required />
+                                        <label className="form-label">Referência de Localização</label>
+                                        <input className="form-input" value={novaArea.localizacaoArea} onChange={e => setNovaArea({...novaArea, localizacaoArea: e.target.value})} required />
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="form-label" style={{display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px'}}>
-                                        <Globe size={16} className="text-primary"/> Localização GPS
+
+                                <div className="map-column">
+                                    <label className="form-label" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                        <Globe size={16} color="#127F0A"/> Ponto GPS no Mapa
                                     </label>
-                                    <div style={{ height: '240px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #cbd5e1', marginBottom: '12px', position: 'relative', zIndex: 0 }}>
+                                    <div className="map-container-wrapper">
                                         <MapContainer
-                                            center={[novaArea.latitudeArea || -14.235, novaArea.longitudeArea || -51.925]}
-                                            zoom={novaArea.latitudeArea === -14.235 ? 4 : 13}
+                                            center={[novaArea.latitudeArea, novaArea.longitudeArea]}
+                                            zoom={novaArea.latitudeArea === -14.235 ? 4 : 15}
                                             style={{ height: '100%', width: '100%' }}
                                         >
-                                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap contributors' />
+                                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                                             <SeletorMapa />
                                         </MapContainer>
                                     </div>
-                                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
-                                        <div>
-                                            <label style={{fontSize: '0.75rem', color: '#64748b'}}>Latitude</label>
-                                            <input className="form-input" style={{background: '#f1f5f9', fontSize: '0.8rem'}} value={novaArea.latitudeArea ? Number(novaArea.latitudeArea).toFixed(5) : ''} readOnly />
+                                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+                                        <div className="form-group">
+                                            <label className="form-label">Lat</label>
+                                            <input className="form-input" style={{background: '#f8fafc'}} value={Number(novaArea.latitudeArea).toFixed(6)} readOnly />
                                         </div>
-                                        <div>
-                                            <label style={{fontSize: '0.75rem', color: '#64748b'}}>Longitude</label>
-                                            <input className="form-input" style={{background: '#f1f5f9', fontSize: '0.8rem'}} value={novaArea.longitudeArea ? Number(novaArea.longitudeArea).toFixed(5) : ''} readOnly />
+                                        <div className="form-group">
+                                            <label className="form-label">Long</label>
+                                            <input className="form-input" style={{background: '#f8fafc'}} value={Number(novaArea.longitudeArea).toFixed(6)} readOnly />
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="modal-footer">
+                            <div className="modal-footer" style={{padding: '20px 0 0 0'}}>
                                 <button type="button" className="btn-outline" onClick={fecharModal}>Cancelar</button>
                                 <button type="submit" className="btn-primary">Salvar Área</button>
                             </div>

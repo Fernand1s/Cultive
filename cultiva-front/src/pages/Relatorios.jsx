@@ -1,293 +1,458 @@
-import { useState, useEffect } from 'react';
-import '../App.css';
-import '../css/Relatorios.css'
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     BarChart3, MapPin, Sprout, Droplets, Bug,
-    Calendar, AlertCircle, TrendingUp, Download,
-    Filter, RefreshCw, Layers
+    Download, Filter, RefreshCw,
+    ChevronRight, CheckCircle2, Activity, Info, TrendingUp, Search,
+    Calendar, AlertTriangle, Leaf, Zap, FileSpreadsheet, Target,
+    Users, Gauge, ClipboardCheck
 } from 'lucide-react';
 import {
-    ResponsiveContainer,
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-    PieChart, Pie, Cell, LineChart, Line
+    ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
+    CartesianGrid, Tooltip, Cell, AreaChart, Area, PieChart, Pie, Legend
 } from 'recharts';
 import { useNotify } from "../context/NotificationContext";
+import '../css/Relatorios.css';
 
-// --- COMPONENTES AUXILIARES ---
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
-const StatCard = ({ title, value, subtext, icon: IconComponent, colorClass, trend }) => (
-    <div className="kpi-card animate-fade-in">
-        <div className="kpi-header">
-            <span className="kpi-title">{title}</span>
-            <div className={`icon-box ${colorClass}`}>
-                {IconComponent && <IconComponent size={20} />}
-            </div>
-        </div>
-        <div>
-            <div className="kpi-value">{value}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                {trend && <span style={{ color: trend > 0 ? '#16a34a' : '#ef4444', fontSize: '0.8rem', fontWeight: 600 }}>
-                    {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
-                </span>}
-                <div className="kpi-subtext">{subtext}</div>
-            </div>
-        </div>
-    </div>
-);
-
-const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-        return (
-            <div className="chart-tooltip-custom">
-                <p className="tooltip-label">{label}</p>
-                <p className="tooltip-value">{`${payload[0].name}: ${payload[0].value}`}</p>
-            </div>
-        );
-    }
-    return null;
-};
-
-// --- COMPONENTE PRINCIPAL ---
 const Relatorios = () => {
     const notify = useNotify();
 
-    // Estados de Dados
+    // Estados de Dados Primários
     const [areas, setAreas] = useState([]);
-    const [abaAtiva, setAbaAtiva] = useState('geral'); // 'geral' ou 'detalhado'
+    const [cultivosTotal, setCultivosTotal] = useState([]);
+    const [abaAtiva, setAbaAtiva] = useState('geral');
     const [loading, setLoading] = useState(false);
 
-    // Seleção
+    // Filtros
+    const [statusFiltro, setStatusFiltro] = useState('TODOS');
     const [areaSelecionadaId, setAreaSelecionadaId] = useState('');
-    const [cultivosDaArea, setCultivosDaArea] = useState([]);
     const [cultivoSelecionado, setCultivoSelecionado] = useState(null);
+    const [filtroNome, setFiltroNome] = useState('');
 
-    // Dados Analíticos
-    const [totalAgua, setTotalAgua] = useState(null);
-    const [historicoPragas, setHistoricoPragas] = useState([]);
-    const [graficoStatusArea, setGraficoStatusArea] = useState([]);
+    // Dados de Análise
+    const [distribuicaoSaude, setDistribuicaoSaude] = useState([]);
+    const [detalhesLote, setDetalhesLote] = useState({
+        totalAgua: 0,
+        historicoPragas: [],
+        previsaoColheita: null,
+        compatibilidade: false
+    });
 
-    const COLORS = ['#16a34a', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6'];
-
-    useEffect(() => {
-        carregarDadosIniciais();
-    }, []);
-
-    const carregarDadosIniciais = async () => {
+    const sincronizarBancoDeDados = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await fetch('http://localhost:8090/api/areas');
-            if (!response.ok) throw new Error();
-            const data = await response.json();
+            const [resAreas, resCultivos] = await Promise.all([
+                fetch('http://localhost:8090/api/areas'),
+                fetch('http://localhost:8090/api/cultivos')
+            ]);
 
-            setAreas(data);
-            const dadosGrafico = data.map(a => ({
-                name: a.nomeArea,
-                quantidade: a.cultivos ? a.cultivos.length : 0
-            }));
-            setGraficoStatusArea(dadosGrafico);
+            const dAreas = await resAreas.json();
+            const dCultivos = await resCultivos.json();
+
+            setAreas(dAreas);
+            setCultivosTotal(dCultivos);
+
+            const categorias = [
+                { name: 'Saudável', value: dCultivos.filter(c => c.estadoPlanta === 'SAUDAVEL').length, fill: '#22c55e' },
+                { name: 'Alerta', value: dCultivos.filter(c => c.estadoPlanta === 'ALERTA').length, fill: '#eab308' },
+                { name: 'Crítico', value: dCultivos.filter(c => c.estadoPlanta === 'CRITICO').length, fill: '#ef4444' }
+            ];
+            setDistribuicaoSaude(categorias);
+
+            notify("Inteligência de campo atualizada.", "success");
         } catch (err) {
-            notify("Não foi possível carregar os dados das áreas.", "error");
+            notify("Falha na conexão com a API.", "error");
         } finally {
             setLoading(false);
         }
-    };
+    }, [notify]);
 
-    const handleSelecionarArea = (idArea) => {
-        setAreaSelecionadaId(idArea);
-        const area = areas.find(a => a.idArea === parseInt(idArea));
-        if (area) {
-            setCultivosDaArea(area.cultivos || []);
-            setCultivoSelecionado(null);
-            setTotalAgua(null);
-            setHistoricoPragas([]);
-        } else {
-            setCultivosDaArea([]);
-        }
-    };
+    useEffect(() => { sincronizarBancoDeDados(); }, [sincronizarBancoDeDados]);
 
-    const analisarCultivo = async (cultivo) => {
+    const analisarLoteDeep = async (cultivo) => {
         setLoading(true);
         setCultivoSelecionado(cultivo);
 
         try {
-            // Busca paralela para performance
-            const [resAgua, resPragas] = await Promise.all([
+            const [resAgua, resPragas, resCompat] = await Promise.all([
                 fetch(`http://localhost:8090/api/relatorios/agua/${cultivo.idCultivo}`),
-                fetch(`http://localhost:8090/api/relatorios/pragas/${cultivo.idCultivo}`)
+                fetch(`http://localhost:8090/api/relatorios/pragas/${cultivo.idCultivo}`),
+                fetch(`http://localhost:8090/api/relatorios/compatibilidade/${cultivo.plantaCultivada.idPlanta}/${cultivo.areaCultivo.idArea}`)
             ]);
 
-            const agua = await resAgua.json();
-            const pragas = await resPragas.json();
+            const aguaVal = await resAgua.json();
+            const pragasVal = await resPragas.json();
+            const compatVal = await resCompat.json();
 
-            setTotalAgua(agua);
-            setHistoricoPragas(pragas);
+            // Lógica de Previsão de Colheita Multinível
+            let dataPrevista = cultivo.previsaoColheita || cultivo.dataColheitaFinal;
 
-            notify(`Análise de ${cultivo.planta?.nomePopular} carregada.`, "success");
+            if (!dataPrevista) {
+                const dataPlantio = new Date(cultivo.dataPlantio);
+                const dias = cultivo.plantaCultivada?.cicloMedioDias || 0;
+                dataPrevista = new Date(dataPlantio.setDate(dataPlantio.getDate() + dias)).toISOString();
+            }
+
+            setDetalhesLote({
+                totalAgua: aguaVal,
+                historicoPragas: pragasVal,
+                previsaoColheita: new Date(dataPrevista).toLocaleDateString('pt-BR'),
+                compatibilidade: compatVal
+            });
+
         } catch (err) {
-            notify("Erro ao buscar detalhes do cultivo.", "error");
+            notify("Erro na telemetria do lote.", "error");
         } finally {
             setLoading(false);
         }
     };
 
-    const exportarRelatorio = () => {
-        notify("Preparando PDF para exportação...", "info");
-        // Lógica de exportação futura aqui
+    const cultivosFiltrados = useMemo(() => {
+        return cultivosTotal.filter(c => {
+            const matchesArea = areaSelecionadaId === '' || c.areaCultivo?.idArea === parseInt(areaSelecionadaId);
+            const matchesNome = c.plantaCultivada?.nomePopular?.toLowerCase().includes(filtroNome.toLowerCase());
+            const matchesStatus = statusFiltro === 'TODOS' || c.statusCultivo === statusFiltro;
+            return matchesArea && matchesNome && matchesStatus;
+        });
+    }, [cultivosTotal, areaSelecionadaId, filtroNome, statusFiltro]);
+
+    const statsGerais = useMemo(() => {
+        const ativos = cultivosTotal.filter(c => c.statusCultivo === 'ATIVO');
+        return {
+            totalAtivos: ativos.length,
+            taxaSaude: ativos.length > 0 ? ((ativos.filter(c => c.estadoPlanta === 'SAUDAVEL').length / ativos.length) * 100).toFixed(1) : 0,
+            alertas: ativos.filter(c => c.estadoPlanta === 'CRITICO').length
+        };
+    }, [cultivosTotal]);
+
+    const gerarPDF = () => {
+        // Inicializa o documento A4
+        const doc = new jsPDF('p', 'mm', 'a4');
+
+        // Definição Estrita de Cores (RGB) para evitar erros de argumento
+        const rV = 18, gV = 98, bV = 11;    // Verde CultivaMais
+        const rS = 71, gS = 85, bS = 105;   // Slate (Cinza Profissional)
+        const rB = 248, gB = 250, bB = 252; // Fundo Light
+        const rW = 255, gW = 255, bW = 255; // Branco
+
+        // --- 1. CABEÇALHO CORPORATIVO ---
+        doc.setFillColor(rV, gV, bV);
+        doc.rect(0, 0, 210, 40, 'F');
+
+        doc.setTextColor(rW, gW, rW);
+        doc.setFontSize(24);
+        doc.setFont("helvetica", "bold");
+        doc.text("CultivaMais", 15, 22);
+
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text("SISTEMA DE INTELIGÊNCIA E MONITORAMENTO AGRÍCOLA", 15, 30);
+        doc.text("RELATÓRIO TÉCNICO DE DESEMPENHO DE SAFRA", 15, 34);
+
+        // Protocolo e Data (Canto Superior Direito)
+        const timestamp = new Date().toLocaleString('pt-BR');
+        doc.setFontSize(8);
+        doc.text(`PROTOCOLO: CRM-${Date.now().toString().slice(-6)}`, 155, 15);
+        doc.text(`EMISSÃO: ${timestamp}`, 155, 20);
+
+        // --- 2. PAINEL DE KPIs (QUADRO DE RESUMO) ---
+        doc.setFillColor(rW, gW, rW);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(15, 48, 180, 28, 2, 2, 'FD');
+
+        // Labels
+        doc.setFontSize(8);
+        doc.setTextColor(rS, gS, bS);
+        doc.setFont("helvetica", "bold");
+        doc.text("SAÚDE DA SAFRA", 25, 56);
+        doc.text("LOTES EM MONITORAMENTO", 85, 56);
+        doc.text("ALERTAS DE RISCO", 145, 56);
+
+        // Valores Dinâmicos
+        doc.setFontSize(15);
+        doc.setTextColor(rV, gV, bV);
+        doc.text(`${statsGerais.taxaSaude}%`, 25, 66);
+
+        doc.setTextColor(15, 23, 42); // Navy Blue
+        doc.text(`${cultivosFiltrados.length} Unidades`, 85, 66);
+
+        const hasAlerts = statsGerais.alertas > 0;
+        doc.setTextColor(hasAlerts ? 185 : rV, hasAlerts ? 28 : gV, hasAlerts ? 28 : bV);
+        doc.text(`${statsGerais.alertas} Críticos`, 145, 66);
+
+        // --- 3. TABELA DE INVENTÁRIO DETALHADA ---
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text("Detalhamento por Lote e Estado Fitossanitário", 15, 90);
+
+        autoTable(doc, {
+            startY: 95,
+            head: [['ID', 'CULTURA', 'ÁREA / SETOR', 'STATUS', 'SANIDADE']],
+            body: cultivosFiltrados.map(c => [
+                { content: `#${c.idCultivo}`, styles: { fontStyle: 'bold' } },
+                c.plantaCultivada?.nomePopular?.toUpperCase() || 'N/A',
+                c.areaCultivo?.nomeArea || 'N/A',
+                c.statusCultivo?.replace('_', ' ') || 'N/A',
+                c.estadoPlanta || 'N/A'
+            ]),
+            theme: 'striped',
+            headStyles: {
+                fillColor: [rV, gV, bV],
+                fontSize: 9,
+                halign: 'center',
+                cellPadding: 4
+            },
+            styles: {
+                fontSize: 8,
+                cellPadding: 4,
+                valign: 'middle',
+                font: 'helvetica'
+            },
+            columnStyles: {
+                0: { width: 15, halign: 'center' },
+                4: { halign: 'center', fontStyle: 'bold' }
+            },
+            didParseCell: (data) => {
+                // Aplicação de cores semânticas diretamente na tabela do PDF
+                if (data.section === 'body' && data.column.index === 4) {
+                    const val = data.cell.raw;
+                    if (val === 'CRITICO') data.cell.styles.textColor = [185, 28, 28];
+                    if (val === 'ALERTA') data.cell.styles.textColor = [161, 98, 7];
+                    if (val === 'SAUDAVEL') data.cell.styles.textColor = [21, 128, 61];
+                }
+            }
+        });
+
+        // --- 4. ANÁLISE DE TELEMETRIA (SE SELECIONADO) ---
+        let finalY = doc.lastAutoTable.finalY + 15;
+
+        if (cultivoSelecionado) {
+            // Garantir que cabe na página, se não, criar nova
+            if (finalY > 230) { doc.addPage(); finalY = 20; }
+
+            doc.setFillColor(241, 245, 249);
+            doc.roundedRect(15, finalY, 180, 40, 2, 2, 'F');
+
+            doc.setFontSize(10);
+            doc.setTextColor(rV, gV, bV);
+            doc.setFont("helvetica", "bold");
+            doc.text(`DIAGNÓSTICO PROFUNDO: ${cultivoSelecionado.plantaCultivada?.nomePopular}`, 22, finalY + 10);
+
+            doc.setFontSize(8);
+            doc.setTextColor(rS, gS, bS);
+            doc.setFont("helvetica", "normal");
+            doc.text(`• Acumulado Hídrico: ${detalhesLote.totalAgua} Litros aferidos`, 22, finalY + 20);
+            doc.text(`• Janela de Colheita: Estimada para ${detalhesLote.previsaoColheita}`, 22, finalY + 25);
+            doc.text(`• Índice de Solo: ${detalhesLote.compatibilidade ? 'COMPATÍVEL' : 'DIVERGENTE'}`, 22, finalY + 30);
+            doc.text(`• Responsáveis: ${cultivoSelecionado.areaCultivo.usuariosResponsaveis?.length || 0} técnico(s) alocado(s)`, 22, finalY + 35);
+
+            finalY += 50;
+        }
+
+        // --- 5. RODAPÉ TÉCNICO E PAGINAÇÃO ---
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+
+            doc.setDrawColor(226, 232, 240);
+            doc.line(15, 282, 195, 282);
+
+            doc.setFontSize(7);
+            doc.setTextColor(rS, gS, bS);
+            doc.text("CultivaMais Platform - Software de Gestão Agrícola Enterprise", 15, 287);
+            doc.text(`Página ${i} de ${pageCount}`, 195, 287, { align: 'right' });
+
+            doc.setFontSize(6);
+            doc.text("Este documento é uma cópia digital autêntica gerada a partir de dados de sensores de campo.", 105, 292, { align: 'center' });
+        }
+
+        // Exportação
+        doc.save(`LAUDO_TECNICO_SAFRA_${Date.now()}.pdf`);
+        notify("Relatório técnico de alta precisão gerado.", "success");
     };
 
     return (
-        <div className="animate-fade-in" style={{ padding: '0 10px' }}>
+        <div className="main-content reports-page-wrapper">
 
-            {/* Header Profissional */}
-            <div className="reports-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <header className="bi-header">
                 <div>
-                    <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#0f172a', margin: 0 }}>Relatórios e Inteligência</h1>
-                    <p style={{ color: '#64748b', marginTop: '4px' }}>Dados consolidados para tomada de decisão.</p>
+                    <h1 className="main-title">Business Intelligence</h1>
+                    <p className="sub-title">Monitoramento de Ativos e Sanidade Vegetal</p>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <button className="btn-outline" onClick={carregarDadosIniciais} disabled={loading}>
-                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                <div className="bi-action-group">
+                    <select className="bi-select" value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
+                        <option value="TODOS">Todos os Status</option>
+                        <option value="ATIVO">Ativos</option>
+                        <option value="COLHEITO">Colhidos</option>
+                        <option value="EM_PREPARO">Em Preparo</option>
+                    </select>
+                    <button className="bi-btn btn-sync" onClick={sincronizarBancoDeDados} disabled={loading}>
+                        <RefreshCw size={18} className={loading ? 'spin' : ''} />
                     </button>
-                    <button className="btn-primary" onClick={exportarRelatorio}>
-                        <Download size={18} /> Exportar
+                    <button className="bi-btn btn-export" onClick={gerarPDF}>
+                        <FileSpreadsheet size={18} /> Exportar
                     </button>
                 </div>
-            </div>
+            </header>
 
-            {/* Tabs de Navegação */}
-            <div className="tabs-container" style={{ display: 'flex', gap: '20px', marginBottom: '24px', borderBottom: '1px solid #e2e8f0' }}>
-                <button
-                    className={`tab-btn ${abaAtiva === 'geral' ? 'active' : ''}`}
-                    onClick={() => setAbaAtiva('geral')}
-                >
-                    <BarChart3 size={18} /> Visão Geral da Fazenda
+            <nav className="bi-tabs">
+                <button className={`bi-tab ${abaAtiva === 'geral' ? 'active' : ''}`} onClick={() => setAbaAtiva('geral')}>
+                    <TrendingUp size={18} /> Dashboard Geral
                 </button>
-                <button
-                    className={`tab-btn ${abaAtiva === 'detalhado' ? 'active' : ''}`}
-                    onClick={() => setAbaAtiva('detalhado')}
-                >
-                    <Filter size={18} /> Filtro Detalhado por Cultivo
+                <button className={`bi-tab ${abaAtiva === 'detalhado' ? 'active' : ''}`} onClick={() => setAbaAtiva('detalhado')}>
+                    <Activity size={18} /> Análise Técnica
                 </button>
-            </div>
+            </nav>
 
-            {/* --- CONTEÚDO: ABA GERAL --- */}
-            {abaAtiva === 'geral' && (
-                <div className="animate-fade-in">
-                    <div className="kpi-grid" style={{ marginBottom: '24px' }}>
-                        <StatCard title="Áreas Ativas" value={areas.length} subtext="Setores mapeados" icon={MapPin} colorClass="bg-green-light" />
-                        <StatCard title="Cultivos Totais" value={graficoStatusArea.reduce((acc, curr) => acc + curr.quantidade, 0)} subtext="Em andamento" icon={Sprout} colorClass="bg-blue-light" />
-                        <StatCard title="Eficiência" value="94%" subtext="+2% que o mês anterior" icon={TrendingUp} colorClass="bg-orange-light" trend={2} />
-                    </div>
-
-                    <div className="chart-card-container" style={{ padding: '24px' }}>
-                        <div className="chart-header">
-                            <h3 className="chart-title"><Layers size={20} className="text-primary"/> Distribuição de Cultivos por Setor</h3>
-                            <p className="chart-subtitle">Análise volumétrica de plantio por área geográfica.</p>
-                        </div>
-                        <div style={{ height: '350px', marginTop: '20px' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={graficoStatusArea}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b'}} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{fill: '#f8fafc'}} />
-                                    <Bar dataKey="quantidade" name="Cultivos" fill="#16a34a" radius={[6, 6, 0, 0]} barSize={60} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- CONTEÚDO: ABA DETALHADO --- */}
-            {abaAtiva === 'detalhado' && (
-                <div className="report-detailed-grid animate-fade-in">
-                    <div className="sidebar-filters">
-                        <div className="filter-card" style={{ height: 'fit-content' }}>
-                            <label className="input-label"><MapPin size={14} /> Selecionar Área</label>
-                            <select
-                                value={areaSelecionadaId}
-                                onChange={(e) => handleSelecionarArea(e.target.value)}
-                                className="form-select"
-                                style={{ marginBottom: '20px' }}
-                            >
-                                <option value="">Escolha um setor...</option>
-                                {areas.map(area => (
-                                    <option key={area.idArea} value={area.idArea}>{area.nomeArea}</option>
-                                ))}
-                            </select>
-
-                            <label className="input-label"><Sprout size={14} /> Cultivo Ativo</label>
-                            <div className="cultivo-list-scroll">
-                                {cultivosDaArea.length > 0 ? (
-                                    cultivosDaArea.map(cultivo => (
-                                        <div
-                                            key={cultivo.idCultivo}
-                                            className={`cultivo-item-card ${cultivoSelecionado?.idCultivo === cultivo.idCultivo ? 'active' : ''}`}
-                                            onClick={() => analisarCultivo(cultivo)}
-                                        >
-                                            <div className="cultivo-item-info">
-                                                <strong>{cultivo.planta?.nomePopular}</strong>
-                                                <span>Plantado em: {new Date(cultivo.dataPlantio).toLocaleDateString()}</span>
-                                            </div>
-                                            <AlertCircle size={16} color={cultivo.estadoPlanta === 'SAUDAVEL' ? '#16a34a' : '#ef4444'} />
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="empty-substate">Aguardando seleção...</div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="main-report-area">
-                        {!cultivoSelecionado ? (
-                            <div className="empty-state-box" style={{ height: '100%', background: 'white', borderRadius: '12px' }}>
-                                <Filter size={48} color="#cbd5e1" style={{ marginBottom: '16px' }} />
-                                <h3>Análise Detalhada</h3>
-                                <p>Selecione uma área e um cultivo para ver métricas específicas.</p>
-                            </div>
-                        ) : (
-                            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                <div className="kpi-grid" style={{ marginBottom: 0 }}>
-                                    <StatCard title="Irrigação Acumulada" value={`${totalAgua || 0} L`} subtext="Volume total" icon={Droplets} colorClass="bg-blue-light" />
-                                    <StatCard title="Status Fitossanitário" value={cultivoSelecionado.estadoPlanta} subtext="Último registro" icon={Bug} colorClass={cultivoSelecionado.estadoPlanta === 'SAUDAVEL' ? 'bg-green-light' : 'bg-red-light'} />
+            <section className="bi-content">
+                {abaAtiva === 'geral' ? (
+                    <div className="dashboard-grid animate-fade">
+                        <div className="kpi-row-modern">
+                            <div className="kpi-glass-card">
+                                <div className="kpi-inner">
+                                    <div className="kpi-icon orange"><AlertTriangle /></div>
+                                    <div className="kpi-text"><p>Risco Imediato</p><h3>{statsGerais.alertas}</h3></div>
                                 </div>
+                            </div>
+                            <div className="kpi-glass-card">
+                                <div className="kpi-inner">
+                                    <div className="kpi-icon green"><Leaf /></div>
+                                    <div className="kpi-text"><p>Eficiência Bio</p><h3>{statsGerais.taxaSaude}%</h3></div>
+                                </div>
+                            </div>
+                            <div className="kpi-glass-card">
+                                <div className="kpi-inner">
+                                    <div className="kpi-icon blue"><Zap /></div>
+                                    <div className="kpi-text"><p>Em Produção</p><h3>{statsGerais.totalAtivos}</h3></div>
+                                </div>
+                            </div>
+                        </div>
 
-                                <div className="chart-card-container">
-                                    <div className="chart-header">
-                                        <h3 className="chart-title" style={{ color: '#ef4444' }}><Bug size={20} /> Histórico de Incidências</h3>
-                                        <p className="chart-subtitle">Eventos de pragas e doenças registrados.</p>
+                        <div className="charts-row-complex">
+                            <div className="chart-card-full">
+                                <h3>Volume de Cultivo por Setor</h3>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={areas.map(a => ({
+                                        name: a.nomeArea,
+                                        valor: cultivosTotal.filter(c => c.areaCultivo.idArea === a.idArea).length
+                                    }))}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis dataKey="name" />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Bar dataKey="valor" fill="#12620B" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="chart-card-side">
+                                <h3>Saúde da Safra</h3>
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <PieChart>
+                                        <Pie data={distribuicaoSaude} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                                            {distribuicaoSaude.map((entry, index) => <Cell key={index} fill={entry.fill} />)}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="precision-layout animate-fade">
+                        <aside className="precision-sidebar">
+                            <div className="search-box-premium">
+                                <Search size={18} />
+                                <input placeholder="Buscar lote ou planta..." value={filtroNome} onChange={(e) => setFiltroNome(e.target.value)} />
+                            </div>
+                            <div className="scroll-list-premium">
+                                {cultivosFiltrados.map(c => (
+                                    <button key={c.idCultivo} className={`lote-item ${cultivoSelecionado?.idCultivo === c.idCultivo ? 'active' : ''}`} onClick={() => analisarLoteDeep(c)}>
+                                        <div className="lote-info">
+                                            <span className="lote-name">{c.plantaCultivada?.nomePopular}</span>
+                                            <span className="lote-sub">{c.areaCultivo?.nomeArea} • ID {c.idCultivo}</span>
+                                        </div>
+                                        <div className={`status-dot ${c.estadoPlanta}`}></div>
+                                    </button>
+                                ))}
+                            </div>
+                        </aside>
+
+                        <main className="precision-details">
+                            {!cultivoSelecionado ? (
+                                <div className="empty-state-bi">
+                                    <ClipboardCheck size={48} />
+                                    <p>Selecione um lote para auditoria completa</p>
+                                </div>
+                            ) : (
+                                <div className="bi-detailed-view">
+                                    <div className="predictive-banner">
+                                        <div className="pred-item">
+                                            <Calendar />
+                                            <div><p>Colheita</p><strong>{detalhesLote.previsaoColheita}</strong></div>
+                                        </div>
+                                        <div className="divider"></div>
+                                        <div className="pred-item">
+                                            <Target size={20} />
+                                            <div><p>Match Agronômico</p><strong>{detalhesLote.compatibilidade ? "Ideal" : "Risco"}</strong></div>
+                                        </div>
+                                        <div className="divider"></div>
+                                        <div className="pred-item">
+                                            <Users size={20} />
+                                            <div><p>Responsáveis</p><strong>{cultivoSelecionado.areaCultivo.usuariosResponsaveis?.length || 0} Especialistas</strong></div>
+                                        </div>
                                     </div>
 
-                                    {historicoPragas.length === 0 ? (
-                                        <div className="empty-state-box" style={{ padding: '40px' }}>
-                                            <AlertCircle size={40} color="#16a34a" style={{ opacity: 0.5 }} />
-                                            <p style={{ marginTop: '10px' }}>Nenhum problema detectado até o momento.</p>
+                                    <div className="analysis-grid-complex">
+                                        <div className="bi-card">
+                                            <h3><Droplets size={18}/> Telemetria Hídrica</h3>
+                                            <div className="big-value">{detalhesLote.totalAgua} <small>L/total</small></div>
+                                            <div className="area-specs">
+                                                <div className="spec-item"><span>Solo:</span> <strong>{cultivoSelecionado.areaCultivo.tipoSolo}</strong></div>
+                                                <div className="spec-item"><span>Luz:</span> <strong>{cultivoSelecionado.areaCultivo.quantidadeLuz}</strong></div>
+                                            </div>
                                         </div>
-                                    ) : (
-                                        <div className="pest-timeline" style={{ padding: '10px 20px 20px' }}>
-                                            {historicoPragas.map(praga => (
-                                                <div key={praga.idEvento} className="pest-item-modern">
-                                                    <div className="pest-date-badge">
-                                                        <Calendar size={14} />
-                                                        {new Date(praga.dataHora).toLocaleDateString()}
-                                                    </div>
-                                                    <div className="pest-details">
-                                                        <h4>{praga.nomePragaOuDoenca}</h4>
-                                                        <p>{praga.observacaoEvento || "Sem observações adicionais."}</p>
-                                                        <span className={`level-tag level-${praga.nivelAfetacao}`}>Nível {praga.nivelAfetacao}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
+
+                                        <div className="bi-card">
+                                            <h3><Bug size={18}/> Registros Fitossanitários</h3>
+                                            <div className="timeline-bi">
+                                                {detalhesLote.historicoPragas.length === 0 ? (
+                                                    <div className="success-message">Nenhuma ameaça biológica detectada.</div>
+                                                ) : (
+                                                    detalhesLote.historicoPragas.map((p, idx) => (
+                                                        <div key={idx} className="timeline-node">
+                                                            <div className="node-marker"></div>
+                                                            <div className="node-content">
+                                                                <span className="node-date">{new Date(p.dataHora).toLocaleDateString()}</span>
+                                                                <p className="node-title">{p.nomePragaOuDoenca}</p>
+                                                                <span className={`node-badge ${p.nivelAfetacao}`}>{p.nivelAfetacao}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
                                         </div>
-                                    )}
+
+                                        <div className="bi-card full-width">
+                                            <h3><Users size={18}/> Equipe Responsável pela Área</h3>
+                                            <div className="team-avatars">
+                                                {cultivoSelecionado.areaCultivo.usuariosResponsaveis?.map((u, i) => (
+                                                    <div key={i} className="user-tag">
+                                                        <CheckCircle2 size={12} /> {u.nomeUsuario} ({u.funcao})
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </main>
                     </div>
-                </div>
-            )}
+                )}
+            </section>
         </div>
     );
 };

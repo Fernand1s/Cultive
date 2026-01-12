@@ -1,117 +1,115 @@
-/* Perfil.css */
+/* =========================================
+   ESTILO PERFIL - CULTIVAMAIS
+   CENTRAL DE CONTA PREMIUM
+   ========================================= */
 
 .perfil-container {
-    padding: 24px;
     max-width: 1000px;
     margin: 0 auto;
-    font-family: 'Inter', sans-serif;
-    color: #334155;
+    padding-bottom: 40px;
 }
 
-/* Header */
+/* Header de Perfil */
 .perfil-header {
-    background: white;
-    padding: 24px;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background: linear-gradient(135deg, #16a34a 0%, #14532d 100%);
+    border-radius: 24px;
+    padding: 40px;
     margin-bottom: 24px;
+    color: white;
+    box-shadow: var(--shadow-premium);
 }
 
 .header-content {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 24px;
 }
 
 .avatar-circle {
-    width: 64px;
-    height: 64px;
-    background-color: #dcfce7;
-    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    background: white;
+    border-radius: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid #bbf7d0;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
 }
 
 .user-info-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: #0f172a;
+    font-size: 1.75rem;
+    margin: 0 0 8px 0;
+    font-weight: 800;
 }
 
 .role-badge {
-    display: inline-block;
-    margin-top: 4px;
-    background-color: #f1f5f9;
-    padding: 4px 10px;
-    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    padding: 6px 16px;
+    border-radius: 100px;
     font-size: 0.75rem;
     font-weight: 700;
-    color: #475569;
     text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Grid Layout */
+/* Layout Grid */
 .perfil-grid {
     display: grid;
-    grid-template-columns: 250px 1fr;
+    grid-template-columns: 280px 1fr;
     gap: 24px;
-    align-items: start;
 }
 
-/* Menu Lateral */
+/* Sidebar Menu */
 .perfil-sidebar {
     background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    display: flex;
-    flex-direction: column;
+    border-radius: 24px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    height: fit-content;
 }
 
 .menu-btn {
+    width: 100%;
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 16px 20px;
-    background: transparent;
+    padding: 14px 18px;
     border: none;
-    border-left: 4px solid transparent;
-    text-align: left;
-    cursor: pointer;
-    font-size: 0.95rem;
+    background: transparent;
+    border-radius: 14px;
     color: #64748b;
+    font-weight: 600;
+    cursor: pointer;
     transition: all 0.2s;
+    margin-bottom: 4px;
 }
 
 .menu-btn:hover {
-    background-color: #f8fafc;
-    color: #0f172a;
+    background: #f8fafc;
+    color: #1e293b;
 }
 
 .menu-btn.ativo {
-    background-color: #f0fdf4;
-    color: #166534;
-    border-left-color: #166534;
-    font-weight: 600;
+    background: #f0fdf4;
+    color: #16a34a;
 }
 
-/* Conteúdo Forms */
+/* Conteúdo */
 .perfil-content {
     background: white;
+    border-radius: 24px;
     padding: 32px;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    min-height: 400px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .perfil-content h3 {
     margin-top: 0;
-    margin-bottom: 20px;
-    color: #0f172a;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 12px;
+    font-size: 1.25rem;
+    color: #1e293b;
+    margin-bottom: 24px;
 }
 
 .desc-text {
@@ -120,173 +118,98 @@
     margin-bottom: 24px;
 }
 
+/* Formulário e Inputs */
 .form-group {
     margin-bottom: 20px;
 }
 
 .form-group label {
     display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #475569;
     margin-bottom: 8px;
-    font-weight: 500;
-    font-size: 0.9rem;
-    color: #334155;
-}
-
-/* Container do Input com Ícones */
-.input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
 }
 
 .input-icon {
     position: relative;
     display: flex;
     align-items: center;
-    flex: 1;
 }
 
-.input-icon svg {
+.input-icon svg:not(.lock-icon) {
     position: absolute;
-    left: 12px;
+    left: 14px;
     color: #94a3b8;
-    pointer-events: none;
 }
 
 .input-icon input {
     width: 100%;
-    padding: 10px 40px 10px 40px; /* Espaço para ícone na esquerda e olho na direita */
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    padding: 12px 12px 12px 42px;
+    border: 2px solid #f1f5f9;
+    border-radius: 12px;
+    background: #f8fafc;
     font-size: 0.95rem;
     transition: all 0.2s;
 }
 
 .input-icon input:focus {
+    border-color: #16a34a;
+    background: white;
     outline: none;
-    border-color: #22c55e;
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.1);
 }
 
-/* Botão de Ver/Ocultar Senha */
+.form-group.disabled input {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.lock-icon {
+    position: absolute;
+    right: 14px;
+    color: #cbd5e1;
+}
+
+/* Senha */
+.input-wrapper {
+    position: relative;
+    display: flex;
+}
+
 .btn-toggle-view {
     position: absolute;
-    right: 10px;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
     border: none;
     color: #94a3b8;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 5px;
-    border-radius: 4px;
-    transition: color 0.2s;
+    z-index: 5;
 }
 
-.btn-toggle-view:hover {
-    color: #166534;
-}
-
-/* Requisitos de Senha */
 .password-requirements {
-    margin-top: 10px;
-    padding: 12px;
-    background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
 }
 
-.password-requirements div {
-    transition: all 0.2s;
-}
-
-/* Ícone de Cadeado de Leitura */
-.lock-icon {
-    position: absolute !important;
-    right: 12px !important;
-    left: auto !important;
-}
-
-.form-group.disabled .input-icon input {
-    background-color: #f1f5f9;
-    color: #64748b;
-    cursor: not-allowed;
-}
-
-.form-group small {
-    display: block;
-    margin-top: 8px;
-    font-size: 0.8rem;
-    color: #94a3b8;
-}
-
+/* Rodapé */
 .form-footer {
     margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.perfil-loading {
     display: flex;
-    justify-content: flex-end;
-}
-
-/* Botões */
-.btn-primary, .btn-warning {
-    padding: 10px 24px;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border: none;
-    transition: transform 0.1s, opacity 0.2s;
-}
-
-.btn-primary { background-color: #166534; color: white; }
-.btn-primary:hover { background-color: #14532d; }
-
-.btn-warning { background-color: #ca8a04; color: white; }
-.btn-warning:hover { background-color: #a16207; }
-
-.btn-primary:disabled, .btn-warning:disabled {
-    background-color: #cbd5e1;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.btn-primary:active, .btn-warning:active {
-    transform: scale(0.98);
-}
-
-/* Empty State */
-.center-content {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-    text-align: center;
-    color: #94a3b8;
-}
-
-/* Animações */
-.fade-in {
-    animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
+    padding: 100px;
+    color: #16a34a;
+    font-weight: 700;
 }
 
 @media (max-width: 768px) {
     .perfil-grid { grid-template-columns: 1fr; }
-    .perfil-sidebar { flex-direction: row; overflow-x: auto; }
-    .menu-btn { white-space: nowrap; border-left: none; border-bottom: 3px solid transparent; }
-    .menu-btn.ativo { border-bottom-color: #166534; }
+    .header-content { flex-direction: column; text-align: center; }
 }

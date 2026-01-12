@@ -1,0 +1,280 @@
+/* =========================================
+   SISTEMA DE DESIGN - CULTIVAMAIS AREAS
+   ESTILO ULTRA-PREMIUM (VERDE)
+   ========================================= */
+
+/* Reutilizando as variáveis globais para consistência */
+:root {
+    --v-darker: #062904;
+    --v-dark: #12620B;
+    --v-primary: #127F0A;
+    --v-medium: #2A9420;
+    --v-light: #43A935;
+    --v-soft: #75D360;
+    --v-background-soft: #f0fdf4;
+    --bg-app: #f8fafc;
+    --card-surface: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #e2e8f0;
+    --radius-xl: 24px;
+    --radius-md: 14px;
+    --brand-gradient: linear-gradient(135deg, #127F0A 0%, #062904 100%);
+    --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+}
+
+/* KPI Section */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.kpi-card {
+    background: var(--card-surface);
+    padding: 1.5rem;
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-premium);
+}
+
+.kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.kpi-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.kpi-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--v-darker);
+}
+
+.icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bg-green-light { background: #dcfce7; color: #16a34a; }
+.bg-blue-light { background: #eff6ff; color: #2563eb; }
+.bg-orange-light { background: #fff7ed; color: #ea580c; }
+
+/* Grid de Áreas */
+.areas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 2rem;
+}
+
+.area-card {
+    background: var(--card-surface);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-color);
+    padding: 1.75rem;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-premium);
+    display: flex;
+    flex-direction: column;
+}
+
+.area-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--v-medium);
+}
+
+.area-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.area-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.area-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.area-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.area-info-row strong {
+    color: var(--text-primary);
+}
+
+/* Ações do Card */
+.area-card-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px dashed var(--border-color);
+}
+
+.btn-icon-action {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+}
+
+.btn-icon-action:hover {
+    background: var(--v-background-soft);
+    color: var(--v-primary);
+    border-color: var(--v-primary);
+}
+
+.btn-icon-action.danger:hover {
+    background: #fff1f2;
+    color: #ef4444;
+    border-color: #ef4444;
+}
+
+/* Modais de Áreas */
+.modal-modern-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(6, 41, 4, 0.45);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.modal-modern-content {
+    background: white;
+    border-radius: 24px;
+    padding: 2.5rem;
+    width: 95%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+    position: relative;
+    max-height: 95vh;
+    overflow-y: auto;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--v-darker);
+    margin: 0;
+}
+
+/* Formulário Interno */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.form-input, .form-select {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    outline: none;
+    transition: all 0.2s;
+}
+
+.form-input:focus, .form-select:focus {
+    border-color: var(--v-primary);
+    box-shadow: 0 0 0 3px rgba(18, 127, 10, 0.1);
+}
+
+.btn-primary {
+    background: var(--brand-gradient);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(18, 127, 10, 0.2);
+}
+
+.btn-outline {
+    background: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-outline:hover {
+    background: #f8fafc;
+    border-color: var(--v-primary);
+    color: var(--v-primary);
+}
+
+/* Mapa Custom */
+.map-container-wrapper {
+    height: 300px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 1rem;
+}
+
+/* Lista de Cultivos interna ao Card */
+.cultivos-list-container {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+    .modal-modern-content { padding: 1.5rem; }
+    .kpi-grid { grid-template-columns: 1fr; }
+    .areas-grid { grid-template-columns: 1fr; }
+}

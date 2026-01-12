@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { userService, authService } from '../services/api';
 import '../App.css';
+import '../css/Administracao.css';
 import {
     UserPlus, Trash2, Search, Edit, Ban, CheckCircle,
     X, ShieldAlert, FileText, Key, AlertCircle,
@@ -19,7 +20,7 @@ const TIPOS_USUARIO = {
 };
 
 const Administracao = () => {
-    const notify = useNotify(); // Inicialização do hook de notificações
+    const notify = useNotify();
     const searchInputRef = useRef(null);
 
     // --- ESTADOS ---
@@ -39,11 +40,9 @@ const Administracao = () => {
     const [modalLogsOpen, setModalLogsOpen] = useState(false);
     const [loadingLogs, setLoadingLogs] = useState(false);
 
-    // Estados para Modais de Confirmação Customizados
     const [confirmacaoExclusao, setConfirmacaoExclusao] = useState({ aberta: false, id: null, nome: '' });
     const [confirmacaoLogoutGeral, setConfirmacaoLogoutGeral] = useState(false);
 
-    // Filtros
     const [filtroLogUsuario, setFiltroLogUsuario] = useState('');
     const [filtroLogAcao, setFiltroLogAcao] = useState('');
     const [filtroDataInicio, setFiltroDataInicio] = useState('');
@@ -75,7 +74,6 @@ const Administracao = () => {
         setLoadingLogs(true);
         try {
             let dadosLogs = [];
-
             if (userService && typeof userService.listarLogs === 'function') {
                 const rawLogs = await userService.listarLogs();
                 dadosLogs = rawLogs.map(log => ({
@@ -102,12 +100,10 @@ const Administracao = () => {
             });
 
             setLogs(logsLimpos);
-
             if (logsLimpos.length > 0) {
                 const primeiraData = formatarDataSimples(logsLimpos[0].dataHora);
                 setDatasExpandidas({ [primeiraData]: true });
             }
-
             setModalLogsOpen(true);
         } catch (error) {
             notify("Erro ao carregar o histórico de logs.", "error");
@@ -213,7 +209,6 @@ const Administracao = () => {
             notify("Preencha todos os campos obrigatórios.", "error");
             return;
         }
-
         try {
             const usuarioParaSalvar = {
                 nomeUsuario: formData.nome,
@@ -221,16 +216,14 @@ const Administracao = () => {
                 funcao: formData.tipo,
                 ativo: true
             };
-
             if (usuarioEmEdicao) {
                 await userService.atualizar(usuarioEmEdicao.id, usuarioParaSalvar);
                 notify("Usuário atualizado com sucesso!", "success");
             } else {
-                usuarioParaSalvar.senha = "123456";
+                usuarioParaSalvar.senha = "CultivaMais@2026";
                 await userService.criar(usuarioParaSalvar);
                 notify(`Usuário criado! Senha padrão: CultivaMais@2026`, "success");
             }
-
             await fetchUsuarios();
             fecharModal();
         } catch (error) {
@@ -244,10 +237,8 @@ const Administracao = () => {
             notify("Você não pode bloquear a si mesmo.", "error");
             return;
         }
-
         const novoStatus = !user.ativo;
         const acaoTexto = novoStatus ? 'Desbloqueado' : 'Bloqueado';
-
         try {
             await userService.atualizar(user.id, {
                 ativo: novoStatus,
@@ -259,10 +250,6 @@ const Administracao = () => {
         } catch (error) {
             notify(`Erro ao alterar status do usuário.`, "error");
         }
-    };
-
-    const abrirConfirmacaoExclusao = (id, nome) => {
-        setConfirmacaoExclusao({ aberta: true, id, nome });
     };
 
     const executarExclusao = async () => {
@@ -299,55 +286,81 @@ const Administracao = () => {
     );
 
     return (
-        <div className="main-content animate-fade-in" style={{ paddingTop: '10px' }}>
-            <div className="stat-header" style={{ marginBottom: '32px' }}>
-                <div><h2 className="dashboard-title">Administração</h2><p className="dashboard-subtitle">Gestão de acessos e segurança.</p></div>
-                <button className="botao-ver" style={{ width: 'auto', display: 'flex', gap: '8px' }} onClick={abrirModalCriacao}><UserPlus size={18} /> Novo Usuário</button>
+        <div className="main-content animate-fade-in">
+            <div className="admin-header">
+                <div>
+                    <h2 className="dashboard-title">Administração</h2>
+                    <p className="dashboard-subtitle">Gestão de acessos e segurança.</p>
+                </div>
+                <button className="botao-ver" onClick={abrirModalCriacao}>
+                    <UserPlus size={18} /> Novo Usuário
+                </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-                <div onClick={focarBuscaUsuario} className="hover:shadow-lg hover:scale-[1.02]" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderLeft: '4px solid #3b82f6', cursor: 'pointer', transition: 'transform 0.2s' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div><h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#334155', margin: 0 }}>Gerenciar Usuários</h3><p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '4px' }}>Buscar e editar equipe.</p></div>
-                        <div style={{ background: '#dbeafe', padding: '10px', borderRadius: '50%', color: '#2563eb' }}><Users size={24} /></div>
+            <div className="admin-shortcuts-grid">
+                <div onClick={focarBuscaUsuario} className="shortcut-card blue">
+                    <div>
+                        <h3 className="shortcut-title">Gerenciar Usuários</h3>
+                        <p className="dashboard-subtitle">Buscar e editar equipe.</p>
                     </div>
+                    <div className="icon-circle blue"><Users size={24} /></div>
                 </div>
-                <div onClick={fetchLogs} className="hover:shadow-lg hover:scale-[1.02]" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderLeft: '4px solid #22c55e', cursor: 'pointer', transition: 'transform 0.2s' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div><h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#334155', margin: 0 }}>Histórico de Logs</h3><p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '4px' }}>Auditoria de ações.</p></div>
-                        <div style={{ background: '#dcfce7', padding: '10px', borderRadius: '50%', color: '#16a34a' }}><Activity size={24} /></div>
+                <div onClick={fetchLogs} className="shortcut-card green">
+                    <div>
+                        <h3 className="shortcut-title">Histórico de Logs</h3>
+                        <p className="dashboard-subtitle">Auditoria de ações.</p>
                     </div>
+                    <div className="icon-circle green"><Activity size={24} /></div>
                 </div>
-                <div onClick={() => setConfirmacaoLogoutGeral(true)} className="hover:shadow-lg hover:scale-[1.02]" style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', borderLeft: '4px solid #f97316', cursor: 'pointer', transition: 'transform 0.2s' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div><h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#334155', margin: 0 }}>Segurança Global</h3><p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '4px' }}>Controle de sessão.</p></div>
-                        <div style={{ background: '#ffedd5', padding: '10px', borderRadius: '50%', color: '#ea580c' }}><Lock size={24} /></div>
+                <div onClick={() => setConfirmacaoLogoutGeral(true)} className="shortcut-card orange">
+                    <div>
+                        <h3 className="shortcut-title">Segurança Global</h3>
+                        <p className="dashboard-subtitle">Controle de sessão.</p>
                     </div>
+                    <div className="icon-circle orange"><Lock size={24} /></div>
                 </div>
             </div>
 
             <div className="filter-card">
-                <div className="filter-title"><Search size={18} className="text-muted" style={{ marginRight: '8px' }} /> Filtrar Equipe</div>
-                <input ref={searchInputRef} type="text" placeholder="Buscar por nome ou e-mail..." className="form-input" value={termoBusca} onChange={(e) => setTermoBusca(e.target.value)} />
+                <div className="filter-title">
+                    <Search size={18} className="text-muted" style={{ marginRight: '8px' }} />
+                    Filtrar Equipe
+                </div>
+                <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Buscar por nome ou e-mail..."
+                    className="form-input"
+                    value={termoBusca}
+                    onChange={(e) => setTermoBusca(e.target.value)}
+                />
             </div>
 
-            {loading ? <div style={{ textAlign: 'center', padding: '40px' }}>Carregando...</div> : (
+            {loading ? <div className="loading-container">Carregando...</div> : (
                 <div className="users-grid">
                     {usuariosFiltrados.map((user) => (
                         <div key={user.id} className="user-card" style={{ opacity: user.ativo ? 1 : 0.6 }}>
-                            <button className="btn-delete-user" onClick={() => abrirConfirmacaoExclusao(user.id, user.nome)} title="Excluir"><Trash2 size={18} /></button>
-                            <div className={`user-avatar-lg ${user.tipo === 'ADMINISTRADOR' ? 'avatar-admin' : 'avatar-tecnico'}`}>{getIniciais(user.nome)}</div>
-                            <div className="user-info-content" style={{ width: '100%' }}>
+                            <button className="btn-delete-user" onClick={() => setConfirmacaoExclusao({ aberta: true, id: user.id, nome: user.nome })} title="Excluir">
+                                <Trash2 size={18} />
+                            </button>
+                            <div className={`user-avatar-lg ${user.tipo === 'ADMINISTRADOR' ? 'avatar-admin' : 'avatar-tecnico'}`}>
+                                {getIniciais(user.nome)}
+                            </div>
+                            <div className="user-info-content">
                                 <h3>{user.nome}</h3>
                                 <span className="user-email">{user.email}</span>
-                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-                                    <span className={`role-badge ${user.tipo === 'ADMINISTRADOR' ? 'role-admin' : 'role-tecnico'}`}>{TIPOS_USUARIO[user.tipo] || user.tipo}</span>
-                                    {!user.ativo && <span className="role-badge" style={{ background: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0' }}>BLOQUEADO</span>}
+                                <div className="role-badges-container">
+                                    <span className={`role-badge ${user.tipo === 'ADMINISTRADOR' ? 'role-admin' : 'role-tecnico'}`}>
+                                        {TIPOS_USUARIO[user.tipo] || user.tipo}
+                                    </span>
+                                    {!user.ativo && <span className="role-badge blocked">BLOQUEADO</span>}
                                 </div>
-                                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '8px' }}>
-                                    <button className="btn-outline" style={{ padding: '6px' }} onClick={() => abrirModalEdicao(user)} title="Editar"><Edit size={18} color="#64748b" /></button>
-                                    <button className="btn-outline" style={{ padding: '6px' }} onClick={() => handleGerarCodigoSenha(user)} title="Gerar Código"><Key size={18} color="#eab308" /></button>
-                                    <button className="btn-outline" style={{ padding: '6px' }} onClick={() => toggleStatus(user)} title={user.ativo ? "Bloquear" : "Desbloquear"}>{user.ativo ? <Ban size={18} color="#ef4444" /> : <CheckCircle size={18} color="#16a34a" />}</button>
+                                <div className="user-actions-footer">
+                                    <button className="btn-outline-sm" onClick={() => abrirModalEdicao(user)} title="Editar"><Edit size={18} /></button>
+                                    <button className="btn-outline-sm" onClick={() => handleGerarCodigoSenha(user)} title="Gerar Código"><Key size={18} color="#eab308" /></button>
+                                    <button className="btn-outline-sm" onClick={() => toggleStatus(user)} title={user.ativo ? "Bloquear" : "Desbloquear"}>
+                                        {user.ativo ? <Ban size={18} color="#ef4444" /> : <CheckCircle size={18} color="#16a34a" />}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -355,117 +368,151 @@ const Administracao = () => {
                 </div>
             )}
 
-            {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO CUSTOMIZADO */}
+            {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
             {confirmacaoExclusao.aberta && (
                 <div className="modal-modern-overlay" style={{ zIndex: 10000 }}>
-                    <div className="modal-modern-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
-                        <div style={{ background: '#fee2e2', color: '#dc2626', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
-                            <AlertCircle size={32} />
-                        </div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>Excluir Usuário?</h3>
-                        <p style={{ color: '#64748b', marginBottom: '24px' }}>Deseja realmente remover o usuário <strong>{confirmacaoExclusao.nome}</strong>? Esta ação não pode ser desfeita.</p>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button className="btn-outline" style={{ flex: 1 }} onClick={() => setConfirmacaoExclusao({ aberta: false, id: null, nome: '' })}>Cancelar</button>
-                            <button className="btn-primary" style={{ flex: 1, backgroundColor: '#dc2626', borderColor: '#dc2626' }} onClick={executarExclusao}>Sim, Excluir</button>
+                    <div className="modal-modern-content confirm-modal">
+                        <div className="icon-warning-container"><AlertCircle size={32} /></div>
+                        <h3 className="modal-confirm-title">Excluir Usuário?</h3>
+                        <p className="modal-confirm-desc">Deseja realmente remover o usuário <strong>{confirmacaoExclusao.nome}</strong>? Esta ação não pode ser desfeita.</p>
+                        <div className="modal-footer-confirm">
+                            <button className="btn-outline" onClick={() => setConfirmacaoExclusao({ aberta: false, id: null, nome: '' })}>Cancelar</button>
+                            <button className="btn-danger" onClick={executarExclusao}>Sim, Excluir</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* MODAL DE CONFIRMAÇÃO LOGOUT GERAL CUSTOMIZADO */}
+            {/* MODAL DE CONFIRMAÇÃO LOGOUT GERAL */}
             {confirmacaoLogoutGeral && (
                 <div className="modal-modern-overlay" style={{ zIndex: 10000 }}>
-                    <div className="modal-modern-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
-                        <div style={{ background: '#ffedd5', color: '#ea580c', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
-                            <Lock size={32} />
-                        </div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>Logout Global</h3>
-                        <p style={{ color: '#64748b', marginBottom: '24px' }}>Deseja desconectar todos os usuários ativos no sistema agora?</p>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <button className="btn-outline" style={{ flex: 1 }} onClick={() => setConfirmacaoLogoutGeral(false)}>Cancelar</button>
-                            <button className="btn-primary" style={{ flex: 1, backgroundColor: '#f97316', borderColor: '#f97316' }} onClick={executarLogoutGeral}>Confirmar</button>
+                    <div className="modal-modern-content confirm-modal">
+                        <div className="icon-lock-container"><Lock size={32} /></div>
+                        <h3 className="modal-confirm-title">Logout Global</h3>
+                        <p className="modal-confirm-desc">Deseja desconectar todos os usuários ativos no sistema agora?</p>
+                        <div className="modal-footer-confirm">
+                            <button className="btn-outline" onClick={() => setConfirmacaoLogoutGeral(false)}>Cancelar</button>
+                            <button className="btn-warning" onClick={executarLogoutGeral}>Confirmar</button>
                         </div>
                     </div>
                 </div>
             )}
 
+            {/* MODAL CRIAR/EDITAR */}
             {modalAberta && (
                 <div className="modal-modern-overlay">
                     <div className="modal-modern-content">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <div className="modal-header-flex">
                             <h2 className="modal-title">{usuarioEmEdicao ? 'Editar Usuário' : 'Novo Usuário'}</h2>
-                            <button onClick={fecharModal} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={24} color="#64748b" /></button>
+                            <button onClick={fecharModal} className="btn-close-modal"><X size={24} /></button>
                         </div>
-                        <div className="form-group"><label className="form-label">Nome</label><input className="form-input" value={formData.nome} onChange={(e) => setFormData({...formData, nome: e.target.value})} /></div>
-                        <div className="form-group"><label className="form-label">E-mail</label><input className="form-input" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} /></div>
+                        <div className="form-group">
+                            <label className="form-label">Nome</label>
+                            <input className="form-input" placeholder="Nome completo do colaborador" value={formData.nome} onChange={(e) => setFormData({...formData, nome: e.target.value})} />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">E-mail</label>
+                            <input className="form-input" placeholder="exemplo@cultivamais.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                        </div>
                         <div className="form-group">
                             <label className="form-label">Função</label>
                             <select className="form-select" value={formData.tipo} onChange={(e) => setFormData({...formData, tipo: e.target.value})}>
                                 {Object.entries(TIPOS_USUARIO).map(([key, label]) => (<option key={key} value={key}>{label}</option>))}
                             </select>
                         </div>
-                        <div className="modal-footer"><button className="btn-outline" onClick={fecharModal}>Cancelar</button><button className="botao-ver" onClick={handleSalvar}>Salvar</button></div>
+                        <div className="modal-footer">
+                            <button className="btn-outline" onClick={fecharModal}>Cancelar</button>
+                            <button className="botao-ver" onClick={handleSalvar}>Salvar</button>
+                        </div>
                     </div>
                 </div>
             )}
 
+            {/* MODAL CÓDIGO SENHA */}
             {modalCodigo && (
                 <div className="modal-modern-overlay">
-                    <div className="modal-modern-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+                    <div className="modal-modern-content code-modal">
                         <h2 className="modal-title">Código para {usuarioNomeCodigo}</h2>
-                        <div style={{ margin: '20px 0', fontSize: '2rem', fontWeight: 'bold', letterSpacing: '4px', color: '#166534' }}>{codigoGerado}</div>
+                        <div className="generated-code-display">{codigoGerado}</div>
                         <button className="botao-ver" onClick={() => setModalCodigo(false)}>Fechar</button>
                     </div>
                 </div>
             )}
 
+            {/* MODAL LOGS */}
             {modalLogsOpen && (
                 <div className="modal-modern-overlay">
-                    <div className="modal-modern-content" style={{ maxWidth: '900px', width: '95%', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexShrink: 0 }}>
-                            <div style={{display:'flex', alignItems:'center', gap: '10px'}}><FileText size={24} color="#0f172a" /><div><h2 className="modal-title">Logs de Atividades</h2><p className="modal-desc" style={{margin:0}}>Auditoria e rastreabilidade.</p></div></div>
-                            <button onClick={() => setModalLogsOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={24} color="#64748b" /></button>
-                        </div>
-
-                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #e2e8f0', flexShrink: 0 }}>
-                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                                <div style={{flex: 1, minWidth: '180px'}}>
-                                    <label style={{fontSize: '0.75rem', color:'#64748b', fontWeight:'700', textTransform: 'uppercase'}}>Quem (Ator)</label>
-                                    <div style={{position:'relative', display: 'flex', alignItems:'center'}}><Search size={16} style={{position:'absolute', left: 10, color:'#94a3b8'}} /><input type="text" className="form-input" style={{paddingLeft: '32px', marginTop: '4px'}} placeholder="Nome ou ID..." value={filtroLogUsuario} onChange={(e) => setFiltroLogUsuario(e.target.value)} /></div>
-                                </div>
-                                <div style={{flex: 1.5, minWidth: '200px'}}>
-                                    <label style={{fontSize: '0.75rem', color:'#64748b', fontWeight:'700', textTransform: 'uppercase'}}>O que (Ação/Alvo)</label>
-                                    <div style={{position:'relative', display: 'flex', alignItems:'center'}}><Activity size={16} style={{position:'absolute', left: 10, color:'#94a3b8'}} /><input type="text" className="form-input" style={{paddingLeft: '32px', marginTop: '4px'}} placeholder="Ex: Bloqueou, Login, ID..." value={filtroLogAcao} onChange={(e) => setFiltroLogAcao(e.target.value)} /></div>
+                    <div className="modal-modern-content logs-modal">
+                        <div className="modal-header-flex">
+                            <div className="header-icon-title">
+                                <FileText size={24} color="#0f172a" />
+                                <div>
+                                    <h2 className="modal-title">Auditoria e rastreabilidade</h2>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-                                <div style={{flex: 1}}><label style={{fontSize: '0.75rem', color:'#64748b', fontWeight:'700', textTransform: 'uppercase'}}>De</label><div style={{position:'relative'}}><Calendar size={16} style={{position:'absolute', left: 10, top: '50%', transform: 'translateY(-30%)', color:'#94a3b8'}} /><input type="date" className="form-input" style={{paddingLeft: '32px', marginTop: '4px'}} value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} /></div></div>
-                                <div style={{flex: 1}}><label style={{fontSize: '0.75rem', color:'#64748b', fontWeight:'700', textTransform: 'uppercase'}}>Até</label><div style={{position:'relative'}}><Calendar size={16} style={{position:'absolute', left: 10, top: '50%', transform: 'translateY(-30%)', color:'#94a3b8'}} /><input type="date" className="form-input" style={{paddingLeft: '32px', marginTop: '4px'}} value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} /></div></div>
+                            <button onClick={() => setModalLogsOpen(false)} className="btn-close-modal"><X size={24} /></button>
+                        </div>
+
+                        <div className="logs-filter-section">
+                            <div className="filter-row">
+                                <div className="filter-col">
+                                    <label className="filter-label">Quem (Ator)</label>
+                                    <div className="input-with-icon">
+                                        <Search size={16} />
+                                        <input type="text" className="form-input-sm" placeholder="Nome..." value={filtroLogUsuario} onChange={(e) => setFiltroLogUsuario(e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="filter-col">
+                                    <label className="filter-label">O que (Ação/Alvo)</label>
+                                    <div className="input-with-icon">
+                                        <Activity size={16} />
+                                        <input type="text" className="form-input-sm" placeholder="Ex: Bloqueou, Login, ID..." value={filtroLogAcao} onChange={(e) => setFiltroLogAcao(e.target.value)} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="filter-row border-top">
+                                <div className="filter-col">
+                                    <label className="filter-label">De</label>
+                                    <div className="input-with-icon">
+                                        <Calendar size={16} />
+                                        <input type="date" className="form-input-sm" value={filtroDataInicio} onChange={(e) => setFiltroDataInicio(e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="filter-col">
+                                    <label className="filter-label">Até</label>
+                                    <div className="input-with-icon">
+                                        <Calendar size={16} />
+                                        <input type="date" className="form-input-sm" value={filtroDataFim} onChange={(e) => setFiltroDataFim(e.target.value)} />
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="log-list-container" style={{ overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+                        <div className="log-list-container">
                             {Object.keys(logsAgrupados).length === 0 ? (
-                                <div style={{textAlign:'center', padding: '40px', color: '#94a3b8'}}><ShieldAlert size={40} style={{opacity: 0.2, marginBottom: 10}}/><p>Nenhum registro encontrado.</p></div>
+                                <div className="empty-logs">
+                                    <ShieldAlert size={40} />
+                                    <p>Nenhum registro encontrado.</p>
+                                </div>
                             ) : (
                                 Object.keys(logsAgrupados).map((data) => (
-                                    <div key={data} style={{ marginBottom: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-                                        <button onClick={() => toggleData(data)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: '#f1f5f9', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-                                            <span style={{ fontWeight: '600', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px' }}>📅 {data} <span style={{ fontSize: '0.75rem', fontWeight: 'normal', background: 'white', padding: '2px 8px', borderRadius: '12px', border: '1px solid #cbd5e1' }}>{logsAgrupados[data].length}</span></span>
-                                            {datasExpandidas[data] ? <ChevronUp size={18} color="#64748b"/> : <ChevronDown size={18} color="#64748b"/>}
+                                    <div key={data} className="log-group">
+                                        <button onClick={() => toggleData(data)} className="log-group-header">
+                                            <span className="log-date-label">📅 {data} <span className="log-count-badge">{logsAgrupados[data].length}</span></span>
+                                            {datasExpandidas[data] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                         </button>
                                         {datasExpandidas[data] && (
-                                            <div style={{ background: 'white' }}>
+                                            <div className="log-items-list">
                                                 {logsAgrupados[data].map((log) => {
                                                     const atorNome = resolverNomeAtor(log.usuarioIdentificador);
                                                     return (
-                                                        <div key={log.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                                                            <div style={{ width: '60px', fontSize: '0.8rem', fontFamily: 'monospace', color: '#64748b' }}>{formatarHora(log.dataHora)}</div>
-                                                            <div style={{ width: '160px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: atorNome.includes('Sistema') ? '#f1f5f9' : '#dcfce7', color: atorNome.includes('Sistema') ? '#94a3b8' : '#166534', fontSize: '0.7rem', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 'bold' }}>{atorNome.substring(0,2).toUpperCase()}</div>
-                                                                <span style={{ fontSize: '0.9rem', fontWeight: '500', color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={atorNome}>{atorNome}</span>
+                                                        <div key={log.id} className="log-item">
+                                                            <div className="log-time">{formatarHora(log.dataHora)}</div>
+                                                            <div className="log-actor">
+                                                                <div className="log-actor-avatar">{atorNome.substring(0,2).toUpperCase()}</div>
+                                                                <span className="log-actor-name" title={atorNome}>{atorNome}</span>
                                                             </div>
-                                                            <div style={{ flex: 1, fontSize: '0.9rem', color: '#475569', paddingLeft: '12px', borderLeft: '1px solid #f1f5f9' }}>{formatarMensagemLog(log.acao)}</div>
+                                                            <div className="log-message">{formatarMensagemLog(log.acao)}</div>
                                                         </div>
                                                     );
                                                 })}
@@ -475,7 +522,9 @@ const Administracao = () => {
                                 ))
                             )}
                         </div>
-                        <div className="modal-footer" style={{marginTop: '16px', flexShrink: 0}}><button className="botao-ver" onClick={() => setModalLogsOpen(false)}>Fechar</button></div>
+                        <div className="modal-footer">
+                            <button className="botao-ver" onClick={() => setModalLogsOpen(false)}>Fechar</button>
+                        </div>
                     </div>
                 </div>
             )}

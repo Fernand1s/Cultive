@@ -1,0 +1,152 @@
+/* =========================================
+   SISTEMA DE DESIGN - CULTIVAMAIS PLANTAS
+   ESTILO ULTRA-PREMIUM (VERDE) - COMPACTO
+   ========================================= */
+
+.plants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.plant-card {
+    background: var(--card-surface);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-premium);
+    display: flex;
+    flex-direction: column;
+}
+
+.plant-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    border-color: var(--v-soft);
+}
+
+.plant-card-top {
+    height: 6px;
+    width: 100%;
+}
+
+.border-top-hortalica { background-color: #22c55e; }
+.border-top-fruta { background-color: #f97316; }
+.border-top-grao { background-color: #eab308; }
+.border-top-legume { background-color: #a855f7; }
+
+.plant-card-content {
+    padding: 1.5rem;
+    flex-grow: 1;
+}
+
+.plant-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.bg-soft-green { background: #f0fdf4; color: #16a34a; }
+.bg-soft-orange { background: #fff7ed; color: #ea580c; }
+.bg-soft-yellow { background: #fefce8; color: #ca8a04; }
+.bg-soft-purple { background: #faf5ff; color: #9333ea; }
+.bg-soft-pink { background: #fdf2f8; color: #db2777; }
+
+.plant-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--v-darker);
+    margin: 0;
+}
+
+.plant-scientific {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 1rem;
+}
+
+.plant-badge {
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.plant-info-section {
+    border-top: 1px solid #f1f5f9;
+    padding-top: 1rem;
+}
+
+.cycle-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.soil-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.soil-tag {
+    background: var(--bg-app);
+    color: var(--text-secondary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+}
+
+/* Modal e Formulário Compactos */
+.form-compact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem; /* Reduzido de 1.25rem ou 20px */
+}
+
+.form-group {
+    margin-bottom: 0.75rem; /* Reduzido o espaço entre linhas */
+}
+
+.form-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 4px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+}
+
+@media (max-width: 768px) {
+    .plants-grid { grid-template-columns: 1fr; }
+    .form-compact-grid { grid-template-columns: 1fr; }
+}
