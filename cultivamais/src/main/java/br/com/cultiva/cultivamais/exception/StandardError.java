@@ -2,7 +2,7 @@ package br.com.cultiva.cultivamais.exception;
 
 import java.time.Instant;
 
-// DTO simples para padronizar a resposta de erro
+// DTO para padronizar a resposta de erro
 public class StandardError {
     private Instant timestamp;
     private Integer status;

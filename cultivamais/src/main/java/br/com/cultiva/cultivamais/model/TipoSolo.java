@@ -5,23 +5,23 @@ public enum TipoSolo {
     ARGILOSO,
     ARENOSO,
     SILTOSO,
-    HUMOSO,          // Ou HUMIFERO/ORGANICO
+    HUMOSO,
     CALCARIO,
     FRANCO,
 
-    // --- Classificação Técnica (Embrapa) ---
+    // --- Classificação Técnica ---
     LATOSSOLO,
     ARGISSOLO,
     CHERNOSSOLO,
     NEOSSOLO,
     CAMBISSOLO,
-    GLEISSOLO,       // Solos com água em excesso
+    GLEISSOLO,
     NITOSSOLO,
 
     // --- Regionais / Populares ---
     TERRA_ROXA,
     MASSAPE,
-    VARZEA,          // Solos de beira de rio
+    VARZEA,
 
     // --- Genéricos ---
     MISTO,

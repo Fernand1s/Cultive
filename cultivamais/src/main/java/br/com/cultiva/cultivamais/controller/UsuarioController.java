@@ -19,11 +19,14 @@ import br.com.cultiva.cultivamais.service.UsuarioService;
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
 
-    @Autowired
-    private UsuarioService usuarioService;
+    private final UsuarioService usuarioService;
 
-    @Autowired
-    private LogService logService;
+    private final LogService logService;
+
+    public UsuarioController(UsuarioService usuarioService, LogService logService) {
+        this.usuarioService = usuarioService;
+        this.logService = logService;
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<Usuario> buscarUsuarioPorId(@PathVariable Long id) {
@@ -41,18 +44,16 @@ public class UsuarioController {
         return "Yuan Admin";
     }
 
-    // --- CADASTRO COM VALIDAÇÃO E SEGURANÇA ---
+    // CADASTRO COM VALIDAÇÃO E SEGURANÇA
     @PostMapping
     public ResponseEntity<Usuario> criarUsuario(@Valid @RequestBody UsuarioCadastroDTO usuarioDTO) {
 
-        // Converter DTO para Entidade
         Usuario novoUsuario = new Usuario();
         novoUsuario.setNomeUsuario(usuarioDTO.getNomeUsuario());
         novoUsuario.setEmail(usuarioDTO.getEmail());
         novoUsuario.setSenha(usuarioDTO.getSenha());
         novoUsuario.setFuncao(usuarioDTO.getFuncao());
 
-        // Chamar o serviço
         Usuario usuarioSalvo = usuarioService.criarUsuario(novoUsuario);
 
         return ResponseEntity.ok(usuarioSalvo);
@@ -63,27 +64,19 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioService.listarTodos());
     }
 
-    // --- LÓGICA DE BLOQUEIO/DESBLOQUEIO ---
+    // LÓGICA DE BLOQUEIO/DESBLOQUEIO
     @PutMapping("/{id}")
     public ResponseEntity<Usuario> atualizarUsuario(@PathVariable Long id, @RequestBody Usuario usuarioNovosDados) {
 
-        // Buscar o usuário ANTES da atualização
         Usuario usuarioAntigo = usuarioService.buscarPorId(id);
 
         if (usuarioAntigo == null) {
             return ResponseEntity.notFound().build();
         }
 
-        // IMPORTANTÍSSIMO: Guardar o estado do boolean ANTES de chamar o service.atualizar
         boolean eraAtivo = Boolean.TRUE.equals(usuarioAntigo.getAtivo());
-
-        // Realizar a atualização no Banco
         Usuario atualizado = usuarioService.atualizarUsuario(id, usuarioNovosDados);
-
-        // Verificar como ficou o status AGORA
         boolean ficouAtivo = Boolean.TRUE.equals(atualizado.getAtivo());
-
-        // Definir a mensagem do Log
         String acaoLog = "Editou \"" + atualizado.getNomeUsuario() + "\"";
 
         if (eraAtivo && !ficouAtivo) {
@@ -92,7 +85,6 @@ public class UsuarioController {
             acaoLog = "Desbloqueou o usuário \"" + atualizado.getNomeUsuario() + "\"";
         }
 
-        // Salvar o Log
         String ator = getUsuarioLogado();
         logService.registrarLog(ator, acaoLog);
 
@@ -112,7 +104,7 @@ public class UsuarioController {
         return ResponseEntity.noContent().build();
     }
 
-    // --- LOGIN ---
+    // LOGIN
     @PostMapping("/login")
     public ResponseEntity<Usuario> login(@RequestBody LoginRequest loginRequest) {
         Usuario usuarioLogado = usuarioService.autenticar(
@@ -121,15 +113,14 @@ public class UsuarioController {
         );
 
         if (usuarioLogado != null) {
-            usuarioLogado.setSenha(null); // Nunca retorne hash ou senha
+            usuarioLogado.setSenha(null);
             return ResponseEntity.ok(usuarioLogado);
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
 
-    // --- Endpoints de Recuperação ---
-
+    // GERAR CÓDIGO DE REDEFINIÇÃO DE SENHA
     @PostMapping("/gerar-codigo")
     public ResponseEntity<Map<String, String>> gerarCodigo(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
@@ -141,6 +132,7 @@ public class UsuarioController {
         return ResponseEntity.badRequest().build();
     }
 
+    // REDEFINIR SENHA
     @PostMapping("/redefinir-senha")
     public ResponseEntity<Void> redefinirSenha(@RequestBody Map<String, String> payload) {
         boolean sucesso = usuarioService.redefinirSenhaComCodigo(

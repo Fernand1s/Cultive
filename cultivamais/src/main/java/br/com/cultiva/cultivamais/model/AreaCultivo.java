@@ -25,7 +25,6 @@ public class AreaCultivo {
     private TipoSolo tipoSolo;
     private String observacaoArea;
 
-    // RELACIONAMENTO PARA NOTIFICAÇÕES: Quem cuida desta área?
     @ManyToMany
     @JoinTable(
             name = "area_usuario_responsavel",

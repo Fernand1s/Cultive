@@ -16,30 +16,29 @@ import br.com.cultiva.cultivamais.repository.UsuarioRepository;
 @Service
 public class TarefaService {
 
-    @Autowired
-    private TarefaRepository tarefaRepository;
+    private final TarefaRepository tarefaRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final LogService logService;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final NotificacaoService notificacaoService;
 
-    @Autowired
-    private LogService logService;
+    public TarefaService(TarefaRepository tarefaRepository, UsuarioRepository usuarioRepository, LogService logService, NotificacaoService notificacaoService) {
+        this.tarefaRepository = tarefaRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.logService = logService;
+        this.notificacaoService = notificacaoService;
+    }
 
-    // Injeção para enviar notificações
-    @Autowired
-    private NotificacaoService notificacaoService;
-
-    // --- CRIAR ---
+    // CRIAR
     public Tarefa criarTarefa(Long idCriador, Long idResponsavel, Tarefa novaTarefa) {
         Usuario criador = usuarioRepository.findById(idCriador).orElse(null);
         Usuario responsavel = usuarioRepository.findById(idResponsavel).orElse(null);
 
         if (criador != null) {
             novaTarefa.setCriador(criador);
-            // Se o responsável não for informado, define o próprio criador
             novaTarefa.setResponsavel(responsavel != null ? responsavel : criador);
             novaTarefa.setConcluida(false);
-            novaTarefa.setCancelada(false); // Tarefa nasce ativa
+            novaTarefa.setCancelada(false);
             novaTarefa.setDataCriacao(LocalDateTime.now());
 
             Tarefa salva = tarefaRepository.save(novaTarefa);
@@ -62,30 +61,27 @@ public class TarefaService {
         return null;
     }
 
-    // --- LISTAR TODAS (USADO PELO DASHBOARD) ---
+    // LISTAR TODAS
     public List<Tarefa> listarTodas() {
         return tarefaRepository.findAll();
     }
 
-    // --- LISTAR POR USUÁRIO (MANTIDA A HIERARQUIA) ---
+    // LISTAR POR USUÁRIO
     public List<Tarefa> listarTarefasPorUsuario(Long idUsuario, String funcao) {
-        // Se for ADMIN, EMPRESA ou ADMINISTRADOR, vê tudo.
-        if ("ADMIN".equalsIgnoreCase(funcao) || "EMPRESA".equalsIgnoreCase(funcao) || "ADMINISTRADOR".equalsIgnoreCase(funcao)) {
+        if ("ADMIN".equalsIgnoreCase(funcao) || "ADMINISTRADOR".equalsIgnoreCase(funcao)) {
             return tarefaRepository.findAll();
         } else {
-            // Busca tarefas onde ele é RESPONSÁVEL *OU* onde ele é o CRIADOR.
             return tarefaRepository.findByResponsavel_IdUsuarioOrCriador_IdUsuario(idUsuario, idUsuario);
         }
     }
 
-    // --- ATUALIZAR (COM RESTRIÇÃO) ---
+    // ATUALIZAR
     public Tarefa atualizarTarefa(Long idTarefa, Tarefa dadosNovos, Long idUsuarioLogado) {
         Tarefa tarefa = tarefaRepository.findById(idTarefa).orElse(null);
         Usuario quemEditou = usuarioRepository.findById(idUsuarioLogado).orElse(null);
 
         if (tarefa != null && quemEditou != null) {
 
-            // VERIFICAÇÃO DE PERMISSÃO: Só Criador ou Admin
             boolean isCriador = tarefa.getCriador().getIdUsuario().equals(idUsuarioLogado);
             boolean isAdmin = quemEditou.getFuncao().toString().contains("ADMIN") || quemEditou.getFuncao().toString().contains("EMPRESA");
 
@@ -95,18 +91,15 @@ public class TarefaService {
 
             String tituloAntigo = tarefa.getTitulo();
 
-            // Atualiza campos
             tarefa.setTitulo(dadosNovos.getTitulo());
             tarefa.setDescricao(dadosNovos.getDescricao());
             tarefa.setPrioridade(dadosNovos.getPrioridade());
             tarefa.setCategoria(dadosNovos.getCategoria());
             tarefa.setDataPrazo(dadosNovos.getDataPrazo());
 
-            // Reatribuição de responsável
             if (dadosNovos.getResponsavel() != null && dadosNovos.getResponsavel().getIdUsuario() != null) {
                 Usuario novoResponsavel = usuarioRepository.findById(dadosNovos.getResponsavel().getIdUsuario()).orElse(null);
 
-                // Se mudou o responsável, avisa o novo
                 if (novoResponsavel != null && !novoResponsavel.equals(tarefa.getResponsavel())) {
                     tarefa.setResponsavel(novoResponsavel);
 
@@ -129,22 +122,21 @@ public class TarefaService {
         return null;
     }
 
-    // --- CONCLUIR COM OBSERVAÇÃO ---
+    // CONCLUIR COM OBSERVAÇÃO
     public Tarefa concluirTarefa(Long idTarefa, Long idUsuarioLogado, String observacao) {
         Tarefa t = tarefaRepository.findById(idTarefa).orElse(null);
         Usuario quemFez = usuarioRepository.findById(idUsuarioLogado).orElse(null);
 
         if (t != null && quemFez != null) {
-            boolean vaiConcluir = !t.isConcluida(); // Inverte o estado atual
+            boolean vaiConcluir = !t.isConcluida();
             t.setConcluida(vaiConcluir);
 
             if (vaiConcluir) {
-                // ESTÁ CONCLUINDO
+
                 t.setDataConclusao(LocalDateTime.now());
-                t.setObservacaoConclusao(observacao); // Salva o texto
+                t.setObservacaoConclusao(observacao);
                 logService.registrarLog(quemFez.getNomeUsuario(), "Concluiu a tarefa \"" + t.getTitulo() + "\". Obs: " + observacao);
 
-                // NOTIFICAÇÃO: Se quem fez não foi o criador, avisa o criador (Feedback de trabalho feito)
                 if (!t.getCriador().getIdUsuario().equals(quemFez.getIdUsuario())) {
                     notificacaoService.criarNotificacao(
                             t.getCriador().getIdUsuario(),
@@ -155,9 +147,8 @@ public class TarefaService {
                 }
 
             } else {
-                // ESTÁ REABRINDO
                 t.setDataConclusao(null);
-                t.setObservacaoConclusao(null); // Limpa a observação antiga
+                t.setObservacaoConclusao(null);
                 logService.registrarLog(quemFez.getNomeUsuario(), "Reabriu a tarefa \"" + t.getTitulo() + "\"");
             }
             return tarefaRepository.save(t);
@@ -165,23 +156,21 @@ public class TarefaService {
         return null;
     }
 
-    // --- CANCELAR ---
+    // CANCELAR
     public Tarefa cancelarTarefa(Long idTarefa, Long idUsuarioLogado) {
         Tarefa t = tarefaRepository.findById(idTarefa).orElse(null);
         Usuario quemCancelou = usuarioRepository.findById(idUsuarioLogado).orElse(null);
 
         if (t != null && quemCancelou != null) {
-            // REGRA: Só Criador ou Admin
             boolean isCriador = t.getCriador().getIdUsuario().equals(idUsuarioLogado);
             boolean isAdmin = quemCancelou.getFuncao().toString().contains("ADMIN") || quemCancelou.getFuncao().toString().contains("EMPRESA");
 
             if (isCriador || isAdmin) {
                 t.setCancelada(true);
-                t.setConcluida(false); // Garante que não conte como concluída
+                t.setConcluida(false);
 
                 logService.registrarLog(quemCancelou.getNomeUsuario(), "Cancelou a tarefa \"" + t.getTitulo() + "\"");
 
-                // NOTIFICAÇÃO: Avisa o responsável que a tarefa foi cancelada
                 if (!t.getResponsavel().getIdUsuario().equals(quemCancelou.getIdUsuario())) {
                     notificacaoService.criarNotificacao(
                             t.getResponsavel().getIdUsuario(),
@@ -194,16 +183,15 @@ public class TarefaService {
                 return tarefaRepository.save(t);
             }
         }
-        return null; // Retorna null se não tiver permissão
+        return null;
     }
 
-    // --- EXCLUIR ---
+    // EXCLUIR
     public boolean excluirTarefa(Long idTarefa, Long idUsuarioLogado) {
         Tarefa t = tarefaRepository.findById(idTarefa).orElse(null);
         Usuario quemExclui = usuarioRepository.findById(idUsuarioLogado).orElse(null);
 
         if (t != null && quemExclui != null) {
-            // REGRA: Só Criador ou Admin
             boolean isCriador = t.getCriador().getIdUsuario().equals(idUsuarioLogado);
             boolean isAdmin = quemExclui.getFuncao().toString().contains("ADMIN") || quemExclui.getFuncao().toString().contains("EMPRESA");
 
@@ -217,8 +205,7 @@ public class TarefaService {
         return false;
     }
 
-    // --- AUTOMAÇÃO (CRON) ---
-    // Executa todo dia às 08:00 AM para verificar atrasos
+    // VERIFICA TAREFAS ATRASADAS
     @Scheduled(cron = "0 0 8 * * *")
     public void verificarTarefasAtrasadas() {
         System.out.println(">>> Verificando tarefas atrasadas...");
@@ -231,12 +218,11 @@ public class TarefaService {
 
             if (t.getDataPrazo() != null && t.getDataPrazo().toLocalDate().isBefore(hoje)) {
 
-                // NOTIFICAÇÃO DE COBRANÇA
                 notificacaoService.criarNotificacao(
                         t.getResponsavel().getIdUsuario(),
                         "Tarefa Atrasada",
                         "Atenção: A tarefa '" + t.getTitulo() + "' venceu em " + t.getDataPrazo(),
-                        "erro" // Vermelho
+                        "erro"
                 );
             }
         }

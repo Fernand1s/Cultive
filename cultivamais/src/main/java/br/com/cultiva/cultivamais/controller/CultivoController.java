@@ -22,9 +22,13 @@ import br.com.cultiva.cultivamais.service.CultivoService;
 @RequestMapping("/api/cultivos")
 public class CultivoController {
 
-    @Autowired
-    private CultivoService cultivoService;
+    private final CultivoService cultivoService;
 
+    public CultivoController(CultivoService cultivoService) {
+        this.cultivoService = cultivoService;
+    }
+
+    // CRIAR CULTIVO
     @PostMapping
     public ResponseEntity<Cultivo> criarCultivo(
             @RequestParam Long idPlanta,
@@ -38,18 +42,21 @@ public class CultivoController {
         return ResponseEntity.ok(cultivoSalvo);
     }
 
+    // LISTAR CULTIVOS
     @GetMapping
     public ResponseEntity<List<Cultivo>> listarCultivos() {
         List<Cultivo> lista = cultivoService.listarTodos();
         return ResponseEntity.ok(lista);
     }
 
+    // EXCLUIR CULTIVO
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluirCultivo(@PathVariable Long id) {
         cultivoService.excluirCultivo(id);
         return ResponseEntity.noContent().build();
     }
 
+    // EDITAR CULTIVOS
     @PutMapping("/{id}")
     public ResponseEntity<Cultivo> atualizarCultivo(@PathVariable Long id, @RequestBody Cultivo cultivo) {
         Cultivo cultivoAtualizado = cultivoService.atualizarCultivo(id, cultivo);

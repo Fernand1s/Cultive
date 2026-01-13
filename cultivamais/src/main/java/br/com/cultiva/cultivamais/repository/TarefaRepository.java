@@ -7,8 +7,6 @@ import br.com.cultiva.cultivamais.model.Tarefa;
 
 @Repository
 public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
-
     List<Tarefa> findByResponsavelIdUsuario(Long idUsuario);
-
     List<Tarefa> findByResponsavel_IdUsuarioOrCriador_IdUsuario(Long idResponsavel, Long idCriador);
 }

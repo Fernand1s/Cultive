@@ -12,10 +12,13 @@ import java.util.List;
 @RequestMapping("/api/notificacoes")
 public class NotificacaoController {
 
-    @Autowired
-    private NotificacaoService service;
+    private final NotificacaoService service;
 
-    // DTO auxiliar para criação
+    public NotificacaoController(NotificacaoService service) {
+        this.service = service;
+    }
+
+    // DTO AUXILIAR PARA CRIAÇÃO
     public static class NotificacaoDTO {
         public Long idUsuario;
         public String titulo;
@@ -23,34 +26,34 @@ public class NotificacaoController {
         public String tipo;
     }
 
-    // Listar notificações do usuário
+    // LISTAR NOTIFICAÇÕES DO USUÁRIO
     @GetMapping("/usuario/{idUsuario}")
     public ResponseEntity<List<Notificacao>> listar(@PathVariable Long idUsuario) {
         return ResponseEntity.ok(service.listarPorUsuario(idUsuario));
     }
 
-    // Criar nova notificação
+    // CRIAR NOTIFICAÇÃO
     @PostMapping
     public ResponseEntity<Notificacao> criar(@RequestBody NotificacaoDTO dto) {
         Notificacao nova = service.criarNotificacao(dto.idUsuario, dto.titulo, dto.mensagem, dto.tipo);
         return ResponseEntity.ok(nova);
     }
 
-    // Marcar uma como lida
+    // MARCAR COMO LIDA
     @PutMapping("/{id}/lida")
     public ResponseEntity<Void> marcarLida(@PathVariable Long id) {
         service.marcarComoLida(id);
         return ResponseEntity.noContent().build();
     }
 
-    // Marcar TODAS como lidas
+    // MARCAR TODAS COMO LIDA
     @PutMapping("/usuario/{idUsuario}/ler-todas")
     public ResponseEntity<Void> marcarTodasLidas(@PathVariable Long idUsuario) {
         service.marcarTodasComoLidas(idUsuario);
         return ResponseEntity.noContent().build();
     }
 
-    // Excluir notificação
+    // EXCLUIR NOTIFICAÇÃO
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         service.excluir(id);

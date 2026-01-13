@@ -25,7 +25,6 @@ public class AreaCultivoService {
     public AreaCultivo criarAreaCultivo(@NonNull AreaCultivo novaArea) {
         AreaCultivo salva = areaCultivoRepository.save(novaArea);
 
-        // Log
         logRepository.save(new LogSistema("Sistema", "Criou nova área de cultivo: " + salva.getNomeArea()));
 
         return salva;
@@ -39,7 +38,6 @@ public class AreaCultivoService {
     public void excluirArea(@NonNull Long id) {
         if (areaCultivoRepository.existsById(id)) {
             areaCultivoRepository.deleteById(id);
-            // Log
             logRepository.save(new LogSistema("Sistema", "Excluiu a área de cultivo ID: " + id));
         } else {
             throw new ResourceNotFoundException("Área não encontrada para exclusão.");
@@ -62,7 +60,6 @@ public class AreaCultivoService {
 
                     AreaCultivo atualizada = areaCultivoRepository.save(areaExistente);
 
-                    // Log
                     logRepository.save(new LogSistema("Sistema", "Atualizou a área de cultivo: " + atualizada.getNomeArea()));
 
                     return atualizada;

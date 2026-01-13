@@ -20,29 +20,27 @@ import io.micrometer.common.lang.NonNull;
 @Service
 public class UsuarioService {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final LogRepository logRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final NotificacaoService notificacaoService;
 
-    @Autowired
-    private LogRepository logRepository;
+    public UsuarioService(UsuarioRepository usuarioRepository, LogRepository logRepository, PasswordEncoder passwordEncoder, NotificacaoService notificacaoService) {
+        this.usuarioRepository = usuarioRepository;
+        this.logRepository = logRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.notificacaoService = notificacaoService;
+    }
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    // Injeção de Notificações
-    @Autowired
-    private NotificacaoService notificacaoService;
-
-    // Método auxiliar público para o Controller usar na comparação
     public Usuario buscarPorId(Long id) {
         return usuarioRepository.findById(id).orElse(null);
     }
 
+    // CRIAR UTILIZADOR
     @Transactional
     @SuppressWarnings("null")
     public Usuario criarUsuario(@NonNull Usuario novoUsuario) {
         try {
-            // 1. CRIPTOGRAFIA NA CRIAÇÃO
             String senhaCriptografada = passwordEncoder.encode(novoUsuario.getSenha());
             novoUsuario.setSenha(senhaCriptografada);
 
@@ -50,15 +48,11 @@ public class UsuarioService {
                 novoUsuario.setAtivo(true);
             }
 
-            // Tenta salvar o usuário (Aqui que dava o erro 500 se o email fosse repetido)
             Usuario usuarioSalvo = usuarioRepository.save(novoUsuario);
 
-            // Log de criação
             logRepository.save(new LogSistema("Sistema", "Criou novo usuário: " + usuarioSalvo.getNomeUsuario()));
 
-            // NOTIFICAÇÕES (Em bloco try separado para não falhar o cadastro se a notificação der erro)
             try {
-                // HIERARQUIA 1: O usuário recebe boas-vindas
                 notificacaoService.criarNotificacao(
                         usuarioSalvo.getIdUsuario(),
                         "Bem-vindo ao Cultiva+!",
@@ -66,7 +60,6 @@ public class UsuarioService {
                         "sucesso"
                 );
 
-                // HIERARQUIA 2: Admins são avisados do novo cadastro (Monitoramento)
                 notificarAdministradores(
                         "Novo Cadastro no Sistema",
                         "O usuário " + usuarioSalvo.getNomeUsuario() + " (" + usuarioSalvo.getFuncao() + ") acabou de se registrar.",
@@ -79,15 +72,16 @@ public class UsuarioService {
             return usuarioSalvo;
 
         } catch (DataIntegrityViolationException e) {
-            // CORREÇÃO DO ERRO 500: Lança uma mensagem amigável para o Front-end
             throw new RuntimeException("Erro: O e-mail informado já está cadastrado no sistema.");
         }
     }
 
+    // LISTAR USUÁRIOS
     public List<Usuario> listarTodos() {
         return usuarioRepository.findAll();
     }
 
+    // EDITAR USUÁRIOS
     public Usuario atualizarUsuario(Long id, Usuario dadosAtualizados) {
         Optional<Usuario> usuarioExistente = usuarioRepository.findById(id);
 
@@ -108,7 +102,6 @@ public class UsuarioService {
                 usuario.setAtivo(dadosAtualizados.getAtivo());
             }
 
-            // 2. CRIPTOGRAFIA NA EDIÇÃO
             if (dadosAtualizados.getSenha() != null && !dadosAtualizados.getSenha().isEmpty()) {
                 String novaSenhaHash = passwordEncoder.encode(dadosAtualizados.getSenha());
                 usuario.setSenha(novaSenhaHash);
@@ -117,7 +110,6 @@ public class UsuarioService {
 
             Usuario salvo = usuarioRepository.save(usuario);
 
-            // Se a senha foi trocada numa edição de perfil, avisa o usuário (segurança)
             if (senhaAlterada) {
                 try {
                     notificacaoService.criarNotificacao(
@@ -138,6 +130,7 @@ public class UsuarioService {
         }
     }
 
+    // EXCLUIR USUÁRIO
     @SuppressWarnings("null")
     public void excluirUsuario(@NonNull Long id) {
         if (!usuarioRepository.existsById(id)) {
@@ -151,7 +144,6 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findByEmail(email);
 
         if (usuario != null) {
-            // 3. VERIFICAÇÃO DE HASH
             if (passwordEncoder.matches(senhaPlana, usuario.getSenha())) {
 
                 if (Boolean.TRUE.equals(usuario.getAtivo())) {
@@ -163,8 +155,7 @@ public class UsuarioService {
         return null;
     }
 
-    // --- Métodos de Recuperação de Senha ---
-
+    // GERAR CÓDIGO DE RECUPERAÇÃO DE SENHA
     public String gerarCodigoRecuperacao(String email) {
         Usuario usuario = usuarioRepository.findByEmail(email);
 
@@ -178,6 +169,7 @@ public class UsuarioService {
         return null;
     }
 
+    // REDEFINIR SENHA
     public boolean redefinirSenhaComCodigo(String email, String codigoInput, String novaSenha) {
         Usuario usuario = usuarioRepository.findByEmail(email);
 
@@ -186,7 +178,6 @@ public class UsuarioService {
 
             if (codigoSalvo != null && codigoSalvo.equals(codigoInput)) {
 
-                // 4. CRIPTOGRAFIA NA REDEFINIÇÃO
                 usuario.setSenha(passwordEncoder.encode(novaSenha));
 
                 usuario.setCodigoRecuperacao(null);
@@ -194,7 +185,6 @@ public class UsuarioService {
                 logRepository.save(new LogSistema(email, "Redefiniu a senha com sucesso"));
 
                 try {
-                    // NOTIFICAÇÃO 1: Usuário recebe aviso de segurança
                     notificacaoService.criarNotificacao(
                             usuario.getIdUsuario(),
                             "Senha Alterada",
@@ -202,7 +192,6 @@ public class UsuarioService {
                             "alerta"
                     );
 
-                    // NOTIFICAÇÃO 2: Admins recebem alerta de auditoria (Hierarquia)
                     notificarAdministradores(
                             "Segurança: Redefinição de Senha",
                             "O usuário " + usuario.getNomeUsuario() + " (" + email + ") redefiniu a senha via código.",
@@ -218,12 +207,10 @@ public class UsuarioService {
         return false;
     }
 
-    // --- MÉTODO PRIVADO PARA HIERARQUIA DE ADM ---
+    // NOTIFICA OS ADMIN
     private void notificarAdministradores(String titulo, String mensagem, String tipo) {
-        // Busca todos e filtra quem tem permissão de Admin
         List<Usuario> todos = usuarioRepository.findAll();
         for (Usuario u : todos) {
-            // Verifica se a função não é nula antes de chamar o .name()
             if (u.getFuncao() != null) {
                 String funcao = u.getFuncao().name().toUpperCase();
                 if (funcao.contains("ADMIN") || funcao.contains("EMPRESA")) {

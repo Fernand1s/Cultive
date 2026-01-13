@@ -30,15 +30,14 @@ public class Irrigacao extends Evento {
     public double getVolumeAgua() {
         return volumeAgua;
     }
-
-    public void setVolumeAgua(double volumeAgua) {
-        this.volumeAgua = volumeAgua;
-    }
-
     public MetodoIrrigacao getMetodo() {
         return metodo;
     }
 
+    //Setters
+    public void setVolumeAgua(double volumeAgua) {
+        this.volumeAgua = volumeAgua;
+    }
     public void setMetodo(MetodoIrrigacao metodo) {
         this.metodo = metodo;
     }

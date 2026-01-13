@@ -63,9 +63,6 @@ public class GeolocalizacaoService {
         }
     }
 
-    /**
-     * CORREÇÃO: Substituído fields() depreciado por elements()
-     */
     private double calcularMediaDoJson(JsonNode nodeDatas) {
         if (nodeDatas == null || nodeDatas.isMissingNode()) return 0.0;
 

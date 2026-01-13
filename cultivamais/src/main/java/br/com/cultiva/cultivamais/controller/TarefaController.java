@@ -17,20 +17,15 @@ public class TarefaController {
     @Autowired
     private TarefaService tarefaService;
 
-    // --- MÉTODO LISTAR (AJUSTADO PARA O DASHBOARD) ---
+    // LISTAR TAREFAS
     @GetMapping
     public ResponseEntity<?> listar(@RequestParam(required=false) Long idUsuario, @RequestParam(required=false) String funcao) {
         try {
-            // CENÁRIO 1: DASHBOARD (Sem parâmetros)
-            // Se o React chamar sem ID, retornamos TODAS as tarefas para gerar os gráficos
             if (idUsuario == null || funcao == null) {
-                // Certifique-se que seu Service tem esse método.
-                // Se não tiver, crie lá: return tarefaRepository.findAll();
                 List<Tarefa> todas = tarefaService.listarTodas();
                 return ResponseEntity.ok(todas);
             }
 
-            // CENÁRIO 2: APP MOBILE / USUÁRIO ESPECÍFICO (Com parâmetros)
             List<Tarefa> lista = tarefaService.listarTarefasPorUsuario(idUsuario, funcao);
             return ResponseEntity.ok(lista);
 
@@ -40,12 +35,14 @@ public class TarefaController {
         }
     }
 
+    // CRIAR TAREFA
     @PostMapping
     public Tarefa criar(@RequestParam Long idCriador, @RequestParam(required=false) Long idResponsavel, @RequestBody Tarefa tarefa) {
         Long resp = (idResponsavel != null) ? idResponsavel : idCriador;
         return tarefaService.criarTarefa(idCriador, resp, tarefa);
     }
 
+    // EDITAR TAREFA
     @PutMapping("/{id}")
     public ResponseEntity<?> atualizar(
             @PathVariable Long id,
@@ -60,6 +57,7 @@ public class TarefaController {
         }
     }
 
+    // CONCLUIR TAREFA
     @PutMapping("/{id}/concluir")
     public ResponseEntity<Tarefa> concluir(
             @PathVariable Long id,
@@ -73,6 +71,7 @@ public class TarefaController {
         return ResponseEntity.badRequest().build();
     }
 
+    // CANCELAR TAREFA
     @PutMapping("/{id}/cancelar")
     public ResponseEntity<Tarefa> cancelar(@PathVariable Long id, @RequestParam Long idUsuarioLogado) {
         Tarefa t = tarefaService.cancelarTarefa(id, idUsuarioLogado);
@@ -80,6 +79,7 @@ public class TarefaController {
         return ResponseEntity.status(403).body(null);
     }
 
+    // EXCLUIR TAREFA
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id, @RequestParam Long idUsuarioLogado) {
         boolean sucesso = tarefaService.excluirTarefa(id, idUsuarioLogado);

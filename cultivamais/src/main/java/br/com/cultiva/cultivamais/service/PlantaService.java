@@ -16,15 +16,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PlantaService {
 
-    @Autowired
-    private PlantaRepository plantaRepository;
+    private final PlantaRepository plantaRepository;
+    private final LogRepository logRepository;
+    private final NotificacaoService notificacaoService;
 
-    @Autowired
-    private LogRepository logRepository;
+    public PlantaService(PlantaRepository plantaRepository, LogRepository logRepository, NotificacaoService notificacaoService) {
+        this.plantaRepository = plantaRepository;
+        this.logRepository = logRepository;
+        this.notificacaoService = notificacaoService;
+    }
 
-    @Autowired
-    private NotificacaoService notificacaoService;
-
+    // CRIAR PLANTA
     @Transactional
     public Planta criarPlanta(@NonNull Long idUsuario, @NonNull Planta novaPlanta) {
         Planta salva = plantaRepository.save(novaPlanta);
@@ -44,6 +46,7 @@ public class PlantaService {
         return plantaRepository.findAll();
     }
 
+    // EXCLUIR PLANTA
     @SuppressWarnings("null")
     public void excluirPlanta(@NonNull Long id) {
         if (plantaRepository.existsById(id)) {
@@ -54,6 +57,7 @@ public class PlantaService {
         }
     }
 
+    // EDITAR PLANTA
     @Transactional
     public Planta atualizarPlanta(@NonNull Long id, Planta dadosAtualizados) {
         return plantaRepository.findById(id)

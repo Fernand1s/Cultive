@@ -4,11 +4,11 @@ public enum TipoPlanta {
     HORTALICA,
     FRUTA,
     GRAO,
-    LEGUME,          // Importante: O frontend usa este!
+    LEGUME,
     VERDURA,
     FLOR,
-    ERVA_MEDICINAL,  // Sugestão extra
-    TEMPERO,         // Sugestão extra
+    ERVA_MEDICINAL,
+    TEMPERO,
     ARBUSTO,
     OUTRO
 }

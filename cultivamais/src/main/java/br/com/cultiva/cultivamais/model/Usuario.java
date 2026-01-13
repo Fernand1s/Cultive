@@ -24,7 +24,7 @@ public class Usuario {
     @Enumerated(EnumType.STRING)
     private FuncaoUsuario funcao;
 
-    // --- RELACIONAMENTOS ---
+    // RELACIONAMENTOS
     @OneToMany(mappedBy = "responsavel", cascade = CascadeType.ALL)
     @JsonIgnore
     private List<Tarefa> tarefasAtribuidas;
@@ -37,7 +37,7 @@ public class Usuario {
     @JsonIgnore
     private List<Notificacao> notificacoes;
 
-    // --- CONSTRUTORES ---
+    // CONSTRUTORES
     public Usuario(String nome, String email, String senha, FuncaoUsuario funcao) {
         this.nomeUsuario = nome;
         this.email = email;

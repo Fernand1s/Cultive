@@ -16,30 +16,38 @@ import br.com.cultiva.cultivamais.service.RelatorioService;
 @RequestMapping("/api/relatorios")
 public class RelatorioController {
 
-    @Autowired
-    private RelatorioService relatorioService;
+    private final RelatorioService relatorioService;
 
+    public RelatorioController(RelatorioService relatorioService) {
+        this.relatorioService = relatorioService;
+    }
+
+    // TOTAL DE ÁGUA
     @GetMapping("/agua/{idCultivo}")
     public ResponseEntity<Double> getRelatorioAgua(@PathVariable Long idCultivo) {
         return ResponseEntity.ok(relatorioService.calcularTotalAguaCultivo(idCultivo));
     }
 
+    // COMPATIBILIDADE PLANTA/ÁREA
     @GetMapping("/compatibilidade/{idPlanta}/{idArea}")
     public ResponseEntity<Boolean> getCompatibilidadeTotal(@PathVariable Long idPlanta, @PathVariable Long idArea) {
         return ResponseEntity.ok(relatorioService.verificarCompatibilidadeTotal(idPlanta, idArea));
     }
 
+    // TOTAL COLHIDO
     @GetMapping("/colheita/{idArea}")
     public ResponseEntity<Double> getTotalColhidoArea(@PathVariable Long idArea) {
         // CORREÇÃO: Retorna o valor Double somado pelo banco
         return ResponseEntity.ok(relatorioService.calcularTotalColhidoArea(idArea));
     }
 
+    // PREVISÃO DE COLHEITA
     @GetMapping("/previsao/{idArea}")
     public ResponseEntity<List<Cultivo>> previsaoColheita(@PathVariable Long idArea) {
         return ResponseEntity.ok(relatorioService.obterCultivosDaArea(idArea));
     }
 
+    // HISTÓRICO DE DOENÇAS OU PRAGAS
     @GetMapping("/pragas/{idCultivo}")
     public ResponseEntity<List<DoencaPraga>> historicoPragas(@PathVariable Long idCultivo) {
         return ResponseEntity.ok(relatorioService.obterHistoricoPragas(idCultivo));

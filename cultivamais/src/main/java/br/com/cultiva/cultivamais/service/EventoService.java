@@ -11,13 +11,19 @@ import io.micrometer.common.lang.NonNull;
 @Service
 public class EventoService {
 
-    @Autowired private CultivoRepository cultivoRepository;
-    @Autowired private IrrigacaoRepository irrigacaoRepository;
-    @Autowired private DoencaPragaRepository doencaPragaRepository;
-    @Autowired private LogRepository logRepository;
+    private final CultivoRepository cultivoRepository;
+    private final IrrigacaoRepository irrigacaoRepository;
+    private final DoencaPragaRepository doencaPragaRepository;
+    private final LogRepository logRepository;
+    private final NotificacaoService notificacaoService;
 
-    // Injeção da Notificação
-    @Autowired private NotificacaoService notificacaoService;
+    public EventoService(CultivoRepository cultivoRepository, IrrigacaoRepository irrigacaoRepository, DoencaPragaRepository doencaPragaRepository, LogRepository logRepository, NotificacaoService notificacaoService) {
+        this.cultivoRepository = cultivoRepository;
+        this.irrigacaoRepository = irrigacaoRepository;
+        this.doencaPragaRepository = doencaPragaRepository;
+        this.logRepository = logRepository;
+        this.notificacaoService = notificacaoService;
+    }
 
     public Irrigacao registrarIrrigacao(@NonNull Long idUsuario, @NonNull Long idCultivo, double volumeAgua, MetodoIrrigacao metodo, String observacao, LocalDateTime dataHora) {
 
@@ -29,7 +35,6 @@ public class EventoService {
 
         logRepository.save(new LogSistema("Usuario ID " + idUsuario, "Irrigação registrada: " + volumeAgua + "L"));
 
-        // Notificação Informativa
         notificacaoService.criarNotificacao(
                 idUsuario,
                 "Irrigação Realizada",
@@ -51,10 +56,9 @@ public class EventoService {
 
         logRepository.save(new LogSistema("Usuario ID " + idUsuario, "Praga registrada: " + nomePraga));
 
-        // Notificação de ALERTA ou ERRO dependendo da gravidade
         String tipoNotificacao = "alerta";
         if (nivel == NivelAfetacao.ALTO || nivel == NivelAfetacao.CRITICO) {
-            tipoNotificacao = "erro"; // Vermelho
+            tipoNotificacao = "erro";
         }
 
         notificacaoService.criarNotificacao(

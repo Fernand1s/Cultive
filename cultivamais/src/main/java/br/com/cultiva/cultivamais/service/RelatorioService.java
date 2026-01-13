@@ -30,9 +30,7 @@ public class RelatorioService {
     @Autowired
     private AreaCultivoRepository areaCultivoRepository;
 
-    /**
-     * CORREÇÃO: Verifica se a planta é compatível com o solo E com a luz da área.
-     */
+    // VERIFICAR COMPATIBILIDADE
     public boolean verificarCompatibilidadeTotal(Long idPlanta, Long idArea) {
         Planta planta = plantaRepository.findById(idPlanta)
                 .orElseThrow(() -> new ResourceNotFoundException("Planta não encontrada"));
@@ -50,13 +48,12 @@ public class RelatorioService {
         return soloOk && luzOk;
     }
 
-    /**
-     * EVOLUÇÃO: Performance otimizada via SQL (Repository)
-     */
+    // CALCULA O TOTAL COLHIDO DA ÁREA
     public double calcularTotalColhidoArea(Long idArea) {
         return cultivoRepository.sumQuantidadeColhidaByArea(idArea);
     }
 
+    // CALCULA O TOTAL DE ÁGUA DO CULTIVO
     public double calcularTotalAguaCultivo(@NonNull Long idCultivo) {
         Cultivo cultivo = cultivoRepository.findById(idCultivo)
                 .orElseThrow(() -> new ResourceNotFoundException("Cultivo não encontrado com ID: " + idCultivo));
@@ -70,6 +67,7 @@ public class RelatorioService {
         return totalVolume;
     }
 
+    // LISTA O HISTÓRICO DE DOENÇAS
     public List<DoencaPraga> obterHistoricoPragas(@NonNull Long idCultivo) {
         Cultivo cultivo = cultivoRepository.findById(idCultivo)
                 .orElseThrow(() -> new ResourceNotFoundException("Cultivo não encontrado com ID: " + idCultivo));
@@ -83,6 +81,7 @@ public class RelatorioService {
         return historicoPragas;
     }
 
+    // PEGA OS CULTIVOS DA ÁREA
     public List<Cultivo> obterCultivosDaArea(@NonNull Long idArea) {
         AreaCultivo area = areaCultivoRepository.findById(idArea)
                 .orElseThrow(() -> new ResourceNotFoundException("Área não encontrada com ID: " + idArea));

@@ -24,7 +24,7 @@ public class EventoController {
     @Autowired
     private EventoService eventoService;
 
-    // --- REGISTRAR IRRIGAÇÃO ---
+    // REGISTRAR IRRIGAÇÃO
     @PostMapping("/irrigacao/{idCultivo}")
     public ResponseEntity<Irrigacao> registrarIrrigacao(
             @PathVariable Long idCultivo,
@@ -34,7 +34,6 @@ public class EventoController {
             @RequestParam(required = false) String observacao,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataHora) {
 
-        // Se a data não for informada, usa o momento atual
         if (dataHora == null) {
             dataHora = LocalDateTime.now();
         }
@@ -44,7 +43,7 @@ public class EventoController {
         return ResponseEntity.ok(irrigacao);
     }
 
-    // --- REGISTRAR DOENÇA/PRAGA ---
+    // REGISTRAR DOENÇA/PRAGA
     @PostMapping("/praga/{idCultivo}")
     public ResponseEntity<DoencaPraga> registrarPraga(
             @PathVariable Long idCultivo,

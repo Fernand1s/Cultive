@@ -2,7 +2,7 @@ package br.com.cultiva.cultivamais.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import com.fasterxml.jackson.annotation.JsonFormat; // Certifique-se de ter o Jackson
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Entity
 @Table(name = "logs_sistema")
@@ -15,7 +15,6 @@ public class LogSistema {
     private String usuario;
     private String acao;
 
-    // Formata a data como String ISO para o Frontend não receber array de números
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime dataHora;
 
@@ -27,10 +26,15 @@ public class LogSistema {
         this.dataHora = LocalDateTime.now();
     }
 
+    //Getters
     public Long getId() { return id; }
     public String getUsuario() { return usuario; }
-    public void setUsuario(String usuario) { this.usuario = usuario; }
     public String getAcao() { return acao; }
-    public void setAcao(String acao) { this.acao = acao; }
     public LocalDateTime getDataHora() { return dataHora; }
+
+    //Setters
+    public void setId(Long id) { this.id = id; }
+    public void setUsuario(String usuario) { this.usuario = usuario; }
+    public void setAcao(String acao) { this.acao = acao; }
+    public void setDataHora(LocalDateTime dataHora) { this.dataHora = dataHora; }
 }

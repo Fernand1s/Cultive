@@ -13,7 +13,6 @@ public class LogService {
     @Autowired
     private LogRepository logRepository;
 
-    // Método seguro para registrar logs sem parar o sistema se der erro
     public void registrarLog(String usuario, String acao) {
         try {
             LogSistema log = new LogSistema(usuario, acao);

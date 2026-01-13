@@ -18,12 +18,11 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configure(http))
                 .csrf(csrf -> csrf.disable())
-                // EVOLUÇÃO: Stateless para JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/usuarios/login", "/api/usuarios/gerar-codigo", "/api/usuarios/redefinir-senha").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // EVOLUÇÃO: Swagger
-                        .anyRequest().permitAll() // Permitir tudo por enquanto para facilitar seus testes
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .anyRequest().permitAll()
                 );
 
         return http.build();

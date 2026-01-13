@@ -20,24 +20,25 @@ import java.util.Optional;
 @Service
 public class NotificacaoService {
 
-    @Autowired
-    private NotificacaoRepository notificacaoRepository;
+    private final NotificacaoRepository notificacaoRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final CultivoRepository cultivoRepository;
+    private final TarefaRepository tarefaRepository;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    public NotificacaoService(NotificacaoRepository notificacaoRepository, UsuarioRepository usuarioRepository, CultivoRepository cultivoRepository, TarefaRepository tarefaRepository) {
+        this.notificacaoRepository = notificacaoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.cultivoRepository = cultivoRepository;
+        this.tarefaRepository = tarefaRepository;
+    }
 
-    @Autowired
-    private CultivoRepository cultivoRepository;
 
-    @Autowired
-    private TarefaRepository tarefaRepository;
-
-    // --- MÉTODOS EXISTENTES (CORRIGIDOS) ---
-
+    // LISTAR POR USUÁRIOS
     public List<Notificacao> listarPorUsuario(Long idUsuario) {
         return notificacaoRepository.findByUsuario_IdUsuarioOrderByDataHoraDesc(idUsuario);
     }
 
+    // CRIAR NOTIFICAÇÃO
     @Transactional
     public Notificacao criarNotificacao(Long idUsuario, String titulo, String mensagem, String tipo) {
         Usuario usuario = usuarioRepository.findById(idUsuario)
@@ -47,6 +48,7 @@ public class NotificacaoService {
         return notificacaoRepository.save(notificacao);
     }
 
+    // MARCAR COMO LIDA
     @Transactional
     public void marcarComoLida(Long idNotificacao) {
         notificacaoRepository.findById(idNotificacao).ifPresent(n -> {
@@ -55,6 +57,7 @@ public class NotificacaoService {
         });
     }
 
+    // MARCAR TODAS COMO LIDA
     @Transactional
     public void marcarTodasComoLidas(Long idUsuario) {
         List<Notificacao> notificacoes = notificacaoRepository.findByUsuario_IdUsuarioOrderByDataHoraDesc(idUsuario);
@@ -62,6 +65,7 @@ public class NotificacaoService {
         notificacaoRepository.saveAll(notificacoes);
     }
 
+    // EXCLUIR NOTIFICAÇÃO
     @Transactional
     public void excluir(Long id) {
         if (notificacaoRepository.existsById(id)) {
@@ -71,13 +75,7 @@ public class NotificacaoService {
         }
     }
 
-    // --- NOVAS REGRAS DE AUTOMAÇÃO (FREQUÊNCIA) ---
-
-    /**
-     * REGRA: Alerta de Irrigação
-     * FREQUÊNCIA: Roda a cada 6 horas.
-     * LÓGICA: Notifica se o cultivo não tem irrigação registrada nas últimas 24h.
-     */
+    // VERIFICAR REGA
     @Scheduled(fixedRate = 21600000)
     @Transactional
     public void verificarNecessidadeIrrigacao() {
@@ -101,10 +99,7 @@ public class NotificacaoService {
         }
     }
 
-    /**
-     * REGRA: Lembrete de Tarefas do Dia
-     * FREQUÊNCIA: Todo dia às 07:00 da manhã.
-     */
+    // NOTIFICAÇÃO DE TAREFA DO DIA
     @Scheduled(cron = "0 0 7 * * ?")
     @Transactional
     public void notificarTarefasDoDia() {

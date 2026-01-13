@@ -13,16 +13,17 @@ import br.com.cultiva.cultivamais.service.LogService; // Importar
 @RestController
 @RequestMapping("/api/areas")
 public class AreaCultivoController {
+    private final AreaCultivoService areaCultivoService;
+    private final GeolocalizacaoService geolocalizacaoService;
+    private final LogService logService;
 
-    @Autowired
-    private AreaCultivoService areaCultivoService;
+    public AreaCultivoController(AreaCultivoService areaCultivoService, GeolocalizacaoService geolocalizacaoService, LogService logService) {
+        this.areaCultivoService = areaCultivoService;
+        this.geolocalizacaoService = geolocalizacaoService;
+        this.logService = logService;
+    }
 
-    @Autowired
-    private GeolocalizacaoService geolocalizacaoService;
-
-    @Autowired
-    private LogService logService; // Injetar
-
+    // CRIAR ÁREA
     @PostMapping
     public ResponseEntity<AreaCultivo> criarAreaCultivo(@RequestBody AreaCultivo area) {
         AreaCultivo areaSalva = areaCultivoService.criarAreaCultivo(area);
@@ -32,11 +33,13 @@ public class AreaCultivoController {
         return ResponseEntity.ok(areaSalva);
     }
 
+    // LISTAR ÁREAS
     @GetMapping
     public ResponseEntity<List<AreaCultivo>> listarAreas() {
         return ResponseEntity.ok(areaCultivoService.listarTodas());
     }
 
+    // OBTER DADOS CLIMÁTICOS
     @GetMapping("/{id}/clima")
     public ResponseEntity<DadosSolares> obterDadosClimaticos(@PathVariable Long id) {
         DadosSolares dados = geolocalizacaoService.buscarDadosExternos(id);
@@ -44,6 +47,7 @@ public class AreaCultivoController {
         return ResponseEntity.notFound().build();
     }
 
+    // EXCLUIR ÁREA
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluirArea(@PathVariable Long id) {
         areaCultivoService.excluirArea(id);
@@ -53,6 +57,7 @@ public class AreaCultivoController {
         return ResponseEntity.noContent().build();
     }
 
+    // EDITAR ÁREA
     @PutMapping("/{id}")
     public ResponseEntity<AreaCultivo> atualizarArea(@PathVariable Long id, @RequestBody AreaCultivo area) {
         AreaCultivo areaAtualizada = areaCultivoService.atualizarArea(id, area);

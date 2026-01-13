@@ -15,15 +15,17 @@ import java.util.Map;
 @RequestMapping("/api/logs")
 public class LogController {
 
-    @Autowired
-    private LogService logService;
+    private final LogService logService;
+
+    public LogController(LogService logService) {
+        this.logService = logService;
+    }
 
     @GetMapping
     public ResponseEntity<?> listarLogs() {
         try {
             List<LogSistema> logsDoBanco = logService.listarTodos();
 
-            // CONVERSÃO MANUAL (Evita erro de serialização de Data)
             List<Map<String, Object>> listaSegura = new ArrayList<>();
 
             for (LogSistema log : logsDoBanco) {
@@ -32,7 +34,6 @@ public class LogController {
                 item.put("usuario", log.getUsuario());
                 item.put("acao", log.getAcao());
 
-                // Converte a data para String aqui mesmo
                 if (log.getDataHora() != null) {
                     item.put("dataHora", log.getDataHora().toString());
                 } else {
@@ -45,8 +46,7 @@ public class LogController {
             return ResponseEntity.ok(listaSegura);
 
         } catch (Exception e) {
-            // SE DEU ERRO, VAI IMPRIMIR NO CONSOLE DO JAVA
-            System.err.println("❌ ERRO CRÍTICO NO LOG CONTROLLER:");
+            System.err.println("ERRO CRÍTICO NO LOG CONTROLLER:");
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("Erro interno: " + e.getMessage());
         }

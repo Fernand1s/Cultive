@@ -25,7 +25,7 @@ public class Planta {
     private QuantidadeLuz luzRecomendada;
 
     @Enumerated(EnumType.STRING)
-    private QuantidadeAgua aguaRecomendada; // NOVO CAMPO ADICIONADO
+    private QuantidadeAgua aguaRecomendada;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "planta_solos_recomendados", joinColumns = @JoinColumn(name = "planta_id"))

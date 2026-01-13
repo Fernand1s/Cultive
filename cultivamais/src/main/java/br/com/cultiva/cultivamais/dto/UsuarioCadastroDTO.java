@@ -17,7 +17,7 @@ public class UsuarioCadastroDTO {
 
     @NotBlank(message = "A senha é obrigatória")
     @Size(min = 8, message = "A senha deve ter no mínimo 8 caracteres")
-    // Regex: Pelo menos 1 maiúscula, 1 minúscula, 1 número e 1 especial
+    // Pelo menos 1 maiúscula, 1 minúscula, 1 número e 1 especial
     @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).{8,}$",
             message = "A senha deve conter letras maiúsculas, minúsculas, números e caracteres especiais")
     private String senha;
