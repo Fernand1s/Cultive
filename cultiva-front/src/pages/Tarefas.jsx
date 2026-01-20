@@ -3,16 +3,18 @@ import '../App.css';
 import '../css/tarefas.css';
 import {
     Plus, Calendar, Trash2, User,
-    CheckCircle2, AlertTriangle, Edit2, Ban, StickyNote, ClipboardList, X, Clock
+    CheckCircle2, Edit2, Ban, StickyNote, ClipboardList, X, Clock
 } from 'lucide-react';
 import { useNotify } from "../context/NotificationContext";
+
+import { getHeaders, request } from "../services/api.js";
 
 const Tarefas = () => {
     const notify = useNotify();
 
     const [usuarioLogado] = useState(() => {
         try {
-            const dados = localStorage.getItem('usuarioLogado');
+            const dados = localStorage.getItem('usuario_logado');
             return dados ? JSON.parse(dados) : null;
         } catch (e) { return null; }
     });
@@ -32,16 +34,43 @@ const Tarefas = () => {
     });
 
     useEffect(() => {
-        if (usuarioLogado?.idUsuario) carregarDados();
+        if (usuarioLogado?.idUsuario) {
+            carregarTarefas();
+            const souGestor = usuarioLogado.funcao.includes('ADMIN') || usuarioLogado.funcao.includes('GERENTE');
+            if (souGestor) {
+                carregarUsuarios();
+            }
+        }
     }, [usuarioLogado]);
 
-    const carregarDados = async () => {
-        const url = `http://localhost:8090/api/tarefas?idUsuario=${usuarioLogado.idUsuario}&funcao=${usuarioLogado.funcao}`;
+    const carregarTarefas = async () => {
+        const urlT = `http://localhost:8090/api/tarefas?idUsuario=${usuarioLogado.idUsuario}&funcao=${usuarioLogado.funcao}`;
         try {
-            const resT = await fetch(url);
-            const resU = await fetch('http://localhost:8090/api/usuarios');
-            setTarefas(await resT.json());
-            setUsuarios(await resU.json());
+            const resT = await request(urlT, { headers: getHeaders() });
+            setTarefas(resT);
+        } catch (err) {
+            notify("Erro ao carregar tarefas.", "error");
+        }
+    };
+
+    const carregarUsuarios = async () => {
+        try {
+            const resU = await request('http://localhost:8090/api/usuarios', { headers: getHeaders() });
+            setUsuarios(resU);
+        } catch (err) {
+            console.warn("Usuário sem permissão para listar colaboradores.");
+        }
+    };
+
+    const carregarDados = async () => {
+        const urlT = `http://localhost:8090/api/tarefas?idUsuario=${usuarioLogado.idUsuario}&funcao=${usuarioLogado.funcao}`;
+        try {
+            const [resT, resU] = await Promise.all([
+                request(urlT, { headers: getHeaders() }),
+                request('http://localhost:8090/api/usuarios', { headers: getHeaders() })
+            ]);
+            setTarefas(resT);
+            setUsuarios(resU);
         } catch (err) {
             notify("Erro ao sincronizar tarefas.", "error");
         }
@@ -57,37 +86,68 @@ const Tarefas = () => {
         }
     };
 
-    const executarRequisicaoConclusao = (tarefa, observacao) => {
-        fetch(`http://localhost:8090/api/tarefas/${tarefa.id}/concluir?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ observacao })
-        }).then(res => {
-            if (res.ok) {
-                carregarDados();
-                setModalObsAberto(false);
-                notify("Tarefa concluída!", "success");
-            }
-        });
-    };
-
-    const cancelarTarefa = (id) => {
-        if (window.confirm('Deseja cancelar esta tarefa?')) {
-            fetch(`http://localhost:8090/api/tarefas/${id}/cancelar?idUsuarioLogado=${usuarioLogado.idUsuario}`, { method: 'PUT' })
-                .then(res => res.ok ? carregarDados() : notify("Sem permissão.", "error"));
-        }
-    };
-
-    const excluirTarefa = (id) => {
-        if (window.confirm('Excluir definitivamente?')) {
-            fetch(`http://localhost:8090/api/tarefas/${id}?idUsuarioLogado=${usuarioLogado.idUsuario}`, { method: 'DELETE' })
-                .then(res => res.ok ? carregarDados() : notify("Erro ao excluir.", "error"));
-        }
-    };
-
-    const salvarTarefa = (e) => {
-        e.preventDefault();
+    const executarRequisicaoConclusao = async (tarefa, observacao) => {
+        if (carregando) return;
         setCarregando(true);
+
+        try {
+            await request(`http://localhost:8090/api/tarefas/${tarefa.id}/concluir?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
+                method: 'PATCH',
+                headers: getHeaders(),
+                body: JSON.stringify({ observacao })
+            });
+            await carregarDados();
+            setModalObsAberto(false);
+            notify("Tarefa concluída!", "success");
+        } catch (err) {
+            notify("Erro ao concluir tarefa.", "error");
+        } finally {
+            setCarregando(false);
+        }
+    };
+
+    const cancelarTarefa = async (id) => {
+        if (carregando) return;
+        if (window.confirm('Deseja cancelar esta tarefa?')) {
+            setCarregando(true);
+            try {
+                await request(`http://localhost:8090/api/tarefas/${id}/cancelar?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
+                    method: 'PUT',
+                    headers: getHeaders()
+                });
+                carregarDados();
+            } catch (err) {
+                notify("Erro ao cancelar ou sem permissão.", "error");
+            } finally {
+                setCarregando(false);
+            }
+        }
+    };
+
+    const excluirTarefa = async (id) => {
+        if (carregando) return;
+        if (window.confirm('Excluir definitivamente?')) {
+            setCarregando(true);
+            try {
+                await request(`http://localhost:8090/api/tarefas/${id}?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
+                    method: 'DELETE',
+                    headers: getHeaders()
+                });
+                carregarDados();
+                notify("Tarefa removida.", "success");
+            } catch (err) {
+                notify("Erro ao excluir.", "error");
+            } finally {
+                setCarregando(false);
+            }
+        }
+    };
+
+    const salvarTarefa = async (e) => {
+        e.preventDefault();
+        if (carregando) return;
+        setCarregando(true);
+
         const responsavelFinal = novaTarefa.idResponsavel || usuarioLogado.idUsuario;
         const dataFormatada = novaTarefa.dataPrazo.includes('T') ? novaTarefa.dataPrazo : `${novaTarefa.dataPrazo}T23:59:59`;
 
@@ -96,20 +156,27 @@ const Tarefas = () => {
             descricao: novaTarefa.descricao,
             prioridade: novaTarefa.prioridade,
             dataPrazo: dataFormatada,
-            responsavel: { idUsuario: responsavelFinal }
+            idResponsavel: parseInt(responsavelFinal)
         };
 
-        const url = modoEdicao ? `http://localhost:8090/api/tarefas/${idTarefaEditando}?idUsuarioLogado=${usuarioLogado.idUsuario}` : `http://localhost:8090/api/tarefas?idResponsavel=${responsavelFinal}&idCriador=${usuarioLogado.idUsuario}`;
+        const url = modoEdicao
+            ? `http://localhost:8090/api/tarefas/${idTarefaEditando}?idUsuarioLogado=${usuarioLogado.idUsuario}`
+            : `http://localhost:8090/api/tarefas?idCriador=${usuarioLogado.idUsuario}&idResponsavel=${responsavelFinal}`;
 
-        fetch(url, { method: modoEdicao ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) })
-            .then(res => {
-                if (res.ok) {
-                    carregarDados();
-                    setModalAberto(false);
-                    notify("Sucesso!", "success");
-                }
-            })
-            .finally(() => setCarregando(false));
+        try {
+            await request(url, {
+                method: modoEdicao ? 'PUT' : 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(corpo)
+            });
+            await carregarDados();
+            setModalAberto(false);
+            notify(modoEdicao ? "Tarefa atualizada!" : "Tarefa atribuída!", "success");
+        } catch (err) {
+            notify("Erro ao salvar tarefa.", "error");
+        } finally {
+            setCarregando(false);
+        }
     };
 
     const renderTarefa = (tarefa, tipo) => {
@@ -252,9 +319,17 @@ const Tarefas = () => {
                             </div>
                             <div className="form-group">
                                 <label className="input-label">Responsável pela Execução</label>
-                                <select className="login-input" value={novaTarefa.idResponsavel} onChange={e => setNovaTarefa({...novaTarefa, idResponsavel: e.target.value})}>
+                                <select
+                                    className="login-input"
+                                    value={novaTarefa.idResponsavel}
+                                    onChange={e => setNovaTarefa({...novaTarefa, idResponsavel: e.target.value})}
+                                >
                                     <option value={usuarioLogado.idUsuario}>Atribuir a mim</option>
-                                    {usuarios.map(u => u.idUsuario !== usuarioLogado.idUsuario && <option key={u.idUsuario} value={u.idUsuario}>{u.nomeUsuario}</option>)}
+                                    {usuarios.length > 0 && usuarios.map(u =>
+                                            u.idUsuario !== usuarioLogado.idUsuario && (
+                                                <option key={u.idUsuario} value={u.idUsuario}>{u.nomeUsuario}</option>
+                                            )
+                                    )}
                                 </select>
                             </div>
                             <div className="modal-footer" style={{borderTop:'1px solid #f1f5f9', paddingTop:'20px', marginTop:'20px'}}>
@@ -281,7 +356,7 @@ const Tarefas = () => {
                             <textarea className="login-input" rows="3" placeholder="Ex: Tudo pronto, irrigação verificada." value={obsTexto} onChange={e => setObsTexto(e.target.value)} />
                             <div className="modal-footer" style={{marginTop:'20px'}}>
                                 <button type="button" onClick={() => setModalObsAberto(false)} className="link-action">Voltar</button>
-                                <button type="submit" className="btn-login" style={{marginTop:0, background:'#10b981'}}>Concluir Agora</button>
+                                <button type="submit" className="btn-login" style={{marginTop:0, background:'#10b981'}} disabled={carregando}> {carregando ? "Finalizando..." : "Concluir Agora"} </button>
                             </div>
                         </form>
                     </div>

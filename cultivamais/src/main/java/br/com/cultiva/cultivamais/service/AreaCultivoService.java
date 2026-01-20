@@ -15,36 +15,33 @@ import io.micrometer.common.lang.NonNull;
 @Service
 public class AreaCultivoService {
 
-    @Autowired
-    private AreaCultivoRepository areaCultivoRepository;
+    private final AreaCultivoRepository areaCultivoRepository;
 
-    @Autowired
-    private LogRepository logRepository;
 
-    @SuppressWarnings("null")
+    public AreaCultivoService(AreaCultivoRepository areaCultivoRepository) {
+        this.areaCultivoRepository = areaCultivoRepository;
+    }
+
     public AreaCultivo criarAreaCultivo(@NonNull AreaCultivo novaArea) {
-        AreaCultivo salva = areaCultivoRepository.save(novaArea);
-
-        logRepository.save(new LogSistema("Sistema", "Criou nova área de cultivo: " + salva.getNomeArea()));
-
-        return salva;
+        return areaCultivoRepository.save(novaArea);
     }
 
     public List<AreaCultivo> listarTodas() {
         return areaCultivoRepository.findAll();
     }
 
-    @SuppressWarnings("null")
-    public void excluirArea(@NonNull Long id) {
-        if (areaCultivoRepository.existsById(id)) {
-            areaCultivoRepository.deleteById(id);
-            logRepository.save(new LogSistema("Sistema", "Excluiu a área de cultivo ID: " + id));
-        } else {
-            throw new ResourceNotFoundException("Área não encontrada para exclusão.");
-        }
+    public AreaCultivo buscarPorId(@NonNull Long id) {
+        return areaCultivoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Área não encontrada com o ID: " + id));
     }
 
-    @SuppressWarnings("null")
+    public void excluirArea(@NonNull Long id) {
+        if (!areaCultivoRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Área não encontrada para exclusão.");
+        }
+        areaCultivoRepository.deleteById(id);
+    }
+
     public AreaCultivo atualizarArea(@NonNull Long id, @NonNull AreaCultivo dadosAtualizados) {
         return areaCultivoRepository.findById(id)
                 .map(areaExistente -> {
@@ -53,16 +50,13 @@ public class AreaCultivoService {
                     areaExistente.setTamanhoArea(dadosAtualizados.getTamanhoArea());
                     areaExistente.setTipoSolo(dadosAtualizados.getTipoSolo());
 
-                    if (dadosAtualizados.getLatitudeArea() != 0)
+                    if (dadosAtualizados.getLatitudeArea() != null)
                         areaExistente.setLatitudeArea(dadosAtualizados.getLatitudeArea());
-                    if (dadosAtualizados.getLongitudeArea() != 0)
+
+                    if (dadosAtualizados.getLongitudeArea() != null)
                         areaExistente.setLongitudeArea(dadosAtualizados.getLongitudeArea());
 
-                    AreaCultivo atualizada = areaCultivoRepository.save(areaExistente);
-
-                    logRepository.save(new LogSistema("Sistema", "Atualizou a área de cultivo: " + atualizada.getNomeArea()));
-
-                    return atualizada;
+                    return areaCultivoRepository.save(areaExistente);
                 })
                 .orElseThrow(() -> new ResourceNotFoundException("Área não encontrada para edição."));
     }

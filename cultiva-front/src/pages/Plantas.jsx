@@ -6,7 +6,7 @@ import {
     Leaf, Cherry, Bean, Wheat, X, Microscope,
     Droplets, Sun, Flower, AlertCircle
 } from 'lucide-react';
-import { authService, getHeaders } from "../services/api.js";
+import { plantaService, getHeaders } from "../services/api.js";
 import { useNotify } from "../context/NotificationContext";
 
 const Plantas = () => {
@@ -16,6 +16,7 @@ const Plantas = () => {
     const [plantas, setPlantas] = useState([]);
     const [modalAberto, setModalAberto] = useState(false);
     const [confirmacaoExclusao, setConfirmacaoExclusao] = useState({ aberta: false, id: null, nome: '' });
+    const [carregando, setCarregando] = useState(false);
 
     const [editandoId, setEditandoId] = useState(null);
     const [novaPlanta, setNovaPlanta] = useState({
@@ -25,7 +26,8 @@ const Plantas = () => {
         cicloMedioDias: '',
         solosRecomendados: [],
         aguaRecomendada: 'MEDIA',
-        luzRecomendada: 'MEIA_SOMBRA'
+        luzRecomendada: 'MEIA_SOMBRA',
+        descricaoPlanta: ''
     });
 
     const CATEGORIAS_SOLO = {
@@ -51,11 +53,13 @@ const Plantas = () => {
         }
     };
 
-    const carregarPlantas = () => {
-        fetch('http://localhost:8090/api/plantas')
-            .then(res => res.json())
-            .then(dados => setPlantas(Array.isArray(dados) ? dados : []))
-            .catch(() => notify("Erro ao conectar com o catálogo.", "error"));
+    const carregarPlantas = async () => {
+        try {
+            const dados = await plantaService.listar();
+            setPlantas(Array.isArray(dados) ? dados : []);
+        } catch (err) {
+            notify("Erro ao conectar com o catálogo.", "error");
+        }
     };
 
     useEffect(() => { carregarPlantas(); }, []);
@@ -89,38 +93,44 @@ const Plantas = () => {
         setConfirmacaoExclusao({ aberta: true, id, nome });
     };
 
-    const executarExclusao = () => {
-        fetch(`http://localhost:8090/api/plantas/${confirmacaoExclusao.id}`, {
-            method: 'DELETE',
-            headers: getHeaders()
-        }).then(res => {
-            if(res.ok) {
-                notify(`Planta removida.`, "success");
-                carregarPlantas();
-                setConfirmacaoExclusao({ aberta: false });
-            }
-        });
+    const executarExclusao = async () => {
+        try {
+            await plantaService.excluir(confirmacaoExclusao.id);
+            notify(`Planta removida.`, "success");
+            carregarPlantas();
+            setConfirmacaoExclusao({ aberta: false });
+        } catch (err) {
+            notify("Erro ao excluir planta.", "error");
+        }
     };
 
     const salvarPlanta = async (e) => {
         e.preventDefault();
+
+        if (carregando) return;
+        setCarregando(true);
+
         try {
-            const usuario = authService.obterUsuarioLogado();
-            const idUsuario = usuario?.idUsuario || usuario?.id;
-            const url = editandoId ? `http://localhost:8090/api/plantas/${editandoId}` : `http://localhost:8090/api/plantas/usuario/${idUsuario}`;
+            const dadosFormatados = {
+                ...novaPlanta,
+                cicloMedioDias: Number(novaPlanta.cicloMedioDias)
+            };
 
-            const response = await fetch(url, {
-                method: editandoId ? 'PUT' : 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify({ ...novaPlanta, cicloMedioDias: Number(novaPlanta.cicloMedioDias) })
-            });
-
-            if (response.ok) {
-                notify("Dados salvos!", "success");
-                carregarPlantas();
-                fecharModal();
+            let resultado;
+            if (editandoId) {
+                await plantaService.atualizar(editandoId, dadosFormatados, { headers: getHeaders() });
+            } else {
+                await plantaService.criar(dadosFormatados, { headers: getHeaders() });
             }
-        } catch (err) { notify("Erro ao salvar.", "error"); }
+
+            notify("Dados salvos com sucesso!", "success");
+            await carregarPlantas();
+            fecharModal();
+        } catch (err) {
+            notify(err.message || "Erro ao salvar planta. Verifique sua conexão.", "error");
+        } finally {
+            setCarregando(false);
+        }
     };
 
     const mediaCiclo = plantas.length > 0 ? Math.round(plantas.reduce((acc, p) => acc + (Number(p.cicloMedioDias) || 0), 0) / plantas.length) : 0;
@@ -166,15 +176,18 @@ const Plantas = () => {
                     return (
                         <div key={planta.idPlanta} className="plant-card">
                             <div className={`plant-card-top ${config.borderClass}`}></div>
+
                             <div className="plant-card-content">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                {/* CABEÇALHO DO CARD - Trava o ícone e o badge no topo */}
+                                <div className="plant-card-header">
                                     <div className={`plant-icon-wrapper ${config.colorClass}`}>
-                                        <PlantIcon size={24} />
+                                        <PlantIcon size={22} />
                                     </div>
                                     <span className="plant-badge" style={{ backgroundColor: config.badgeStyle.bg, color: config.badgeStyle.color }}>
-                                        {formatarTexto(planta.tipoPlanta)}
-                                    </span>
+                        {formatarTexto(planta.tipoPlanta)}
+                    </span>
                                 </div>
+
                                 <h3 className="plant-name">{planta.nomePopular}</h3>
                                 <p className="plant-scientific">{planta.nomeCientifico || 'Espécie não identificada'}</p>
 
@@ -189,7 +202,7 @@ const Plantas = () => {
                                         <span className="soil-tag"><Droplets size={12} style={{marginRight: 4}}/> {formatarTexto(planta.aguaRecomendada)}</span>
                                     </div>
 
-                                    <div style={{fontSize: '0.65rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', marginTop: '15px', marginBottom: '5px'}}>Solos Recomendados</div>
+                                    <div className="soil-label">Solos Recomendados</div>
                                     <div className="soil-tags-container">
                                         {planta.solosRecomendados?.length > 0 ? planta.solosRecomendados.map(s => (
                                             <span key={s} className="soil-tag">{formatarTexto(s)}</span>
@@ -197,11 +210,16 @@ const Plantas = () => {
                                     </div>
                                 </div>
                             </div>
-                            <div className="user-actions-footer" style={{padding: '1.5rem', borderTop: '1px dashed var(--border-color)'}}>
+
+                            {/* RODAPÉ - Forçado para a base e contido lateralmente */}
+                            <div className="user-actions-footer">
                                 <button className="btn-outline-sm" onClick={() => abrirModal(planta)}>
                                     <Pencil size={16} style={{marginRight: 8}}/> Editar
                                 </button>
-                                <button className="btn-delete-user" style={{position: 'static'}} onClick={() => abrirConfirmacaoExclusao(planta.idPlanta, planta.nomePopular)}>
+                                <button
+                                    className="btn-delete-user"
+                                    onClick={() => abrirConfirmacaoExclusao(planta.idPlanta, planta.nomePopular)}
+                                >
                                     <Trash2 size={16} />
                                 </button>
                             </div>
@@ -298,7 +316,7 @@ const Plantas = () => {
 
                             <div className="modal-footer" style={{padding: '15px 0 0 0', borderTop: '1px solid #f1f5f9'}}>
                                 <button type="button" className="btn-outline" onClick={fecharModal}>Cancelar</button>
-                                <button type="submit" className="btn-primary">Salvar Planta</button>
+                                <button type="submit" className="btn-primary" disabled={carregando}> {carregando ? "Salvando..." : "Salvar Planta"} </button>
                             </div>
                         </form>
                     </div>

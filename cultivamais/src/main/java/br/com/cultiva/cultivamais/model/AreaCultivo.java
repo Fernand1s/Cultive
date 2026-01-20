@@ -14,9 +14,9 @@ public class AreaCultivo {
     private Long idArea;
     private String nomeArea;
     private String localizacaoArea;
-    private double latitudeArea;
-    private double longitudeArea;
-    private double tamanhoArea;
+    private Double latitudeArea;
+    private Double longitudeArea;
+    private Double tamanhoArea;
 
     @Enumerated(EnumType.STRING)
     private QuantidadeLuz quantidadeLuz;
@@ -46,13 +46,21 @@ public class AreaCultivo {
         this.usuariosResponsaveis = new ArrayList<>();
     }
 
+    public void adicionarCultivo(Cultivo novoCultivo) {
+        if (novoCultivo != null) {
+            if (this.cultivos == null) this.cultivos = new ArrayList<>();
+            this.cultivos.add(novoCultivo);
+            novoCultivo.setAreaCultivo(this);
+        }
+    }
+
     // Getters
     public Long getIdArea() { return idArea; }
     public String getNomeArea(){ return this.nomeArea; }
     public String getLocalizacaoArea(){ return this.localizacaoArea; }
-    public double getLatitudeArea(){ return this.latitudeArea; }
-    public double getLongitudeArea(){ return this.longitudeArea; }
-    public double getTamanhoArea(){ return this.tamanhoArea; }
+    public Double getLatitudeArea(){ return this.latitudeArea; }
+    public Double getLongitudeArea(){ return this.longitudeArea; }
+    public Double getTamanhoArea(){ return this.tamanhoArea; }
     public TipoSolo getTipoSolo(){ return this.tipoSolo; }
     public String getObservacaoArea(){ return this.observacaoArea; }
     public List<Cultivo> getCultivos(){ return this.cultivos; }
@@ -63,19 +71,12 @@ public class AreaCultivo {
     public void setIdArea(Long idArea) { this.idArea = idArea; }
     public void setNomeArea(String nomeArea){ this.nomeArea = nomeArea; }
     public void setLocalizacaoArea(String localizacaoArea){ this.localizacaoArea = localizacaoArea; }
-    public void setLongitudeArea(double longitudeArea){ this.longitudeArea = longitudeArea; }
-    public void setLatitudeArea(double latitudeArea){ this.latitudeArea = latitudeArea; }
-    public void setTamanhoArea(double tamanhoArea){ this.tamanhoArea = tamanhoArea; }
+    public void setLongitudeArea(Double longitudeArea){ this.longitudeArea = longitudeArea; }
+    public void setLatitudeArea(Double latitudeArea){ this.latitudeArea = latitudeArea; }
+    public void setTamanhoArea(Double tamanhoArea){ this.tamanhoArea = tamanhoArea; }
     public void setTipoSolo(TipoSolo tipoSolo){ this.tipoSolo = tipoSolo; }
     public void setObservacaoArea(String observacaoArea) { this.observacaoArea = observacaoArea; }
     public void setQuantidadeLuz(QuantidadeLuz quantidadeLuz) { this.quantidadeLuz = quantidadeLuz; }
     public void setUsuariosResponsaveis(List<Usuario> usuariosResponsaveis) { this.usuariosResponsaveis = usuariosResponsaveis; }
 
-    public void adicionarCultivo(Cultivo novoCultivo) {
-        if (novoCultivo != null) {
-            if (this.cultivos == null) this.cultivos = new ArrayList<>();
-            this.cultivos.add(novoCultivo);
-            novoCultivo.setAreaCultivo(this);
-        }
-    }
 }

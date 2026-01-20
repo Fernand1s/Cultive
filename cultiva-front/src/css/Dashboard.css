@@ -3,34 +3,10 @@
    VERSÃO ULTRA-PREMIUM (PALETA VERDE)
    ========================================= */
 
-:root {
-    --v-darker: #062904;
-    --v-dark: #12620B;
-    --v-primary: #127F0A;
-    --v-medium: #2A9420;
-    --v-light: #43A935;
-    --v-soft: #75D360;
-    --v-background-soft: #f0fdf4;
-
-    --bg-app: #f8fafc;
-    --card-surface: #ffffff;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
-    --border-color: #e2e8f0;
-    --radius-xl: 24px;
-    --radius-md: 14px;
-
-    --brand-gradient: linear-gradient(135deg, #127F0A 0%, #062904 100%);
-    --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-    --navbar-height: 80px;
-}
-
 /* Layout Base */
 .dashboard-wrapper {
     animation: fadeIn 0.5s ease-out;
     padding: 20px; /* Igual ao padding da página de relatórios */
-    background-color: var(--bg-app);
     min-height: 100vh;
     margin-top: var(--navbar-height)
 }

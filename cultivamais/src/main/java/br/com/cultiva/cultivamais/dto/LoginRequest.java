@@ -1,7 +1,15 @@
 package br.com.cultiva.cultivamais.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
 public class LoginRequest {
+
+    @NotBlank(message = "O email não pode estar vazio")
+    @Email(message = "Formato de email inválido")
     private String email;
+
+    @NotBlank(message = "A senha é obrigatória")
     private String senha;
 
     public LoginRequest() {}

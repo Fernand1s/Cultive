@@ -2,78 +2,100 @@ package br.com.cultiva.cultivamais.service;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import br.com.cultiva.cultivamais.dto.PlantaDTO;
 import org.springframework.stereotype.Service;
 
 import br.com.cultiva.cultivamais.exception.ResourceNotFoundException;
-import br.com.cultiva.cultivamais.model.LogSistema;
 import br.com.cultiva.cultivamais.model.Planta;
-import br.com.cultiva.cultivamais.repository.LogRepository;
 import br.com.cultiva.cultivamais.repository.PlantaRepository;
-import io.micrometer.common.lang.NonNull;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PlantaService {
 
     private final PlantaRepository plantaRepository;
-    private final LogRepository logRepository;
     private final NotificacaoService notificacaoService;
 
-    public PlantaService(PlantaRepository plantaRepository, LogRepository logRepository, NotificacaoService notificacaoService) {
+    public PlantaService(PlantaRepository plantaRepository, NotificacaoService notificacaoService) {
         this.plantaRepository = plantaRepository;
-        this.logRepository = logRepository;
         this.notificacaoService = notificacaoService;
     }
 
     // CRIAR PLANTA
     @Transactional
-    public Planta criarPlanta(@NonNull Long idUsuario, @NonNull Planta novaPlanta) {
-        Planta salva = plantaRepository.save(novaPlanta);
+    public PlantaDTO criarPlanta(Long idUsuario, PlantaDTO dto) {
+        Planta planta = new Planta();
+        copiarDadosDtoParaEntity(dto, planta);
 
-        logRepository.save(new LogSistema("Usuario ID " + idUsuario, "Cadastrou planta: " + salva.getNomePopular()));
+        Planta salva = plantaRepository.save(planta);
 
-        notificacaoService.criarNotificacao(
-                idUsuario,
-                "Nova Espécie Cadastrada",
-                salva.getNomePopular() + " agora faz parte do catálogo.",
-                "info"
-        );
+        notificacaoService.criarNotificacao(idUsuario, "Nova Espécie",
+                salva.getNomePopular() + " foi adicionada ao catálogo.", "info");
 
-        return salva;
+        return converterParaDTO(salva);
     }
-    public List<Planta> listarTodas() {
-        return plantaRepository.findAll();
+
+    // ATUALIZAR PLANTA
+    @Transactional
+    public PlantaDTO atualizarPlanta(Long id, PlantaDTO dto) {
+        Planta plantaExistente = plantaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Planta não encontrada."));
+
+        copiarDadosDtoParaEntity(dto, plantaExistente);
+        Planta salva = plantaRepository.save(plantaExistente);
+
+        return converterParaDTO(salva);
+    }
+
+    // LISTAR TODAS AS PLANTAS
+    @Transactional(readOnly = true)
+    public List<PlantaDTO> listarTodas() {
+        return plantaRepository.findAll()
+                .stream()
+                .map(this::converterParaDTO)
+                .toList();
     }
 
     // EXCLUIR PLANTA
-    @SuppressWarnings("null")
-    public void excluirPlanta(@NonNull Long id) {
-        if (plantaRepository.existsById(id)) {
-            plantaRepository.deleteById(id);
-            logRepository.save(new LogSistema("Sistema", "Excluiu planta ID: " + id));
-        } else {
+    @Transactional
+    public void excluirPlanta(Long id) {
+        if (!plantaRepository.existsById(id)) {
             throw new ResourceNotFoundException("Planta não encontrada.");
         }
+        plantaRepository.deleteById(id);
     }
 
-    // EDITAR PLANTA
-    @Transactional
-    public Planta atualizarPlanta(@NonNull Long id, Planta dadosAtualizados) {
+    // MÉTODO AUXILIAR PARA O LOG DO CONTROLLER
+    public String buscarNomePlanta(Long id) {
         return plantaRepository.findById(id)
-                .map(plantaExistente -> {
-                    plantaExistente.setNomePopular(dadosAtualizados.getNomePopular());
-                    plantaExistente.setNomeCientifico(dadosAtualizados.getNomeCientifico());
-                    plantaExistente.setTipoPlanta(dadosAtualizados.getTipoPlanta());
-                    plantaExistente.setCicloMedioDias(dadosAtualizados.getCicloMedioDias());
-                    plantaExistente.setLuzRecomendada(dadosAtualizados.getLuzRecomendada());
-                    plantaExistente.setAguaRecomendada(dadosAtualizados.getAguaRecomendada());
-                    plantaExistente.setSolosRecomendados(dadosAtualizados.getSolosRecomendados());
+                .map(Planta::getNomePopular)
+                .orElse("Planta Desconhecida");
+    }
 
-                    Planta salva = plantaRepository.save(plantaExistente);
-                    logRepository.save(new LogSistema("Sistema", "Atualizou cadastro da planta: " + salva.getNomePopular()));
-                    return salva;
-                })
-                .orElseThrow(() -> new ResourceNotFoundException("Planta não encontrada para edição."));
+    // CONVERTER DTO PARA ENTITY (MAPEAMENTO MANUAL)
+    private void copiarDadosDtoParaEntity(PlantaDTO dto, Planta entity) {
+        entity.setNomePopular(dto.getNomePopular());
+        entity.setNomeCientifico(dto.getNomeCientifico());
+        entity.setTipoPlanta(dto.getTipoPlanta());
+        entity.setCicloMedioDias(dto.getCicloMedioDias());
+        entity.setDescricaoPlanta(dto.getDescricaoPlanta());
+        entity.setLuzRecomendada(dto.getLuzRecomendada());
+        entity.setAguaRecomendada(dto.getAguaRecomendada());
+        entity.setSolosRecomendados(dto.getSolosRecomendados());
+    }
+
+    // CONVERTER ENTITY PARA DTO
+    private PlantaDTO converterParaDTO(Planta p) {
+        return new PlantaDTO(
+                p.getIdPlanta(),
+                p.getNomePopular(),
+                p.getNomeCientifico(),
+                p.getTipoPlanta(),
+                p.getCicloMedioDias(),
+                p.getDescricaoPlanta(),
+                p.getLuzRecomendada(),
+                p.getAguaRecomendada(),
+                p.getSolosRecomendados()
+        );
     }
 }

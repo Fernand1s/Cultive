@@ -1,14 +1,17 @@
 package br.com.cultiva.cultivamais.controller;
 
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import br.com.cultiva.cultivamais.dto.AreaCultivoDTO;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import br.com.cultiva.cultivamais.model.AreaCultivo;
 import br.com.cultiva.cultivamais.service.AreaCultivoService;
 import br.com.cultiva.cultivamais.service.GeolocalizacaoService;
 import br.com.cultiva.cultivamais.service.GeolocalizacaoService.DadosSolares;
-import br.com.cultiva.cultivamais.service.LogService; // Importar
+import br.com.cultiva.cultivamais.service.LogService;
+import br.com.cultiva.cultivamais.security.SecurityUtils;
 
 @RestController
 @RequestMapping("/api/areas")
@@ -16,19 +19,32 @@ public class AreaCultivoController {
     private final AreaCultivoService areaCultivoService;
     private final GeolocalizacaoService geolocalizacaoService;
     private final LogService logService;
+    private final SecurityUtils securityUtils;
 
-    public AreaCultivoController(AreaCultivoService areaCultivoService, GeolocalizacaoService geolocalizacaoService, LogService logService) {
+    public AreaCultivoController(AreaCultivoService areaCultivoService, GeolocalizacaoService geolocalizacaoService, LogService logService, SecurityUtils securityUtils) {
         this.areaCultivoService = areaCultivoService;
         this.geolocalizacaoService = geolocalizacaoService;
         this.logService = logService;
+        this.securityUtils = securityUtils;
     }
 
     // CRIAR ÁREA
     @PostMapping
-    public ResponseEntity<AreaCultivo> criarAreaCultivo(@RequestBody AreaCultivo area) {
-        AreaCultivo areaSalva = areaCultivoService.criarAreaCultivo(area);
+    public ResponseEntity<AreaCultivo> criarAreaCultivo(@Valid @RequestBody AreaCultivoDTO areaDTO) {
+        AreaCultivo novaArea = new AreaCultivo();
+        novaArea.setNomeArea(areaDTO.getNomeArea());
+        novaArea.setLocalizacaoArea(areaDTO.getLocalizacaoArea());
+        novaArea.setLatitudeArea(areaDTO.getLatitudeArea());
+        novaArea.setLongitudeArea(areaDTO.getLongitudeArea());
+        novaArea.setTamanhoArea(areaDTO.getTamanhoArea());
+        novaArea.setTipoSolo(areaDTO.getTipoSolo());
+        novaArea.setQuantidadeLuz(areaDTO.getQuantidadeLuz());
+        novaArea.setObservacaoArea(areaDTO.getObservacaoArea());
 
-        logService.registrarLog("Sistema", "Cadastrou nova área de cultivo: " + areaSalva.getNomeArea());
+        AreaCultivo areaSalva = areaCultivoService.criarAreaCultivo(novaArea);
+
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Cadastrou nova área de cultivo: " + areaSalva.getNomeArea());
 
         return ResponseEntity.ok(areaSalva);
     }
@@ -50,9 +66,14 @@ public class AreaCultivoController {
     // EXCLUIR ÁREA
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluirArea(@PathVariable Long id) {
+        // Busca a área para registrar o nome no log antes de deletar
+        AreaCultivo area = areaCultivoService.buscarPorId(id);
+        String nomeArea = area.getNomeArea();
+
         areaCultivoService.excluirArea(id);
 
-        logService.registrarLog("Sistema", "Removeu a área de cultivo ID: " + id);
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Removeu a área de cultivo: " + nomeArea);
 
         return ResponseEntity.noContent().build();
     }
@@ -62,7 +83,8 @@ public class AreaCultivoController {
     public ResponseEntity<AreaCultivo> atualizarArea(@PathVariable Long id, @RequestBody AreaCultivo area) {
         AreaCultivo areaAtualizada = areaCultivoService.atualizarArea(id, area);
 
-        logService.registrarLog("Sistema", "Atualizou a área de cultivo ID: " + id);
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Atualizou a área de cultivo: " + areaAtualizada.getNomeArea());
 
         return ResponseEntity.ok(areaAtualizada);
     }

@@ -4,14 +4,15 @@ import '../css/Dashboard.css';
 import { useNotify } from "../context/NotificationContext";
 import {
     LayoutDashboard, Sprout, Map as CloudSun, Activity, Bug, ClipboardList,
-    PieChart as IconeGrafico, TrendingUp, Leaf, CheckCircle, AlertCircle,
-    ChevronLeft, ChevronRight, Filter, Lightbulb, Sparkles, ArrowRight, X,
-    ClipboardX, PackageOpen, CalendarOff, User, Clock, CheckCircle2, RefreshCw, Gauge
+    PieChart as IconeGrafico, TrendingUp, Leaf, ChevronLeft, ChevronRight,
+    Sparkles, ArrowRight, X, ClipboardX, PackageOpen, CalendarOff, User,
+    Clock, CheckCircle2, RefreshCw, Gauge
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area
 } from 'recharts';
+import { request, getHeaders } from '../services/api';
 
 // --- COMPONENTES VISUAIS DE ALTA FIDELIDADE ---
 
@@ -131,19 +132,16 @@ const Dashboard = () => {
     const carregarDadosGerais = useCallback(async () => {
         setLoading(true);
         try {
-            const [areasRes, plantasRes, cultivosRes, tarefasRes] = await Promise.all([
-                fetch('http://localhost:8090/api/areas'),
-                fetch('http://localhost:8090/api/plantas'),
-                fetch('http://localhost:8090/api/cultivos'),
-                fetch('http://localhost:8090/api/tarefas')
+            // 1. Usamos a função centralizada 'request' com os cabeçalhos de autenticação
+            // Isso resolve o erro 403, pois injeta o Token JWT automaticamente
+            const [areas, plantasBrutas, cultivos, tarefas] = await Promise.all([
+                request('http://localhost:8090/api/areas', { headers: getHeaders() }),
+                request('http://localhost:8090/api/plantas', { headers: getHeaders() }),
+                request('http://localhost:8090/api/cultivos', { headers: getHeaders() }),
+                request('http://localhost:8090/api/tarefas', { headers: getHeaders() })
             ]);
 
-            const areas = areasRes.ok ? await areasRes.json() : [];
-            let plantasBrutas = plantasRes.ok ? await plantasRes.json() : [];
-            const cultivos = cultivosRes.ok ? await cultivosRes.json() : [];
-            const tarefas = tarefasRes.ok ? await tarefasRes.json() : [];
-
-            // Normalização: Garante que solosRecomendados seja sempre um array de strings limpas
+            // 2. Normalização de Plantas
             const plantas = plantasBrutas.map(p => ({
                 ...p,
                 solosRecomendados: Array.isArray(p.solosRecomendados)
@@ -151,7 +149,7 @@ const Dashboard = () => {
                     : []
             }));
 
-            // Identifica áreas ocupadas
+            // 3. Mapeamento de Áreas Ocupadas
             const idsAreasOcupadas = new Set(
                 cultivos
                     .filter(c => c.statusCultivo === 'ATIVO')
@@ -160,33 +158,36 @@ const Dashboard = () => {
 
             const areasLivres = areas.filter(a => !idsAreasOcupadas.has(a.idArea));
 
-            // MOTOR DE INTELIGÊNCIA REAL (Baseado em Solo, Luz e NASA)
+            // 4. MOTOR DE INTELIGÊNCIA (Sugestões de Plantio)
             const novasSugestoes = [];
 
             for (const area of areasLivres) {
                 const soloDaArea = area.tipoSolo?.toString().trim().toUpperCase();
                 if (!soloDaArea) continue;
 
-                // Buscamos dados do clima da área (GeolocalizacaoService no Back-end)
+                // Busca Clima da Área (Tratado com request para evitar 403)
                 let dadosClima = { incidenciaSolarMedia: 5.5 };
                 try {
-                    const climaRes = await fetch(`http://localhost:8090/api/areas/${area.idArea}/clima`);
-                    if (climaRes.ok) dadosClima = await climaRes.ok.json();
-                } catch (e) { /* fallback interno */ }
+                    const climaData = await request(`http://localhost:8090/api/areas/${area.idArea}/clima`, {
+                        headers: getHeaders()
+                    });
+                    if (climaData) dadosClima = climaData;
+                } catch (e) {
+                    console.warn(`Aviso: Clima não disponível para área ${area.nomeArea}`);
+                }
 
                 plantas.forEach(planta => {
                     const aceitaSolo = planta.solosRecomendados.includes(soloDaArea);
 
                     if (aceitaSolo) {
-                        let scoreCalculado = 75; // Base inicial para match de solo
+                        let scoreCalculado = 75;
 
-                        // Bônus por Luz (Dado do seu Enum QuantidadeLuz)
+                        // Match de Luz
                         if (area.quantidadeLuz === planta.luzRecomendada) {
                             scoreCalculado += 15;
                         }
 
-                        // Bônus por Clima Real (Dados da NASA/GeolocalizacaoService)
-                        // Se a planta gosta de PLENO_SOL e a incidência solar real é alta (> 5.5 kWh/m²)
+                        // Match de Clima NASA
                         if (planta.luzRecomendada === 'PLENO_SOL' && dadosClima.incidenciaSolarMedia > 5.5) {
                             scoreCalculado += 10;
                         } else if (planta.luzRecomendada === 'SOMBRA' && dadosClima.incidenciaSolarMedia < 4.0) {
@@ -198,7 +199,7 @@ const Dashboard = () => {
                             areaNome: area.nomeArea,
                             idPlanta: planta.idPlanta,
                             plantaNome: planta.nomePopular,
-                            score: Math.min(scoreCalculado, 100), // Limita a 100%
+                            score: Math.min(scoreCalculado, 100),
                             motivos: [
                                 `Solo ${soloDaArea} ideal para esta espécie`,
                                 area.quantidadeLuz === planta.luzRecomendada ? "Exposição solar perfeita" : "Luz compatível",
@@ -209,7 +210,7 @@ const Dashboard = () => {
                 });
             }
 
-            // ATUALIZAÇÃO DE ESTADOS
+            // 5. ATUALIZAÇÃO DOS ESTADOS
             setRawAreas(areas);
             setRawPlantas(plantas);
             setRawCultivos(cultivos);
@@ -217,7 +218,7 @@ const Dashboard = () => {
             setSugestoesInteligentes(novasSugestoes.sort((a, b) => b.score - a.score));
             setIndiceSugestao(0);
 
-            // ATUALIZAÇÃO DOS KPIs (Importante para os cards não ficarem vazios)
+            // 6. CÁLCULO DE KPIs
             const ativos = cultivos.filter(c => c.statusCultivo === 'ATIVO');
             setKpis({
                 ativos: ativos.length,
@@ -226,14 +227,14 @@ const Dashboard = () => {
                 tarefasConcluidas: tarefas.filter(t => t.concluida).length
             });
 
-            // Define área padrão para o widget de clima se não houver uma
             if (areas.length > 0 && !idAreaClimaSelecionada) {
                 setIdAreaClimaSelecionada(areas[0].idArea);
             }
 
         } catch (error) {
-            console.error("❌ Erro crítico no Dashboard:", error);
-            notify("Erro ao sincronizar dados do servidor", "error");
+            // Se a API retornar 403, a mensagem "Acesso Negado" cairá aqui:
+            console.error("Erro crítico no Dashboard:", error.message);
+            notify(error.message, "error");
         } finally {
             setLoading(false);
         }
@@ -245,32 +246,48 @@ const Dashboard = () => {
     useEffect(() => {
         if (!idAreaClimaSelecionada) return;
 
-        setLoadingClima(true); // Opcional: estado para feedback visual
-        fetch(`http://localhost:8090/api/areas/${idAreaClimaSelecionada}/clima`)
-            .then(res => {
-                if (!res.ok) throw new Error();
-                return res.json();
-            })
-            .then(data => {
+        const buscarClima = async () => {
+            setLoadingClima(true);
+            try {
+                // Usando o seu serviço api.js que injeta o Bearer Token
+                const data = await request(`http://localhost:8090/api/areas/${idAreaClimaSelecionada}/clima`, {
+                    headers: getHeaders()
+                });
                 setClima(data);
-            })
-            .catch(() => setClima(null))
-            .finally(() => setLoadingClima(false));
+            } catch (error) {
+                console.error(`Erro ao buscar clima para área ${idAreaClimaSelecionada}:`, error);
+                setClima(null);
+            } finally {
+                setLoadingClima(false);
+            }
+        };
+
+        buscarClima();
     }, [idAreaClimaSelecionada]);
 
     // --- MEMORIZAÇÃO DE DADOS PARA GRÁFICOS ---
-
     const graficoSaude = useMemo(() => {
+        const counts = { SAUDAVEL: 0, ATENCAO: 0, CRITICO: 0 };
         const ativos = rawCultivos.filter(c => c.statusCultivo === 'ATIVO');
-        const counts = { SAUDAVEL: 0, EM_ATENCAO: 0, COM_PRAGA: 0, CRITICO: 0 };
-        ativos.forEach(c => counts[c.estadoPlanta]++);
+
+        ativos.forEach(c => {
+            const estado = (c.estadoPlanta || '').toUpperCase();
+
+            if (estado === 'SAUDAVEL' || estado === 'EXCELENTE') {
+                counts.SAUDAVEL++;
+            } else if (estado === 'EM_ATENCAO' || estado === 'ALERTA') {
+                counts.ATENCAO++;
+            } else if (estado === 'PRAGA' || estado === 'CRITICO' || estado === 'DOENCA') {
+                counts.CRITICO++;
+            }
+        });
+
         return [
             { name: 'Saudável', valor: counts.SAUDAVEL, fill: COLORS.green },
-            { name: 'Atenção', valor: counts.EM_ATENCAO, fill: COLORS.orange },
-            { name: 'Praga', valor: counts.COM_PRAGA, fill: COLORS.red },
-            { name: 'Crítico', valor: counts.CRITICO, fill: '#7f1d1d' }
+            { name: 'Atenção', valor: counts.ATENCAO, fill: COLORS.orange },
+            { name: 'Crítico', valor: counts.CRITICO, fill: COLORS.red }
         ];
-    }, [rawCultivos]);
+    }, [rawCultivos, COLORS]);
 
     const dadosTarefasAnaliticos = useMemo(() => {
         const inicio = new Date(filtroTarefaInicio).getTime();
@@ -351,28 +368,51 @@ const Dashboard = () => {
     // --- FUNÇÕES DE AÇÃO ---
     const confirmarPlantioRapido = async (e) => {
         e.preventDefault();
+
+        if (loading) return;
+
         const sug = sugestoesInteligentes[indiceSugestao];
+
+        if (!dadosPlantioRapido.quantidadePlantada || dadosPlantioRapido.quantidadePlantada <= 0) {
+            notify("Informe uma quantidade válida para o plantio.", "error");
+            return;
+        }
+
+        setLoading(true);
+
         const payload = {
-            areaCultivo: { idArea: sug.idArea },
-            plantaCultivada: { idPlanta: sug.idPlanta },
-            quantidadePlantada: Number(dadosPlantioRapido.quantidadePlantada),
+            idArea: sug.idArea,
+            idPlanta: sug.idPlanta,
+            quantidadePlantada: parseFloat(dadosPlantioRapido.quantidadePlantada),
             dataPlantio: dadosPlantioRapido.dataPlantio,
             statusCultivo: 'ATIVO',
-            estadoPlanta: 'SAUDAVEL'
+            estadoPlanta: 'SAUDAVEL',
+            observacaoCultivo: "Plantio sugerido pela Inteligência de Dados"
         };
 
         try {
-            const res = await fetch('http://localhost:8090/api/cultivos', {
+            const res = await request('http://localhost:8090/api/cultivos', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    ...getHeaders(),
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(payload)
             });
-            if (res.ok) {
-                notify("Plantio iniciado!", "success");
-                setModalPlantioAberto(false);
-                carregarDadosGerais();
-            }
-        } catch { notify("Erro ao processar plantio", "error"); }
+
+            notify(`Sucesso! ${sug.plantaNome} plantado na área ${sug.areaNome}.`, "success");
+
+            setModalPlantioAberto(false);
+            setDadosPlantioRapido({ quantidadePlantada: '', dataPlantio: new Date().toISOString().split('T')[0] });
+
+            await carregarDadosGerais();
+
+        } catch (error) {
+            console.error("Erro ao processar plantio rápido:", error);
+            notify(error.message || "Erro ao processar plantio. Verifique a conexão.", "error");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -534,20 +574,24 @@ const Dashboard = () => {
 
                 {activeTab === 'saude' && (
                     <ChartCard title="Monitoramento Fitossanitário" subtitle="Estado de saúde dos lotes" icon={Bug}>
-                        {graficoSaude.some(d => d.valor > 0) ? (
-                            <ResponsiveContainer width="100%" height={350}>
-                                <BarChart data={graficoSaude}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                                    <YAxis axisLine={false} tickLine={false} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{fill: '#f8fafc'}} />
-                                    <Bar dataKey="valor" radius={[6, 6, 0, 0]} barSize={50}>
-                                        {graficoSaude.map((entry, index) => <Cell key={index} fill={entry.fill} />)}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
+                        {rawCultivos.filter(c => c.statusCultivo === 'ATIVO').length > 0 ? (
+                            <div style={{ width: '100%', height: 350 }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={graficoSaude} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontWeight: 500}}/>
+                                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} allowDecimals={false}/>
+                                        <Tooltip content={<CustomTooltip />} cursor={{fill: '#f8fafc'}} />
+                                        <Bar dataKey="valor" radius={[6, 6, 0, 0]} barSize={55}>
+                                            {graficoSaude.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         ) : (
-                            <EmptyState icon={Activity} title="Nenhum cultivo ativo" message="Não há plantas em campo para monitorar a saúde." />
+                            <EmptyState icon={Activity} title="Nenhum cultivo ativo" message="Não há plantas em campo para monitorar a saúde no momento."/>
                         )}
                     </ChartCard>
                 )}

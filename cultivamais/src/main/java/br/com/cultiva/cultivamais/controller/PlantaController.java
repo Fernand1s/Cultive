@@ -1,54 +1,74 @@
 package br.com.cultiva.cultivamais.controller;
 
 import java.util.List;
-import io.swagger.v3.oas.annotations.Operation;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import br.com.cultiva.cultivamais.dto.PlantaDTO;
+import br.com.cultiva.cultivamais.security.SecurityUtils;
+import br.com.cultiva.cultivamais.service.LogService;
+import br.com.cultiva.cultivamais.service.PlantaService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.core.Authentication;
-
-import br.com.cultiva.cultivamais.model.Planta;
-import br.com.cultiva.cultivamais.service.PlantaService;
-import br.com.cultiva.cultivamais.security.UsuarioPrincipal;
 
 @RestController
 @RequestMapping("/api/plantas")
 public class PlantaController {
 
     private final PlantaService plantaService;
+    private final LogService logService;
+    private final SecurityUtils securityUtils;
 
-    public PlantaController(PlantaService plantaService) {
+    public PlantaController(PlantaService plantaService, LogService logService, SecurityUtils securityUtils) {
         this.plantaService = plantaService;
+        this.logService = logService;
+        this.securityUtils = securityUtils;
     }
 
     // CRIAR PLANTA
     @PostMapping
-    @Operation(summary = "Cadastrar nova planta via Token", description = "Adiciona uma espécie ao catálogo usando o ID extraído do Token JWT")
-    public ResponseEntity<Planta> criar(@RequestBody Planta planta, Authentication auth) {
-        if (auth == null) {
-            throw new RuntimeException("Usuário não autenticado no contexto de segurança.");
+    public ResponseEntity<PlantaDTO> criar(@Valid @RequestBody PlantaDTO dto) {
+        Long idUsuarioLogado = securityUtils.getIdUsuarioLogado();
+        String nomeUsuario = securityUtils.getNomeUsuarioLogado();
+
+        if (idUsuarioLogado == null) {
+            return ResponseEntity.status(401).build();
         }
-        UsuarioPrincipal principal = (UsuarioPrincipal) auth.getPrincipal();
-        Long idLogado = principal.getId();
-        return ResponseEntity.ok(plantaService.criarPlanta(idLogado, planta));
+
+        PlantaDTO plantaSalva = plantaService.criarPlanta(idUsuarioLogado, dto);
+
+        logService.registrarLog(nomeUsuario, "Cadastrou nova espécie: " + plantaSalva.getNomePopular());
+
+        return ResponseEntity.ok(plantaSalva);
     }
 
-    // LISTAR PLANTAS
+    // LISTAR TODAS AS PLANTAS
     @GetMapping
-    public ResponseEntity<List<Planta>> listarPlantas() {
+    public ResponseEntity<List<PlantaDTO>> listar() {
         return ResponseEntity.ok(plantaService.listarTodas());
     }
 
-    // EDITAR PLANTA
+    // ATUALIZAR PLANTA
     @PutMapping("/{id}")
-    public ResponseEntity<Planta> atualizarPlanta(@PathVariable Long id, @RequestBody Planta planta) {
-        return ResponseEntity.ok(plantaService.atualizarPlanta(id, planta));
+    public ResponseEntity<PlantaDTO> atualizar(@PathVariable Long id, @Valid @RequestBody PlantaDTO dto) {
+        PlantaDTO plantaAtualizada = plantaService.atualizarPlanta(id, dto);
+
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Atualizou dados da planta: " + plantaAtualizada.getNomePopular());
+
+        return ResponseEntity.ok(plantaAtualizada);
     }
 
     // EXCLUIR PLANTA
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluirPlanta(@PathVariable Long id) {
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        // Buscamos o nome antes de excluir para o log ficar informativo
+        String nomePlanta = plantaService.buscarNomePlanta(id);
+
         plantaService.excluirPlanta(id);
+
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Removeu a espécie: " + nomePlanta + " (ID: " + id + ")");
+
         return ResponseEntity.noContent().build();
     }
 }

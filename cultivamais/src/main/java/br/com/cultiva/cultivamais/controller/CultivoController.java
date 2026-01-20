@@ -1,21 +1,16 @@
 package br.com.cultiva.cultivamais.controller;
 
-import java.time.LocalDate;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import br.com.cultiva.cultivamais.dto.CultivoRequestDTO;
+import br.com.cultiva.cultivamais.security.SecurityUtils;
+import br.com.cultiva.cultivamais.service.LogService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import br.com.cultiva.cultivamais.model.Cultivo;
+import br.com.cultiva.cultivamais.model.EstadoPlanta;
 import br.com.cultiva.cultivamais.service.CultivoService;
 
 @RestController
@@ -23,21 +18,31 @@ import br.com.cultiva.cultivamais.service.CultivoService;
 public class CultivoController {
 
     private final CultivoService cultivoService;
+    private final LogService logService;
+    private final SecurityUtils securityUtils;
 
-    public CultivoController(CultivoService cultivoService) {
+    public CultivoController(CultivoService cultivoService,
+                             LogService logService,
+                             SecurityUtils securityUtils) {
         this.cultivoService = cultivoService;
+        this.logService = logService;
+        this.securityUtils = securityUtils;
     }
 
     // CRIAR CULTIVO
     @PostMapping
-    public ResponseEntity<Cultivo> criarCultivo(
-            @RequestParam Long idPlanta,
-            @RequestParam Long idArea,
-            @RequestParam double quantidadePlantada,
-            @RequestParam LocalDate dataPlantio) {
-
+    public ResponseEntity<Cultivo> criarCultivo(@Valid @RequestBody CultivoRequestDTO dto) {
         Cultivo cultivoSalvo = cultivoService.criarCultivo(
-            idPlanta, idArea, quantidadePlantada, dataPlantio);
+                dto.getIdPlanta(),
+                dto.getIdArea(),
+                dto.getQuantidadePlantada(),
+                dto.getDataPlantio()
+        );
+
+        // REGISTRO DE LOG COM NOME DO USUÁRIO LOGADO
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Iniciou cultivo de " + cultivoSalvo.getPlanta().getNomePopular() +
+                        " na área " + cultivoSalvo.getAreaCultivo().getNomeArea());
 
         return ResponseEntity.ok(cultivoSalvo);
     }
@@ -52,14 +57,31 @@ public class CultivoController {
     // EXCLUIR CULTIVO
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluirCultivo(@PathVariable Long id) {
+        Cultivo cultivo = cultivoService.buscarPorId(id);
+        String nomePlanta = cultivo.getPlanta().getNomePopular();
+
         cultivoService.excluirCultivo(id);
+
+        // REGISTRO DE LOG COM NOME DO USUÁRIO LOGADO
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Removeu cultivo de " + nomePlanta + " (ID: " + id + ")");
+
         return ResponseEntity.noContent().build();
     }
 
     // EDITAR CULTIVOS
     @PutMapping("/{id}")
-    public ResponseEntity<Cultivo> atualizarCultivo(@PathVariable Long id, @RequestBody Cultivo cultivo) {
-        Cultivo cultivoAtualizado = cultivoService.atualizarCultivo(id, cultivo);
+    public ResponseEntity<Cultivo> atualizarCultivo(@PathVariable Long id, @Valid @RequestBody CultivoRequestDTO dto) {
+        Cultivo cultivoAtualizado = cultivoService.atualizarCultivo(id, dto);
+
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Atualizou o cultivo de " + cultivoAtualizado.getPlanta().getNomePopular());
+
+        if (cultivoAtualizado.getEstadoPlanta() == EstadoPlanta.CRITICO) {
+            logService.registrarLog("ALERTA SISTEMA",
+                    "O cultivo ID " + id + " entrou em estado CRÍTICO!");
+        }
+
         return ResponseEntity.ok(cultivoAtualizado);
     }
 }

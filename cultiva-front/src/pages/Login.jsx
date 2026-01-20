@@ -36,8 +36,8 @@ export function Login() {
             localStorage.setItem('token', tokenParaSalvar);
 
             const usuarioParaSalvar = {
-                idUsuario: dadosDoBanco.idUsuario || dadosDoBanco.id,
-                nomeUsuario: dadosDoBanco.nomeUsuario || dadosDoBanco.nome,
+                idUsuario: dadosDoBanco.idUsuario,
+                nomeUsuario: dadosDoBanco.nomeUsuario,
                 funcao: dadosDoBanco.funcao,
                 email: dadosDoBanco.email,
                 ativo: dadosDoBanco.ativo

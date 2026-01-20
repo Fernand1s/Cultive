@@ -1,55 +1,63 @@
 package br.com.cultiva.cultivamais.controller;
 
-import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import br.com.cultiva.cultivamais.model.Cultivo;
-import br.com.cultiva.cultivamais.model.DoencaPraga;
+import br.com.cultiva.cultivamais.dto.*;
+import br.com.cultiva.cultivamais.security.SecurityUtils;
+import br.com.cultiva.cultivamais.service.LogService;
 import br.com.cultiva.cultivamais.service.RelatorioService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/relatorios")
 public class RelatorioController {
 
     private final RelatorioService relatorioService;
+    private final LogService logService;
+    private final SecurityUtils securityUtils;
 
-    public RelatorioController(RelatorioService relatorioService) {
+    public RelatorioController(RelatorioService relatorioService, LogService logService, SecurityUtils securityUtils) {
         this.relatorioService = relatorioService;
+        this.logService = logService;
+        this.securityUtils = securityUtils;
     }
 
-    // TOTAL DE ÁGUA
+    // RELATÓRIO DE CONSUMO DE ÁGUA
     @GetMapping("/agua/{idCultivo}")
-    public ResponseEntity<Double> getRelatorioAgua(@PathVariable Long idCultivo) {
-        return ResponseEntity.ok(relatorioService.calcularTotalAguaCultivo(idCultivo));
+    public ResponseEntity<ConsumoAguaDTO> getRelatorioAgua(@PathVariable Long idCultivo) {
+        ConsumoAguaDTO relatorio = relatorioService.calcularTotalAguaCultivo(idCultivo);
+
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Gerou relatório de consumo de água para o cultivo: " + relatorio.getPlanta());
+
+        return ResponseEntity.ok(relatorio);
     }
 
-    // COMPATIBILIDADE PLANTA/ÁREA
+    // VERIFICAR COMPATIBILIDADE ENTRE PLANTA E ÁREA
     @GetMapping("/compatibilidade/{idPlanta}/{idArea}")
-    public ResponseEntity<Boolean> getCompatibilidadeTotal(@PathVariable Long idPlanta, @PathVariable Long idArea) {
+    public ResponseEntity<CompatibilidadeDTO> getCompatibilidade(@PathVariable Long idPlanta, @PathVariable Long idArea) {
         return ResponseEntity.ok(relatorioService.verificarCompatibilidadeTotal(idPlanta, idArea));
     }
 
-    // TOTAL COLHIDO
-    @GetMapping("/colheita/{idArea}")
-    public ResponseEntity<Double> getTotalColhidoArea(@PathVariable Long idArea) {
-        // CORREÇÃO: Retorna o valor Double somado pelo banco
-        return ResponseEntity.ok(relatorioService.calcularTotalColhidoArea(idArea));
-    }
-
-    // PREVISÃO DE COLHEITA
-    @GetMapping("/previsao/{idArea}")
-    public ResponseEntity<List<Cultivo>> previsaoColheita(@PathVariable Long idArea) {
-        return ResponseEntity.ok(relatorioService.obterCultivosDaArea(idArea));
-    }
-
-    // HISTÓRICO DE DOENÇAS OU PRAGAS
+    // HISTÓRICO DE PRAGAS E DOENÇAS
     @GetMapping("/pragas/{idCultivo}")
-    public ResponseEntity<List<DoencaPraga>> historicoPragas(@PathVariable Long idCultivo) {
-        return ResponseEntity.ok(relatorioService.obterHistoricoPragas(idCultivo));
+    public ResponseEntity<List<HistoricoPragaDTO>> getHistoricoPragas(@PathVariable Long idCultivo) {
+        List<HistoricoPragaDTO> historico = relatorioService.obterHistoricoPragasDTO(idCultivo);
+
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Consultou histórico fitossanitário (pragas) do cultivo ID: " + idCultivo);
+
+        return ResponseEntity.ok(historico);
+    }
+
+    // TOTAL COLHIDO POR ÁREA
+    @GetMapping("/colheita/{idArea}")
+    public ResponseEntity<Double> getTotalColhido(@PathVariable Long idArea) {
+        Double total = relatorioService.calcularTotalColhidoArea(idArea);
+
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Consultou rendimento total de colheita da área ID: " + idArea);
+
+        return ResponseEntity.ok(total);
     }
 }

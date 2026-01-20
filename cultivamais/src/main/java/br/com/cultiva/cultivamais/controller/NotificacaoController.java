@@ -1,8 +1,9 @@
 package br.com.cultiva.cultivamais.controller;
 
-import br.com.cultiva.cultivamais.model.Notificacao;
+import br.com.cultiva.cultivamais.dto.NotificacaoDTO;
+import br.com.cultiva.cultivamais.security.SecurityUtils;
+import br.com.cultiva.cultivamais.service.LogService;
 import br.com.cultiva.cultivamais.service.NotificacaoService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,43 +14,55 @@ import java.util.List;
 public class NotificacaoController {
 
     private final NotificacaoService service;
+    private final LogService logService;
+    private final SecurityUtils securityUtils;
 
-    public NotificacaoController(NotificacaoService service) {
+    public NotificacaoController(NotificacaoService service, LogService logService, SecurityUtils securityUtils) {
         this.service = service;
+        this.logService = logService;
+        this.securityUtils = securityUtils;
     }
 
-    // DTO AUXILIAR PARA CRIAÇÃO
-    public static class NotificacaoDTO {
-        public Long idUsuario;
-        public String titulo;
-        public String mensagem;
-        public String tipo;
-    }
-
-    // LISTAR NOTIFICAÇÕES DO USUÁRIO
+    // LISTAR NOTIFICAÇÕES POR USUÁRIO
     @GetMapping("/usuario/{idUsuario}")
-    public ResponseEntity<List<Notificacao>> listar(@PathVariable Long idUsuario) {
+    public ResponseEntity<List<NotificacaoDTO>> listar(@PathVariable Long idUsuario) {
         return ResponseEntity.ok(service.listarPorUsuario(idUsuario));
     }
 
-    // CRIAR NOTIFICAÇÃO
+    // CRIAR NOTIFICAÇÃO MANUALMENTE
     @PostMapping
-    public ResponseEntity<Notificacao> criar(@RequestBody NotificacaoDTO dto) {
-        Notificacao nova = service.criarNotificacao(dto.idUsuario, dto.titulo, dto.mensagem, dto.tipo);
-        return ResponseEntity.ok(nova);
+    public ResponseEntity<NotificacaoDTO> criar(@RequestBody NotificacaoDTO dto) {
+        NotificacaoDTO response = service.salvarERetornarDTO(dto);
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Criou notificação manual: " + response.getTitulo());
+        return ResponseEntity.ok(response);
     }
 
-    // MARCAR COMO LIDA
-    @PutMapping("/{id}/lida")
+    // MARCAR UMA NOTIFICAÇÃO COMO LIDA
+    @PatchMapping("/{id}/lida")
     public ResponseEntity<Void> marcarLida(@PathVariable Long id) {
         service.marcarComoLida(id);
         return ResponseEntity.noContent().build();
     }
 
-    // MARCAR TODAS COMO LIDA
+    // MARCAR UMA NOTIFICAÇÃO COMO NÃO LIDA
+    @PatchMapping("/{id}/nao-lida")
+    public ResponseEntity<Void> marcarNaoLida(@PathVariable Long id) {
+        service.marcarComoNaoLida(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // MARCAR TODAS COMO LIDAS
     @PutMapping("/usuario/{idUsuario}/ler-todas")
     public ResponseEntity<Void> marcarTodasLidas(@PathVariable Long idUsuario) {
         service.marcarTodasComoLidas(idUsuario);
+        return ResponseEntity.noContent().build();
+    }
+
+    // MARCAR TODAS COMO NÃO LIDAS
+    @PutMapping("/usuario/{idUsuario}/desler-todas")
+    public ResponseEntity<Void> marcarTodasNaoLidas(@PathVariable Long idUsuario) {
+        service.marcarTodasComoNaoLidas(idUsuario);
         return ResponseEntity.noContent().build();
     }
 
@@ -57,6 +70,14 @@ public class NotificacaoController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         service.excluir(id);
+        logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
+                "Excluiu notificação ID: " + id);
         return ResponseEntity.noContent().build();
+    }
+
+    // CONTAR NOTIFICAÇÕES NÃO LIDAS
+    @GetMapping("/usuario/{idUsuario}/contar-nao-lidas")
+    public ResponseEntity<Long> contarNaoLidas(@PathVariable Long idUsuario) {
+        return ResponseEntity.ok(service.contarNaoLidas(idUsuario));
     }
 }

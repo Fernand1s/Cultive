@@ -17,26 +17,40 @@ import java.util.Iterator;
 @Service
 public class GeolocalizacaoService {
 
-    @Autowired
-    private AreaCultivoRepository areaCultivoRepository;
+    private final AreaCultivoRepository areaCultivoRepository;
+    private final RestTemplate restTemplate;
+    private final ObjectMapper mapper;
 
+    @Autowired
+    public GeolocalizacaoService(AreaCultivoRepository areaCultivoRepository) {
+        this.areaCultivoRepository = areaCultivoRepository;
+        this.restTemplate = new RestTemplate();
+        this.mapper = new ObjectMapper();
+    }
+
+    // INNER CLASS: ESTRUTURA DE DADOS PARA RETORNO CLIMÁTICO
     public static class DadosSolares {
         public double incidenciaSolarMedia;
         public double umidadeMedia;
     }
 
-    @SuppressWarnings("null")
+    // FUNÇÃO: BUSCAR DADOS NA API DA NASA POWER
     public DadosSolares buscarDadosExternos(@NonNull Long idAreaCultivo) {
         AreaCultivo area = areaCultivoRepository.findById(idAreaCultivo)
                 .orElseThrow(() -> new ResourceNotFoundException("Área não encontrada com ID: " + idAreaCultivo));
 
-        double lat = area.getLatitudeArea();
-        double lon = area.getLongitudeArea();
+        Double latRaw = area.getLatitudeArea();
+        Double lonRaw = area.getLongitudeArea();
+
+        double lat = (latRaw != null) ? latRaw : 0.0;
+        double lon = (lonRaw != null) ? lonRaw : 0.0;
 
         LocalDate hoje = LocalDate.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-        String start = hoje.minusDays(8).format(formatter);
-        String end = hoje.minusDays(2).format(formatter);
+
+        // Define janela de 7 dias (NASA possui atraso de processamento de alguns dias)
+        String start = hoje.minusDays(10).format(formatter);
+        String end = hoje.minusDays(3).format(formatter);
 
         String url = String.format(
                 "https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DWN,RH2M&community=AG&longitude=%s&latitude=%s&start=%s&end=%s&format=JSON",
@@ -44,27 +58,35 @@ public class GeolocalizacaoService {
         );
 
         try {
-            RestTemplate restTemplate = new RestTemplate();
             String jsonResponse = restTemplate.getForObject(url, String.class);
-            ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(jsonResponse);
             JsonNode parameters = root.path("properties").path("parameter");
 
+            if (parameters.isMissingNode()) {
+                throw new RuntimeException("Dados meteorológicos não disponíveis no JSON da NASA");
+            }
+
             DadosSolares dados = new DadosSolares();
-            dados.incidenciaSolarMedia = Math.round(calcularMediaDoJson(parameters.path("ALLSKY_SFC_SW_DWN")) * 100.0) / 100.0;
-            dados.umidadeMedia = Math.round(calcularMediaDoJson(parameters.path("RH2M")) * 10.0) / 10.0;
+            // ALLSKY_SFC_SW_DWN = Radiação Solar / RH2M = Umidade Relativa a 2 metros
+            dados.incidenciaSolarMedia = formatar(calcularMediaDoJson(parameters.path("ALLSKY_SFC_SW_DWN")), 2);
+            dados.umidadeMedia = formatar(calcularMediaDoJson(parameters.path("RH2M")), 1);
 
             return dados;
         } catch (Exception e) {
+            System.err.println("Erro ao acessar API NASA POWER: " + e.getMessage());
+            // FALLBACK: Retorna valores médios seguros em caso de falha na API externa
             DadosSolares dadosFallback = new DadosSolares();
-            dadosFallback.incidenciaSolarMedia = 5.5;
-            dadosFallback.umidadeMedia = 60.0;
+            dadosFallback.incidenciaSolarMedia = 5.2;
+            dadosFallback.umidadeMedia = 65.0;
             return dadosFallback;
         }
     }
 
+    // FUNÇÃO: CALCULAR MÉDIA DOS VALORES NO JSON (Ignora valores de erro -999)
     private double calcularMediaDoJson(JsonNode nodeDatas) {
-        if (nodeDatas == null || nodeDatas.isMissingNode()) return 0.0;
+        if (nodeDatas == null || nodeDatas.isMissingNode() || !nodeDatas.isObject()) {
+            return 0.0;
+        }
 
         double soma = 0.0;
         int conta = 0;
@@ -72,11 +94,17 @@ public class GeolocalizacaoService {
         Iterator<JsonNode> elements = nodeDatas.elements();
         while (elements.hasNext()) {
             double valor = elements.next().asDouble();
-            if (valor != -999.0 && valor >= 0) {
+            if (valor > -900) {
                 soma += valor;
                 conta++;
             }
         }
         return conta > 0 ? soma / conta : 0.0;
+    }
+
+    // FUNÇÃO: FORMATAÇÃO NUMÉRICA (Casas decimais)
+    private double formatar(double valor, int casas) {
+        double escala = Math.pow(10, casas);
+        return Math.round(valor * escala) / escala;
     }
 }

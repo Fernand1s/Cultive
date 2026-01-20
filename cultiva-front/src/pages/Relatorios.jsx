@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    BarChart3, MapPin, Sprout, Droplets, Bug,
-    Download, Filter, RefreshCw,
-    ChevronRight, CheckCircle2, Activity, Info, TrendingUp, Search,
-    Calendar, AlertTriangle, Leaf, Zap, FileSpreadsheet, Target,
-    Users, Gauge, ClipboardCheck
+    Droplets, Bug, RefreshCw, CheckCircle2, Activity, TrendingUp,
+    Search, Calendar, AlertTriangle, Leaf, Zap, FileSpreadsheet,
+    Target, Users, ClipboardCheck
 } from 'lucide-react';
 import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
-    CartesianGrid, Tooltip, Cell, AreaChart, Area, PieChart, Pie, Legend
+    CartesianGrid, Tooltip, Cell, PieChart, Pie, Legend
 } from 'recharts';
 import { useNotify } from "../context/NotificationContext";
 import '../css/Relatorios.css';
+
+import { getHeaders, request } from "../services/api.js";
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -41,52 +41,68 @@ const Relatorios = () => {
     });
 
     const sincronizarBancoDeDados = useCallback(async () => {
-        setLoading(true);
+        setLoading(prev => {
+            if (prev) return prev;
+            return true;
+        });
+
         try {
-            const [resAreas, resCultivos] = await Promise.all([
-                fetch('http://localhost:8090/api/areas'),
-                fetch('http://localhost:8090/api/cultivos')
+            const [dAreas, dCultivos] = await Promise.all([
+                request('http://localhost:8090/api/areas', { headers: getHeaders() }),
+                request('http://localhost:8090/api/cultivos', { headers: getHeaders() })
             ]);
 
-            const dAreas = await resAreas.json();
-            const dCultivos = await resCultivos.json();
+            setAreas(Array.isArray(dAreas) ? dAreas : []);
+            setCultivosTotal(Array.isArray(dCultivos) ? dCultivos : []);
 
-            setAreas(dAreas);
-            setCultivosTotal(dCultivos);
-
+            // No arquivo Relatorios.js, dentro de sincronizarBancoDeDados
             const categorias = [
-                { name: 'Saudável', value: dCultivos.filter(c => c.estadoPlanta === 'SAUDAVEL').length, fill: '#22c55e' },
-                { name: 'Alerta', value: dCultivos.filter(c => c.estadoPlanta === 'ALERTA').length, fill: '#eab308' },
-                { name: 'Crítico', value: dCultivos.filter(c => c.estadoPlanta === 'CRITICO').length, fill: '#ef4444' }
+                {
+                    name: 'Saudável',
+                    value: dCultivos.filter(c => c.estadoPlanta === 'SAUDAVEL').length,
+                    fill: '#22c55e'
+                },
+                {
+                    name: 'Alerta/Praga',
+                    // Aqui unificamos os novos estados que você criou no componente de Cultivos
+                    value: dCultivos.filter(c => ['ALERTA', 'EM_ATENCAO', 'PRAGA'].includes(c.estadoPlanta)).length,
+                    fill: '#f59e0b'
+                },
+                {
+                    name: 'Crítico',
+                    value: dCultivos.filter(c => c.estadoPlanta === 'CRITICO').length,
+                    fill: '#ef4444'
+                }
             ];
             setDistribuicaoSaude(categorias);
 
             notify("Inteligência de campo atualizada.", "success");
         } catch (err) {
-            notify("Falha na conexão com a API.", "error");
+            notify("Falha na sincronização de dados técnicos.", "error");
         } finally {
             setLoading(false);
         }
     }, [notify]);
 
-    useEffect(() => { sincronizarBancoDeDados(); }, [sincronizarBancoDeDados]);
+    useEffect(() => {
+        sincronizarBancoDeDados();
+    }, [sincronizarBancoDeDados]);
 
     const analisarLoteDeep = async (cultivo) => {
+        if (loading) return;
         setLoading(true);
         setCultivoSelecionado(cultivo);
 
+        setDetalhesLote({ totalAgua: 0, historicoPragas: [], previsaoColheita: 'Carregando...', compatibilidade: false });
+
         try {
-            const [resAgua, resPragas, resCompat] = await Promise.all([
-                fetch(`http://localhost:8090/api/relatorios/agua/${cultivo.idCultivo}`),
-                fetch(`http://localhost:8090/api/relatorios/pragas/${cultivo.idCultivo}`),
-                fetch(`http://localhost:8090/api/relatorios/compatibilidade/${cultivo.plantaCultivada.idPlanta}/${cultivo.areaCultivo.idArea}`)
+            // Chamadas de telemetria protegidas com Token
+            const [aguaDTO, pragasVal, compatVal] = await Promise.all([
+                request(`http://localhost:8090/api/relatorios/agua/${cultivo.idCultivo}`, { headers: getHeaders() }),
+                request(`http://localhost:8090/api/relatorios/pragas/${cultivo.idCultivo}`, { headers: getHeaders() }),
+                request(`http://localhost:8090/api/relatorios/compatibilidade/${cultivo.plantaCultivada.idPlanta}/${cultivo.areaCultivo.idArea}`, { headers: getHeaders() })
             ]);
 
-            const aguaVal = await resAgua.json();
-            const pragasVal = await resPragas.json();
-            const compatVal = await resCompat.json();
-
-            // Lógica de Previsão de Colheita Multinível
             let dataPrevista = cultivo.previsaoColheita || cultivo.dataColheitaFinal;
 
             if (!dataPrevista) {
@@ -96,14 +112,14 @@ const Relatorios = () => {
             }
 
             setDetalhesLote({
-                totalAgua: aguaVal,
-                historicoPragas: pragasVal,
+                totalAgua: aguaDTO.totalVolumeLitros || 0,
+                historicoPragas: Array.isArray(pragasVal) ? pragasVal : [],
                 previsaoColheita: new Date(dataPrevista).toLocaleDateString('pt-BR'),
                 compatibilidade: compatVal
             });
 
         } catch (err) {
-            notify("Erro na telemetria do lote.", "error");
+            notify("Erro na telemetria profunda do lote.", "error");
         } finally {
             setLoading(false);
         }
@@ -123,7 +139,7 @@ const Relatorios = () => {
         return {
             totalAtivos: ativos.length,
             taxaSaude: ativos.length > 0 ? ((ativos.filter(c => c.estadoPlanta === 'SAUDAVEL').length / ativos.length) * 100).toFixed(1) : 0,
-            alertas: ativos.filter(c => c.estadoPlanta === 'CRITICO').length
+            alertas: ativos.filter(c => c.estadoPlanta === 'CRITICO' || c.estadoPlanta === 'PRAGA').length
         };
     }, [cultivosTotal]);
 
@@ -286,7 +302,7 @@ const Relatorios = () => {
                     <select className="bi-select" value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)}>
                         <option value="TODOS">Todos os Status</option>
                         <option value="ATIVO">Ativos</option>
-                        <option value="COLHEITO">Colhidos</option>
+                        <option value="COLHIDO">Colhidos</option>
                         <option value="EM_PREPARO">Em Preparo</option>
                     </select>
                     <button className="bi-btn btn-sync" onClick={sincronizarBancoDeDados} disabled={loading}>
@@ -419,16 +435,16 @@ const Relatorios = () => {
                                         <div className="bi-card">
                                             <h3><Bug size={18}/> Registros Fitossanitários</h3>
                                             <div className="timeline-bi">
-                                                {detalhesLote.historicoPragas.length === 0 ? (
+                                                {detalhesLote.historicoPragas?.length === 0 ? (
                                                     <div className="success-message">Nenhuma ameaça biológica detectada.</div>
                                                 ) : (
-                                                    detalhesLote.historicoPragas.map((p, idx) => (
+                                                    detalhesLote.historicoPragas?.map((p, idx) => (
                                                         <div key={idx} className="timeline-node">
                                                             <div className="node-marker"></div>
                                                             <div className="node-content">
-                                                                <span className="node-date">{new Date(p.dataHora).toLocaleDateString()}</span>
-                                                                <p className="node-title">{p.nomePragaOuDoenca}</p>
-                                                                <span className={`node-badge ${p.nivelAfetacao}`}>{p.nivelAfetacao}</span>
+                                                                <span className="node-date">{new Date(p.data).toLocaleDateString()}</span>
+                                                                <p className="node-title">{p.nomePraga}</p>
+                                                                <span className={`node-badge ${p.nivel}`}>{p.nivel}</span>
                                                             </div>
                                                         </div>
                                                     ))

@@ -1,57 +1,58 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authService, notificationService } from '../services/api';
+import '../css/DashboardLayout.css';
 import {
     Home, MapPin, Sprout, Wheat, BarChart3,
     CheckSquare, Shield, LogOut, Bell, User,
-    ChevronLeft, ChevronRight, Trash2, Mail
+    ChevronLeft, ChevronRight, Trash2, MailOpen, Mail, CheckCircle2
 } from 'lucide-react';
 
 export const DashboardLayout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
-
-    // Refs para fechar menus ao clicar fora
     const notificationRef = useRef(null);
     const userMenuRef = useRef(null);
 
-    // Estados de UI e Menus
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
-
-    // Estados de Dados das Notificações
     const [notificacoes, setNotificacoes] = useState([]);
     const [totalNaoLidas, setTotalNaoLidas] = useState(0);
-
-    // Estado para o Modal de Confirmação de Exclusão
     const [confirmExclusao, setConfirmExclusao] = useState({ show: false, id: null });
 
     const usuario = authService.obterUsuarioLogado();
 
-    // Lógica para fechar menus ao clicar fora do elemento
+    // Efeito para fechar menus ao clicar fora
     useEffect(() => {
         const handleClickFora = (event) => {
-            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-                setShowNotifications(false);
-            }
-            if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-                setShowUserMenu(false);
-            }
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) setShowNotifications(false);
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target)) setShowUserMenu(false);
         };
         document.addEventListener("mousedown", handleClickFora);
         return () => document.removeEventListener("mousedown", handleClickFora);
     }, []);
 
-    // --- CORREÇÃO DO LOOP INFINITO ---
-    // Alterado de [usuario] para os IDs específicos para evitar renderizações desnecessárias
+    // Busca notificações ao montar o componente ou mudar usuário
     useEffect(() => {
         const id = usuario?.idUsuario || usuario?.id;
-        if (id) {
-            buscarNotificacoes();
-        }
+        if (id) buscarNotificacoes();
     }, [usuario?.idUsuario, usuario?.id]);
 
+    // Controle de redimensionamento da tela
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth <= 768) {
+                setIsSidebarOpen(false);
+            } else {
+                setIsSidebarOpen(true);
+            }
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // FUNÇÃO: Busca e ordena notificações
     const buscarNotificacoes = async () => {
         try {
             const lista = await notificationService.listar();
@@ -61,175 +62,190 @@ export const DashboardLayout = ({ children }) => {
                 setTotalNaoLidas(ordenadas.filter(n => !n.lida).length);
             }
         } catch (error) {
-            console.error("Erro ao buscar notificações:", error);
+            console.error("Erro ao buscar notificações", error);
         }
     };
 
-    // --- FUNÇÕES DE AÇÃO ---
-
-    const handleToggleLida = async (e, notif) => {
-        e.stopPropagation();
+    // FUNÇÃO: Marcar uma única notificação como lida
+    const handleAlternarStatusLida = async (id, statusAtual) => {
         try {
-            await notificationService.marcarComoLida(notif.id);
+            if (statusAtual) {
+                await notificationService.marcarComoNaoLida(id);
+            } else {
+                await notificationService.marcarComoLida(id);
+            }
+            await buscarNotificacoes();
+        } catch (error) {
+            console.error("Erro ao alterar status da notificação", error);
+        }
+    };
+
+    // FUNÇÃO: Marcar todas como lidas/não lidas
+    const handleMarcarTodasStatus = async (marcarComoLida) => {
+        const idUsuario = usuario?.idUsuario || usuario?.id;
+
+        if (!idUsuario) return;
+
+        try {
+            if (marcarComoLida) {
+                await notificationService.marcarTodasComoLidas(idUsuario);
+            } else {
+                await notificationService.marcarTodasComoNaoLidas(idUsuario);
+            }
             buscarNotificacoes();
         } catch (error) {
-            console.error("Erro ao atualizar status:", error);
+            console.error("Erro ao alterar todas as notificações", error);
         }
     };
 
-    const handleMarcarTodasLidas = async () => {
-        try {
-            await notificationService.marcarTodasComoLidas();
-            buscarNotificacoes();
-        } catch (error) {
-            console.error("Erro ao marcar todas como lidas:", error);
-        }
-    };
+    const handleLogout = () => { authService.logout(); navigate('/login'); };
+    const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
 
-    const abrirModalExcluir = (e, id) => {
-        e.stopPropagation();
-        setConfirmExclusao({ show: true, id });
+    const closeSidebarMobile = () => {
+        if (window.innerWidth <= 768) setIsSidebarOpen(false);
     };
-
-    const executarExclusao = async () => {
-        try {
-            await notificationService.excluir(confirmExclusao.id);
-            setConfirmExclusao({ show: false, id: null });
-            buscarNotificacoes();
-        } catch (error) {
-            console.error("Erro ao excluir:", error);
-        }
-    };
-
-    const handleLogout = () => {
-        authService.logout();
-        navigate('/login');
-    };
-
-    const isActive = (path) => {
-        const currentPath = location.pathname;
-        return path === '/' ? currentPath === '/' : currentPath.startsWith(path);
-    };
-
-    const formatarData = (dataString) => {
-        if (!dataString) return '';
-        const data = new Date(dataString);
-        return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
-    };
-
-    const sidebarClass = isSidebarOpen ? 'sidebar-open' : 'sidebar-closed';
-    const headerClass = isSidebarOpen ? 'header-expanded' : 'header-collapsed';
-    const contentClass = isSidebarOpen ? 'content-expanded' : 'content-collapsed';
 
     return (
         <div className="dashboard-container">
+            {isSidebarOpen && (
+                <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>
+            )}
 
-            {/* --- MODAL DE CONFIRMAÇÃO PERSONALIZADO --- */}
+            {/* Modal de Exclusão */}
             {confirmExclusao.show && (
                 <div className="modal-modern-overlay">
-                    <div className="modal-modern-content" style={{ maxWidth: '380px', textAlign: 'center' }}>
-                        <div style={{ color: '#ef4444', marginBottom: '16px' }}>
-                            <Trash2 size={48} style={{ margin: '0 auto' }} />
-                        </div>
-                        <h3 className="modal-title">Remover Notificação?</h3>
-                        <p className="modal-desc">Você tem certeza que deseja excluir esta mensagem permanentemente?</p>
-                        <div className="modal-footer" style={{ border: 'none', padding: 0, gap: '12px' }}>
-                            <button className="btn-outline" style={{ flex: 1 }} onClick={() => setConfirmExclusao({ show: false, id: null })}>
-                                Cancelar
-                            </button>
-                            <button className="botao-ver" style={{ flex: 1, background: '#ef4444' }} onClick={executarExclusao}>
-                                Confirmar
-                            </button>
+                    <div className="modal-modern-content confirm-modal">
+                        <div className="icon-warning-container"><Trash2 size={32} /></div>
+                        <h3 className="dashboard-title" style={{ fontSize: '1.5rem', textAlign: 'center' }}>Excluir Aviso?</h3>
+                        <p className="text-secondary" style={{ textAlign: 'center', margin: '10px 0 20px' }}>Esta ação removerá a notificação permanentemente.</p>
+                        <div className="modal-footer-confirm">
+                            <button className="btn-outline" onClick={() => setConfirmExclusao({ show: false, id: null })}>Cancelar</button>
+                            <button className="btn-danger" onClick={async () => {
+                                await notificationService.excluir(confirmExclusao.id);
+                                setConfirmExclusao({ show: false, id: null });
+                                buscarNotificacoes();
+                            }}>Confirmar</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* --- SIDEBAR --- */}
-            <aside className={`sidebar ${sidebarClass}`}>
-                <div className="sidebar-toggle-area">
-                    <button className="toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-                        {isSidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+            {/* SIDEBAR */}
+            <aside className={`sidebar ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+                <div className="sidebar-header-toggle">
+                    <button className="toggle-btn-premium" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                        {isSidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
                     </button>
                 </div>
 
                 <nav className="sidebar-nav">
-                    <Link to="/dashboard" className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}><Home size={20} /><span className="link-text">Dashboard</span></Link>
-                    <Link to="/areas" className={`nav-link ${isActive('/areas') ? 'active' : ''}`}><MapPin size={20} /><span className="link-text">Áreas</span></Link>
-                    <Link to="/plantas" className={`nav-link ${isActive('/plantas') ? 'active' : ''}`}><Sprout size={20} /><span className="link-text">Plantas</span></Link>
-                    <Link to="/cultivos" className={`nav-link ${isActive('/cultivos') ? 'active' : ''}`}><Wheat size={20} /><span className="text">Cultivos</span></Link>
-                    <Link to="/tarefas" className={`nav-link ${isActive('/tarefas') ? 'active' : ''}`}><CheckSquare size={20} /><span className="link-text">Tarefas</span></Link>
-                    <Link to="/relatorios" className={`nav-link ${isActive('/relatorios') ? 'active' : ''}`}><BarChart3 size={20} /><span className="link-text">Relatórios</span></Link>
-                    <div style={{ margin: '10px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}></div>
-                    {usuario?.funcao === 'ADMINISTRADOR' && (
-                        <Link to="/admin" className={`nav-link ${isActive('/admin') ? 'active' : ''}`}><Shield size={20} /><span className="link-text">Administração</span></Link>
+                    <div onClick={closeSidebarMobile}>
+                        <NavItem to="/dashboard" icon={<Home size={20}/>} label="Início" active={isActive('/dashboard')} open={isSidebarOpen} />
+                        <NavItem to="/areas" icon={<MapPin size={20}/>} label="Áreas" active={isActive('/areas')} open={isSidebarOpen} />
+                        <NavItem to="/plantas" icon={<Sprout size={20}/>} label="Plantas" active={isActive('/plantas')} open={isSidebarOpen} />
+                        <NavItem to="/cultivos" icon={<Wheat size={20}/>} label="Cultivos" active={isActive('/cultivos')} open={isSidebarOpen} />
+                        <NavItem to="/tarefas" icon={<CheckSquare size={20}/>} label="Tarefas" active={isActive('/tarefas')} open={isSidebarOpen} />
+                        <NavItem to="/relatorios" icon={<BarChart3 size={20}/>} label="Relatórios" active={isActive('/relatorios')} open={isSidebarOpen} />
+                    </div>
+
+                    {(usuario?.funcao === 'ADMINISTRADOR' || usuario?.funcao === 'EMPRESA') && (
+                        <>
+                            <div className="sidebar-premium-divider">
+                                {isSidebarOpen ? <span>ADMINISTRAÇÃO</span> : <div className="divider-line" />}
+                            </div>
+                            <NavItem to="/admin" icon={<Shield size={20}/>} label="Painel de Controle" active={isActive('/admin')} open={isSidebarOpen} />
+                        </>
                     )}
                 </nav>
             </aside>
 
-            {/* --- HEADER --- */}
-            <header className={`top-header ${headerClass}`}>
-                <div style={{ width: '100px' }}></div>
-                <div className="header-center">
-                    <Sprout size={32} color="#4ade80" className="logo-icon" />
-                    <h1 className="logo-text">Cultiva+</h1>
+            {/* HEADER */}
+            <header className={`top-header-premium ${isSidebarOpen ? 'header-expanded' : 'header-collapsed'}`}>
+                <div className="header-brand-section">
+                    <button className="mobile-menu-toggle" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                        {isSidebarOpen ? <ChevronLeft size={24} /> : <div className="hamburger-icon"></div>}
+                    </button>
+
+                    <div className="header-logo-container">
+                        <Sprout size={28} color="white" className="logo-icon-premium" />
+                        <span className="logo-text-header">Cultiva<span className="v-soft-text">+</span></span>
+                    </div>
+
+                    <div className="header-v-divider opacity-20 hiding-mobile"></div>
+                    <span className="breadcrumb-simple hiding-mobile">
+                        {location.pathname.split('/')[1] || 'Dashboard'}
+                    </span>
                 </div>
 
-                <div className="header-right">
-
-                    {/* DROPDOWN DE NOTIFICAÇÕES */}
-                    <div className="dropdown-container" ref={notificationRef}>
-                        <button
-                            className={`icon-btn ${showNotifications ? 'active' : ''}`}
-                            onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false); }}
-                        >
+                <div className="header-actions">
+                    <div className="dropdown-wrapper" ref={notificationRef}>
+                        <button className={`icon-trigger-premium ${showNotifications ? 'active' : ''}`} onClick={() => setShowNotifications(!showNotifications)}>
                             <Bell size={20} />
-                            {totalNaoLidas > 0 && (
-                                <span className="notification-badge-count">
-                                    {totalNaoLidas > 9 ? '9+' : totalNaoLidas}
-                                </span>
-                            )}
+                            {totalNaoLidas > 0 && <span className="badge-premium">{totalNaoLidas}</span>}
                         </button>
 
                         {showNotifications && (
-                            <div className="notifications-dropdown">
-                                <div className="dropdown-header">
+                            <div className="notifications-dropdown-premium">
+                                <div className="drop-header-premium">
                                     <h3>Notificações</h3>
-                                    {totalNaoLidas > 0 && (
-                                        <button className="btn-mark-all" onClick={handleMarcarTodasLidas}>
-                                            Ler todas
-                                        </button>
-                                    )}
+                                    <div className="header-actions-notif">
+                                        {totalNaoLidas > 0 ? (
+                                            <button className="mark-all-btn" onClick={() => handleMarcarTodasStatus(true)}>
+                                                <CheckCircle2 size={14} /> Ler todas
+                                            </button>
+                                        ) : notificacoes.length > 0 && (
+                                            <button className="mark-all-btn" onClick={() => handleMarcarTodasStatus(false)}>
+                                                <Mail size={14} /> Marcar como não lidas
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-
-                                <div className="notifications-list">
+                                <div className="drop-body-premium">
                                     {notificacoes.length === 0 ? (
-                                        <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
-                                            <Mail size={32} style={{ opacity: 0.2, marginBottom: '10px' }} />
-                                            <p style={{ fontSize: '0.85rem' }}>Nenhum aviso por enquanto.</p>
+                                        <div className="empty-notif">
+                                            <Mail size={32} />
+                                            <p>Sem notificações</p>
                                         </div>
                                     ) : (
-                                        notificacoes.map((notif) => (
-                                            <div
-                                                key={notif.id}
-                                                className={`notification-item ${!notif.lida ? 'unread' : ''}`}
-                                                onClick={(e) => handleToggleLida(e, notif)}
-                                            >
-                                                <div className="notif-content" style={{ flex: 1 }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                        <h4>{notif.titulo}</h4>
-                                                        <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{formatarData(notif.dataHora)}</span>
+                                        notificacoes.map(n => (
+                                            <div key={n.id} className={`notif-card ${!n.lida ? 'unread' : ''}`}>
+                                                <div className="notif-content">
+                                                    <div className="notif-title-row">
+                                                        <h4>{n.titulo}</h4>
+                                                        {!n.lida && <span className="unread-dot"></span>}
                                                     </div>
-                                                    <p>{notif.mensagem}</p>
+                                                    <p>{n.mensagem}</p>
+                                                    <div className="notif-footer-row">
+                                                        <span className="notif-time">
+                                                            {new Date(n.dataHora).toLocaleDateString()} às {new Date(n.dataHora).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                        </span>
+
+                                                        <button
+                                                            className={`status-toggle-btn ${n.lida ? 'is-read' : 'is-unread'}`}
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation(); // ESSENCIAL: Impede que o clique suba para o card
+                                                                handleAlternarStatusLida(n.id, n.lida);
+                                                            }}
+                                                            title={n.lida ? "Marcar como não lida" : "Marcar como lida"}
+                                                        >
+                                                            {n.lida ? (
+                                                                <><Mail size={14} /> <span>Não lida</span></>
+                                                            ) : (
+                                                                <><MailOpen size={14} /> <span>Lida</span></>
+                                                            )}
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <div className="notif-actions-hover" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                    <button
-                                                        onClick={(e) => abrirModalExcluir(e, notif.id)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    className="delete-notif-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfirmExclusao({show: true, id: n.id});
+                                                    }}
+                                                >
+                                                    <Trash2 size={14}/>
+                                                </button>
                                             </div>
                                         ))
                                     )}
@@ -238,31 +254,37 @@ export const DashboardLayout = ({ children }) => {
                         )}
                     </div>
 
-                    <div className="header-divider"></div>
+                    <div className="header-v-divider"></div>
 
-                    {/* MENU DO USUÁRIO */}
-                    <div className="dropdown-container" ref={userMenuRef}>
-                        <div className="user-profile" onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }}>
-                            <div className="user-info">
-                                <span className="user-name">{usuario?.nomeUsuario || 'Usuário'}</span>
-                                <span className="user-role">{usuario?.funcao || 'Membro'}</span>
-                            </div>
-                            <div className="user-avatar"><User size={20} /></div>
+                    <div className="user-profile-premium" ref={userMenuRef} onClick={() => setShowUserMenu(!showUserMenu)}>
+                        <div className="user-meta-info">
+                            <span className="u-name">{usuario?.nomeUsuario || 'Usuário'}</span>
+                            <span className="u-role">{usuario?.funcao}</span>
                         </div>
+                        <div className="u-avatar-premium">{usuario?.nomeUsuario?.charAt(0) || <User size={18}/>}</div>
+
                         {showUserMenu && (
-                            <div className="dropdown-menu user-menu" style={{ top: '55px', right: 0 }}>
-                                <div className="dropdown-header">Minha Conta</div>
-                                <Link to="/perfil" className="dropdown-item"><User size={16} /> Perfil</Link>
-                                <button onClick={handleLogout} className="dropdown-item danger"><LogOut size={16} /> Sair</button>
+                            <div className="user-menu-dropdown">
+                                <Link to="/perfil" className="menu-item"><User size={16}/> Meu Perfil</Link>
+                                <button onClick={handleLogout} className="menu-item text-danger"><LogOut size={16}/> Encerrar Sessão</button>
                             </div>
                         )}
                     </div>
                 </div>
             </header>
 
-            <main className={`main-content ${contentClass}`}>
-                {children}
+            <main className={`main-content-premium ${isSidebarOpen ? 'content-expanded' : 'content-collapsed'}`}>
+                <div className="page-transition-wrapper">
+                    {children}
+                </div>
             </main>
         </div>
     );
 };
+
+const NavItem = ({ to, icon, label, active, open }) => (
+    <Link to={to} className={`nav-link-premium ${active ? 'active' : ''}`} title={!open ? label : ''}>
+        <span className="nav-icon-container">{icon}</span>
+        <span className={`nav-label-text ${!open ? 'text-hidden' : ''}`}>{label}</span>
+    </Link>
+);

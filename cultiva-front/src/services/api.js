@@ -1,316 +1,168 @@
 const API_ROOT = "http://localhost:8090/api";
 
+// --- ENDPOINTS ---
 const ENDPOINT_USUARIOS = `${API_ROOT}/usuarios`;
 const ENDPOINT_LOGS = `${API_ROOT}/logs`;
 const ENDPOINT_NOTIFICACOES = `${API_ROOT}/notificacoes`;
+const ENDPOINT_PLANTAS = `${API_ROOT}/plantas`;
 
-// --- FUNÇÃO AUXILIAR PARA CABEÇALHOS (HEADERS) ---
-// Esta função injeta o Token JWT automaticamente em cada requisição
 export const getHeaders = () => {
     const token = localStorage.getItem('token');
     const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
+};
+
+// --- INTERCEPTOR DE REQUISIÇÃO (COM TOAST/ERROR TRIGGER) ---
+export const request = async (url, options = {}) => {
+    try {
+        const response = await fetch(url, options);
+
+        // 401: Sessão Expirada
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('usuario_logado');
+            // O erro será pego pelo catch do componente e exibido no Toast
+            throw new Error("Sessão expirada. Por favor, faça login novamente.");
+        }
+
+        // 403: MENSAGEM PARA O MODAL/TOAST DE BLOQUEIO
+        if (response.status === 403) {
+            throw new Error("Acesso Negado: Você não tem permissão para realizar esta ação.");
+        }
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || "Erro na comunicação com o servidor.");
+        }
+
+        if (response.status === 204) return true;
+        return await response.json();
+
+    } catch (error) {
+        // Relança o erro para que o componente (Administracao.js) mostre o notify()
+        throw error;
+    }
 };
 
 // --- SERVIÇO DE AUTENTICAÇÃO ---
 export const authService = {
     login: async (email, senha) => {
-        try {
-            const response = await fetch(`${ENDPOINT_USUARIOS}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }, // No login ainda não tem token
-                body: JSON.stringify({ email, senha }),
-            });
+        const response = await fetch(`${ENDPOINT_USUARIOS}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, senha }),
+        });
 
-            if (response.status === 401) throw new Error("Email ou senha incorretos.");
-            if (!response.ok) throw new Error("Erro ao conectar com o servidor.");
+        if (response.status === 401) throw new Error("E-mail ou senha incorretos.");
+        if (!response.ok) throw new Error("Erro ao conectar com o servidor.");
 
-            const dados = await response.json();
+        const dados = await response.json();
+        if (dados.token) localStorage.setItem('token', dados.token);
+        if (dados.idUsuario) localStorage.setItem('usuario_logado', JSON.stringify(dados));
 
-            // Salva o Token JWT recebido do Java
-            if (dados.token) {
-                localStorage.setItem('token', dados.token);
-            }
-
-            // Salva os dados do usuário
-            if (dados.idUsuario) {
-                localStorage.setItem('usuario_logado', JSON.stringify(dados));
-            }
-
-            return dados;
-        } catch (error) {
-            console.error("Erro no login:", error);
-            throw error;
-        }
+        return dados;
     },
-
     usuarioEstaLogado: () => !!localStorage.getItem('token'),
-
-    obterUsuarioLogado: () => {
-        const u = localStorage.getItem('usuario_logado');
-        return u ? JSON.parse(u) : null;
-    },
-
+    obterUsuarioLogado: () => JSON.parse(localStorage.getItem('usuario_logado')),
     logout: () => {
-        localStorage.removeItem('usuario_logado');
-        localStorage.removeItem('token');
+        localStorage.clear();
+        window.location.href = "/login";
     }
 };
 
 // --- SERVIÇO DE USUÁRIOS E LOGS ---
 export const userService = {
-
-    listar: async () => {
-        const response = await fetch(ENDPOINT_USUARIOS, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error("Erro ao buscar usuários");
-        return await response.json();
-    },
-
-    obterPorId: async (id) => {
-        const response = await fetch(`${ENDPOINT_USUARIOS}/${id}`, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error("Erro ao buscar dados do perfil.");
-        return await response.json();
-    },
-
-    // --- FUNÇÃO ADICIONADA PARA O HISTÓRICO ---
-    listarLogs: async () => {
-        const response = await fetch(ENDPOINT_LOGS, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error("Erro ao buscar logs de atividades");
-        return await response.json();
-    },
+    listar: () => request(ENDPOINT_USUARIOS, { headers: getHeaders() }),
+    obterPorId: (id) => request(`${ENDPOINT_USUARIOS}/${id}`, { headers: getHeaders() }),
+    listarLogs: () => request(ENDPOINT_LOGS, { headers: getHeaders() }),
 
     registrarLog: async (acao, detalhes, usuarioId) => {
         try {
-            const payload = {
-                acao,
-                detalhes,
-                usuarioId,
-                dataHora: new Date().toISOString()
-            };
-
             await fetch(ENDPOINT_LOGS, {
                 method: "POST",
                 headers: getHeaders(),
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ acao, detalhes, usuarioId, dataHora: new Date().toISOString() })
             });
-        } catch (error) {
-            console.error("Falha silenciosa ao registrar log:", error);
-        }
+        } catch (e) { console.error("Erro no log:", e); }
     },
 
-    criar: async (formData) => {
-        const payload = {
+    criar: (formData) => request(ENDPOINT_USUARIOS, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({
             nomeUsuario: formData.nome || formData.nomeUsuario,
             email: formData.email,
-            funcao: formData.tipo || formData.funcao,
-            // Senha que atende aos requisitos do seu Java:
-            // Maiúscula, minúscula, número, especial e +8 caracteres
+            funcao: (formData.funcao || "OPERADOR_MAQUINAS").toUpperCase(),
             senha: "CultivaMais@2026",
             ativo: true
-        };
+        })
+    }),
 
-        const response = await fetch(ENDPOINT_USUARIOS, {
-            method: "POST",
-            headers: getHeaders(),
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            // Tenta ler a mensagem de validação vinda do Spring Boot
-            const erroJson = await response.json().catch(() => ({}));
-            const mensagem = erroJson.message || "Erro de validação no servidor (Verifique a senha)";
-            throw new Error(mensagem);
-        }
-        return await response.json();
-    },
-
-    atualizar: async (id, dados) => {
-        // Mapeamento para garantir consistência com o Java
-        const payload = {
-            nomeUsuario: dados.nome || dados.nomeUsuario,
-            email: dados.email,
-            funcao: dados.tipo || dados.funcao,
-            ativo: dados.ativo
-        };
-
-        // Se houver senha nova (troca de senha)
-        if (dados.senha) payload.senha = dados.senha;
-
-        const response = await fetch(`${ENDPOINT_USUARIOS}/${id}`, {
+    atualizar: (id, dados) => {
+        const operador = authService.obterUsuarioLogado()?.nomeUsuario || "Sistema";
+        return request(`${ENDPOINT_USUARIOS}/${id}?operador=${encodeURIComponent(operador)}`, {
             method: "PUT",
             headers: getHeaders(),
-            body: JSON.stringify(payload)
+            body: JSON.stringify(dados)
         });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || "Erro ao atualizar usuário");
-        }
-        return await response.json();
     },
 
-    excluir: async (id) => {
-        const response = await fetch(`${ENDPOINT_USUARIOS}/${id}`, {
+    excluir: (id) => {
+        const operador = authService.obterUsuarioLogado()?.nomeUsuario || "Sistema";
+        return request(`${ENDPOINT_USUARIOS}/${id}?operador=${encodeURIComponent(operador)}`, {
             method: "DELETE",
             headers: getHeaders()
         });
-        if (!response.ok) throw new Error("Erro ao excluir usuário");
-        return true;
     },
 
-    gerarCodigo: async (email) => {
-        const response = await fetch(`${ENDPOINT_USUARIOS}/gerar-codigo`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" }, // Rota pública
-            body: JSON.stringify({ email })
-        });
-        if (!response.ok) throw new Error("Erro ao gerar código.");
-        return await response.json();
-    },
+    gerarCodigo: (email) => request(`${ENDPOINT_USUARIOS}/gerar-codigo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+    }),
 
-    redefinirSenha: async (email, codigo, novaSenha) => {
-        const response = await fetch(`${ENDPOINT_USUARIOS}/redefinir-senha`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" }, // Rota pública
-            body: JSON.stringify({ email, codigo, novaSenha })
-        });
-        if (!response.ok) throw new Error("Código inválido.");
-        return true;
-    }
+    redefinirSenha: (email, codigo, novaSenha) => request(`${ENDPOINT_USUARIOS}/redefinir-senha`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, codigo, novaSenha })
+    })
 };
 
 // --- SERVIÇO DE NOTIFICAÇÕES ---
-
-const getUsuarioId = () => {
-    const u = authService.obterUsuarioLogado();
-    return u ? (u.idUsuario || u.id) : null;
-};
-
 export const notificationService = {
-
-    listar: async () => {
-        const idUser = getUsuarioId();
-        if (!idUser) return [];
-
-        try {
-            const response = await fetch(`${ENDPOINT_NOTIFICACOES}/usuario/${idUser}`, {
-                headers: getHeaders()
-            });
-            if (!response.ok) throw new Error("Erro ao buscar notificações");
-            return await response.json();
-        } catch (error) {
-            console.error("Falha ao buscar notificações:", error);
-            return [];
-        }
+    // Busca as notificações do usuário logado
+    listar: () => {
+        const user = authService.obterUsuarioLogado();
+        const id = user?.idUsuario || user?.id; // Tenta capturar o ID de ambos os formatos
+        return id ? request(`${ENDPOINT_NOTIFICACOES}/usuario/${id}`, { headers: getHeaders() }) : [];
     },
 
-    criar: async (titulo, mensagem, tipo) => {
-        const idUser = getUsuarioId();
-        if (!idUser) return;
+    // Marca uma notificação individual como LIDA
+    marcarComoLida: (id) =>
+        request(`${ENDPOINT_NOTIFICACOES}/${id}/lida`, { method: "PATCH", headers: getHeaders() }),
 
-        try {
-            const response = await fetch(ENDPOINT_NOTIFICACOES, {
-                method: "POST",
-                headers: getHeaders(),
-                body: JSON.stringify({
-                    idUsuario: idUser,
-                    titulo,
-                    mensagem,
-                    tipo
-                })
-            });
-            return await response.json();
-        } catch (error) {
-            console.error("Erro ao criar notificação", error);
-        }
-    },
+    // Marca uma notificação individual como NÃO LIDA (Novo!)
+    marcarComoNaoLida: (id) =>
+        request(`${ENDPOINT_NOTIFICACOES}/${id}/nao-lida`, { method: "PATCH", headers: getHeaders() }),
 
-    marcarComoLida: async (idNotificacao) => {
-        try {
-            await fetch(`${ENDPOINT_NOTIFICACOES}/${idNotificacao}/lida`, {
-                method: "PUT",
-                headers: getHeaders()
-            });
-            return true;
-        } catch (error) {
-            console.error("Erro ao marcar como lida", error);
-            return false;
-        }
-    },
+    // Marca todas do usuário como LIDAS
+    marcarTodasComoLidas: (idUsuario) =>
+        request(`${ENDPOINT_NOTIFICACOES}/usuario/${idUsuario}/ler-todas`, { method: "PUT", headers: getHeaders() }),
 
-    marcarTodasComoLidas: async () => {
-        const idUser = getUsuarioId();
-        if (!idUser) return;
+    // Marca todas do usuário como NÃO LIDAS (Novo!)
+    marcarTodasComoNaoLidas: (idUsuario) =>
+        request(`${ENDPOINT_NOTIFICACOES}/usuario/${idUsuario}/desler-todas`, { method: "PUT", headers: getHeaders() }),
 
-        try {
-            await fetch(`${ENDPOINT_NOTIFICACOES}/usuario/${idUser}/ler-todas`, {
-                method: "PUT",
-                headers: getHeaders()
-            });
-            return true;
-        } catch (error) {
-            console.error("Erro ao marcar todas como lidas", error);
-            return false;
-        }
-    },
-
-    excluir: async (idNotificacao) => {
-        try {
-            await fetch(`${ENDPOINT_NOTIFICACOES}/${idNotificacao}`, {
-                method: "DELETE",
-                headers: getHeaders()
-            });
-            return true;
-        } catch (error) {
-            console.error("Erro ao excluir notificação", error);
-            return false;
-        }
-    }
+    // Exclui uma notificação
+    excluir: (id) =>
+        request(`${ENDPOINT_NOTIFICACOES}/${id}`, { method: "DELETE", headers: getHeaders() })
 };
 
 // --- SERVIÇO DE PLANTAS ---
-const ENDPOINT_PLANTAS = `${API_ROOT}/plantas`;
-
 export const plantaService = {
-    listar: async () => {
-        const response = await fetch(ENDPOINT_PLANTAS, {
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error("Erro ao buscar catálogo de plantas");
-        return await response.json();
-    },
-
-    criar: async (plantaData) => {
-        const idUser = getUsuarioId(); // Pega o ID do usuário logado
-
-        const response = await fetch(`${ENDPOINT_PLANTAS}/${idUser}`, {
-            method: "POST",
-            headers: getHeaders(),
-            body: JSON.stringify(plantaData)
-        });
-
-        if (!response.ok) {
-            const erro = await response.json().catch(() => ({}));
-            throw new Error(erro.message || "Erro ao salvar planta no servidor");
-        }
-        return await response.json();
-    },
-
-    excluir: async (id) => {
-        const response = await fetch(`${ENDPOINT_PLANTAS}/${id}`, {
-            method: "DELETE",
-            headers: getHeaders()
-        });
-        if (!response.ok) throw new Error("Erro ao excluir planta");
-        return true;
-    }
+    listar: () => request(ENDPOINT_PLANTAS, { headers: getHeaders() }),
+    criar: (dados) => request(ENDPOINT_PLANTAS, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
+    excluir: (id) => request(`${ENDPOINT_PLANTAS}/${id}`, { method: "DELETE", headers: getHeaders() }),
+    atualizar: (id, dados) => request(`${ENDPOINT_PLANTAS}/${id}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) })
 };

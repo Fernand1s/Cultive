@@ -3,14 +3,26 @@
    ========================================= */
 
 .login-container {
+    width: 100%;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     background: linear-gradient(135deg, #16a34a 0%, #14532d 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    background-color: #14532d;
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: 20px;
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #14532d; /* Cor de segurança igual ao fim do gradiente */
 }
 
 /* Elementos decorativos de fundo */
@@ -23,6 +35,7 @@
     border-radius: 50%;
     top: -250px;
     right: -100px;
+    pointer-events: none;
 }
 
 .login-card {
@@ -35,6 +48,7 @@
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
     z-index: 10;
     animation: fadeInScale 0.5s ease-out;
+    height: fit-content;
 }
 
 .login-title {
@@ -76,6 +90,8 @@
     position: relative;
     display: flex;
     align-items: center;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .login-input {
@@ -86,6 +102,11 @@
     font-size: 1rem;
     transition: all 0.2s ease;
     background: #f8fafc;
+    box-sizing: border-box;
+}
+
+.input-wrapper .login-input {
+    padding-right: 3rem;
 }
 
 .login-input:focus {
@@ -112,6 +133,7 @@
     cursor: pointer;
     display: flex;
     align-items: center;
+    z-index: 5;
 }
 
 .btn-toggle-password:hover {
@@ -202,5 +224,11 @@
 @media (max-width: 480px) {
     .login-card {
         padding: 1.5rem;
+    }
+}
+
+@media (max-height: 700px) {
+    .login-container {
+        align-items: flex-start;
     }
 }

@@ -1,89 +1,73 @@
 package br.com.cultiva.cultivamais.controller;
 
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import br.com.cultiva.cultivamais.dto.TarefaDTO;
+import br.com.cultiva.cultivamais.security.SecurityUtils;
+import br.com.cultiva.cultivamais.service.LogService;
+import br.com.cultiva.cultivamais.service.TarefaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import br.com.cultiva.cultivamais.model.Tarefa;
-import br.com.cultiva.cultivamais.service.TarefaService;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tarefas")
 public class TarefaController {
 
-    @Autowired
-    private TarefaService tarefaService;
+    private final TarefaService tarefaService;
+    private final SecurityUtils securityUtils;
+    private final LogService logService;
 
-    // LISTAR TAREFAS
+    public TarefaController(TarefaService tarefaService, SecurityUtils securityUtils, LogService logService) {
+        this.tarefaService = tarefaService;
+        this.securityUtils = securityUtils;
+        this.logService = logService;
+    }
+
+    // LISTAR TAREFAS (COM FILTRO POR USUÁRIO OU FUNÇÃO)
     @GetMapping
-    public ResponseEntity<?> listar(@RequestParam(required=false) Long idUsuario, @RequestParam(required=false) String funcao) {
-        try {
-            if (idUsuario == null || funcao == null) {
-                List<Tarefa> todas = tarefaService.listarTodas();
-                return ResponseEntity.ok(todas);
-            }
-
-            List<Tarefa> lista = tarefaService.listarTarefasPorUsuario(idUsuario, funcao);
-            return ResponseEntity.ok(lista);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Erro interno: " + e.getMessage());
+    public ResponseEntity<List<TarefaDTO>> listar(@RequestParam(required = false) Long idUsuario, @RequestParam(required = false) String funcao) {
+        if (idUsuario == null) {
+            return ResponseEntity.ok(tarefaService.listarTodas());
         }
+        return ResponseEntity.ok(tarefaService.listarTarefasPorUsuario(idUsuario, funcao));
     }
 
-    // CRIAR TAREFA
+    // CRIAR NOVA TAREFA
     @PostMapping
-    public Tarefa criar(@RequestParam Long idCriador, @RequestParam(required=false) Long idResponsavel, @RequestBody Tarefa tarefa) {
-        Long resp = (idResponsavel != null) ? idResponsavel : idCriador;
-        return tarefaService.criarTarefa(idCriador, resp, tarefa);
+    public ResponseEntity<TarefaDTO> criar(@RequestParam(required = false) Long idResponsavel, @RequestBody TarefaDTO dto) {
+        Long idCriador = securityUtils.getIdUsuarioLogado();
+        TarefaDTO novaTarefa = tarefaService.criarTarefa(idCriador, idResponsavel, dto);
+        return ResponseEntity.ok(novaTarefa);
     }
 
-    // EDITAR TAREFA
+    // ATUALIZAR TAREFA
     @PutMapping("/{id}")
-    public ResponseEntity<?> atualizar(
-            @PathVariable Long id,
-            @RequestBody Tarefa tarefa,
-            @RequestParam Long idUsuarioLogado) {
-
-        try {
-            Tarefa atualizada = tarefaService.atualizarTarefa(id, tarefa, idUsuarioLogado);
-            return ResponseEntity.ok(atualizada);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(403).body(e.getMessage());
-        }
+    public ResponseEntity<TarefaDTO> atualizar(@PathVariable Long id, @RequestBody TarefaDTO dto) {
+        Long idUsuarioLogado = securityUtils.getIdUsuarioLogado();
+        return ResponseEntity.ok(tarefaService.atualizarTarefa(id, dto, idUsuarioLogado));
     }
 
-    // CONCLUIR TAREFA
-    @PutMapping("/{id}/concluir")
-    public ResponseEntity<Tarefa> concluir(
-            @PathVariable Long id,
-            @RequestParam Long idUsuarioLogado,
-            @RequestBody(required = false) Map<String, String> payload
-    ) {
+    // CONCLUIR OU REABRIR TAREFA
+    @PatchMapping("/{id}/concluir")
+    public ResponseEntity<TarefaDTO> concluir(@PathVariable Long id, @RequestBody(required = false) Map<String, String> payload) {
+        Long idUsuarioLogado = securityUtils.getIdUsuarioLogado();
         String obs = (payload != null) ? payload.get("observacao") : "";
-        Tarefa t = tarefaService.concluirTarefa(id, idUsuarioLogado, obs);
-
-        if (t != null) return ResponseEntity.ok(t);
-        return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(tarefaService.concluirTarefa(id, idUsuarioLogado, obs));
     }
 
     // CANCELAR TAREFA
     @PutMapping("/{id}/cancelar")
-    public ResponseEntity<Tarefa> cancelar(@PathVariable Long id, @RequestParam Long idUsuarioLogado) {
-        Tarefa t = tarefaService.cancelarTarefa(id, idUsuarioLogado);
-        if (t != null) return ResponseEntity.ok(t);
-        return ResponseEntity.status(403).body(null);
+    public ResponseEntity<TarefaDTO> cancelar(@PathVariable Long id) {
+        Long idUsuarioLogado = securityUtils.getIdUsuarioLogado();
+        return ResponseEntity.ok(tarefaService.cancelarTarefa(id, idUsuarioLogado));
     }
 
     // EXCLUIR TAREFA
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable Long id, @RequestParam Long idUsuarioLogado) {
-        boolean sucesso = tarefaService.excluirTarefa(id, idUsuarioLogado);
-        if (sucesso) return ResponseEntity.noContent().build();
-        return ResponseEntity.status(403).build();
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+        Long idUsuarioLogado = securityUtils.getIdUsuarioLogado();
+        tarefaService.excluirTarefa(id, idUsuarioLogado);
+        return ResponseEntity.noContent().build();
     }
 }

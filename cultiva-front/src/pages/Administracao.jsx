@@ -49,6 +49,8 @@ const Administracao = () => {
     const [filtroDataFim, setFiltroDataFim] = useState('');
     const [datasExpandidas, setDatasExpandidas] = useState({});
 
+    const [salvando, setSalvando] = useState(false);
+
     // --- BUSCAR USUÁRIOS ---
     const fetchUsuarios = async () => {
         setLoading(true);
@@ -200,15 +202,18 @@ const Administracao = () => {
     const focarBuscaUsuario = () => searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) || searchInputRef.current?.focus();
     const abrirModalCriacao = () => { setUsuarioEmEdicao(null); setFormData({ nome: '', email: '', tipo: 'TECNICO_AGRICOLA' }); setModalAberta(true); };
     const abrirModalEdicao = (user) => { setUsuarioEmEdicao(user); setFormData({ nome: user.nome, email: user.email, tipo: user.tipo }); setModalAberta(true); };
-    const fecharModal = () => { setModalAberta(false); setUsuarioEmEdicao(null); };
+    const fecharModal = () => { setModalAberta(false); setUsuarioEmEdicao(null); setFormData({ nome: '', email: '', tipo: 'TECNICO_AGRICOLA' })};
     const getIniciais = (nome) => nome ? nome.substring(0, 2).toUpperCase() : '??';
 
     // --- AÇÕES DO SISTEMA ---
     const handleSalvar = async () => {
+        if (salvando) return;
         if (!formData.nome || !formData.email) {
             notify("Preencha todos os campos obrigatórios.", "error");
             return;
         }
+
+        setSalvando(true);
         try {
             const usuarioParaSalvar = {
                 nomeUsuario: formData.nome,
@@ -219,10 +224,12 @@ const Administracao = () => {
             if (usuarioEmEdicao) {
                 await userService.atualizar(usuarioEmEdicao.id, usuarioParaSalvar);
                 notify("Usuário atualizado com sucesso!", "success");
+                setSalvando(false);
             } else {
                 usuarioParaSalvar.senha = "CultivaMais@2026";
                 await userService.criar(usuarioParaSalvar);
                 notify(`Usuário criado! Senha padrão: CultivaMais@2026`, "success");
+                setSalvando(false);
             }
             await fetchUsuarios();
             fecharModal();
@@ -249,6 +256,8 @@ const Administracao = () => {
             fetchUsuarios();
         } catch (error) {
             notify(`Erro ao alterar status do usuário.`, "error");
+        } finally {
+            setSalvando(false);
         }
     };
 

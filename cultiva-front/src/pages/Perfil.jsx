@@ -63,12 +63,21 @@ const Perfil = () => {
     const handleSalvarDados = async (e) => {
         e.preventDefault();
         try {
-            await userService.atualizar(usuarioBanco.idUsuario, formulario);
+            const payload = {
+                nomeUsuario: formulario.nomeUsuario,
+                email: formulario.email,
+                funcao: usuarioBanco.funcao,
+                ativo: usuarioBanco.ativo
+            };
+
+            await userService.atualizar(usuarioBanco.idUsuario, payload);
+
             const sessaoAtual = authService.obterUsuarioLogado();
             localStorage.setItem('usuarioLogado', JSON.stringify({ ...sessaoAtual, ...formulario }));
+
             notify('Perfil atualizado!', 'success');
         } catch (error) {
-            notify('Erro ao salvar.', 'error');
+            notify('Erro ao salvar. Verifique se o e-mail já existe.', 'error');
         }
     };
 

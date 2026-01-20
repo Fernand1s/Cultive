@@ -12,6 +12,8 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useNotify } from "../context/NotificationContext";
 
+import { request, getHeaders } from '../services/api';
+
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -32,6 +34,7 @@ const Areas = () => {
     const [idAreaSelecionada, setIdAreaSelecionada] = useState(null);
     const [cultivos, setCultivos] = useState([]);
     const [confirmacaoExclusao, setConfirmacaoExclusao] = useState({ aberta: false, id: null, nome: '' });
+    const [salvando, setSalvando] = useState(false);
 
     const estadoInicial = {
         nomeArea: '',
@@ -88,11 +91,13 @@ const Areas = () => {
         }
     };
 
-    const carregarAreas = () => {
-        fetch('http://localhost:8090/api/areas')
-            .then(res => res.json())
-            .then(dados => setAreas(dados))
-            .catch(() => notify("Não foi possível carregar as áreas.", "error"));
+    const carregarAreas = async () => {
+        try {
+            const dados = await request('http://localhost:8090/api/areas', { headers: getHeaders() });
+            setAreas(dados);
+        } catch (error) {
+            notify(error.message, "error");
+        }
     };
 
     useEffect(() => { carregarAreas(); }, []);
@@ -108,51 +113,100 @@ const Areas = () => {
                 latitudeArea: Number(area.latitudeArea) || -14.235,
                 longitudeArea: Number(area.longitudeArea) || -51.925
             });
+            setModalAberto(true);
         } else {
             setEditandoId(null);
-            setNovaArea(estadoInicial);
-        }
-        setModalAberto(true);
-    };
-
-    const fecharModal = () => { setModalAberto(false); setEditandoId(null); };
-
-    const salvarArea = (e) => {
-        e.preventDefault();
-        const url = editandoId ? `http://localhost:8090/api/areas/${editandoId}` : 'http://localhost:8090/api/areas';
-        fetch(url, {
-            method: editandoId ? 'PUT' : 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(novaArea)
-        }).then(res => {
-            if (res.ok) {
-                carregarAreas();
-                fecharModal();
-                notify("Área salva com sucesso!", "success");
+            // Tenta obter localização atual
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        setNovaArea({
+                            ...estadoInicial,
+                            latitudeArea: position.coords.latitude,
+                            longitudeArea: position.coords.longitude
+                        });
+                        setModalAberto(true);
+                    },
+                    (error) => {
+                        console.error("Erro ao obter localização", error);
+                        notify("Não foi possível obter sua localização atual. Usando padrão.", "info");
+                        setNovaArea(estadoInicial);
+                        setModalAberto(true);
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                setNovaArea(estadoInicial);
+                setModalAberto(true);
             }
-        }).catch(() => notify("Erro ao salvar área.", "error"));
+        }
     };
 
-    const executarExclusao = () => {
-        fetch(`http://localhost:8090/api/areas/${confirmacaoExclusao.id}`, { method: 'DELETE' })
-            .then(res => {
-                if (res.ok) {
-                    carregarAreas();
-                    notify("Área excluída!", "success");
-                    setConfirmacaoExclusao({ aberta: false, id: null, nome: '' });
-                }
+    const fecharModal = () => {
+        setModalAberto(false);
+        setEditandoId(null);
+        setNovaArea(estadoInicial);
+    };
+    
+    const salvarArea = async (e) => {
+        e.preventDefault();
+        if (salvando) return;
+
+        setSalvando(true);
+        try {
+            const payload = {
+                ...novaArea,
+                tamanhoArea: parseFloat(novaArea.tamanhoArea),
+                latitudeArea: parseFloat(novaArea.latitudeArea),
+                longitudeArea: parseFloat(novaArea.longitudeArea)
+            };
+
+            const url = editandoId ? `http://localhost:8090/api/areas/${editandoId}` : 'http://localhost:8090/api/areas';
+
+            await request(url, {
+                method: editandoId ? 'PUT' : 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify(payload)
             });
+
+            carregarAreas();
+            fecharModal();
+            notify(editandoId ? "Área atualizada!" : "Área salva!", "success");
+        } catch (error) {
+            notify(error.message, "error");
+        } finally {
+            setSalvando(false);
+        }
     };
 
-    const verCultivos = (idArea) => {
-        if (idArea === idAreaSelecionada) { setIdAreaSelecionada(null); return; }
-        fetch('http://localhost:8090/api/cultivos')
-            .then(res => res.json())
-            .then(todos => {
-                const filtrados = todos.filter(c => c.areaCultivo?.idArea === idArea);
-                setCultivos(filtrados);
-                setIdAreaSelecionada(idArea);
+    const executarExclusao = async () => {
+        try {
+            await request(`http://localhost:8090/api/areas/${confirmacaoExclusao.id}`, {
+                method: 'DELETE',
+                headers: getHeaders()
             });
+            carregarAreas();
+            notify("Área excluída!", "success");
+            setConfirmacaoExclusao({ aberta: false, id: null, nome: '' });
+        } catch (error) {
+            notify(error.message, "error");
+        }
+    };
+
+    const verCultivos = async (idArea) => {
+        if (idArea === idAreaSelecionada) {
+            setIdAreaSelecionada(null);
+            return;
+        }
+
+        try {
+            const todos = await request('http://localhost:8090/api/cultivos', { headers: getHeaders() });
+            const filtrados = todos.filter(c => (c.idArea || c.areaCultivo?.idArea) === idArea);
+            setCultivos(filtrados);
+            setIdAreaSelecionada(idArea);
+        } catch (error) {
+            notify("Erro ao carregar cultivos.", "error");
+        }
     };
 
     return (
@@ -283,8 +337,14 @@ const Areas = () => {
                                     <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
                                         <div className="form-group">
                                             <label className="form-label">Hectares (ha)</label>
-                                            <input type="number" step="0.1" className="form-input" value={novaArea.tamanhoArea} onChange={e => setNovaArea({...novaArea, tamanhoArea: e.target.value})} required />
-                                        </div>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                className="form-input"
+                                                value={novaArea.tamanhoArea}
+                                                onChange={e => setNovaArea({...novaArea, tamanhoArea: e.target.value})} // O salvarArea converterá para Float
+                                                required
+                                            />                                        </div>
                                         <div className="form-group">
                                             <label className="form-label">Luz Solar</label>
                                             <select className="form-select" value={novaArea.quantidadeLuz} onChange={e => setNovaArea({...novaArea, quantidadeLuz: e.target.value})}>
@@ -337,8 +397,8 @@ const Areas = () => {
                                 </div>
                             </div>
                             <div className="modal-footer" style={{padding: '20px 0 0 0'}}>
-                                <button type="button" className="btn-outline" onClick={fecharModal}>Cancelar</button>
-                                <button type="submit" className="btn-primary">Salvar Área</button>
+                                <button type="button" className="btn-outline" onClick={fecharModal} disabled={salvando}>Cancelar</button>
+                                <button type="submit" className="btn-primary" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar Área'}</button>
                             </div>
                         </form>
                     </div>

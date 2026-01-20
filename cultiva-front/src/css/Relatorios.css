@@ -180,6 +180,8 @@
 .status-dot { width: 8px; height: 8px; border-radius: 50%; }
 .status-dot.SAUDAVEL { background: #22c55e; }
 .status-dot.CRITICO { background: #ef4444; }
+.status-dot.EM_ATENCAO { background: #eab308; }
+.status-dot.PRAGA { background: #f97316; }
 
 /* BANNER PREDITIVO */
 .predictive-banner {
@@ -190,6 +192,10 @@
     gap: 40px;
     color: white;
     margin-bottom: 24px;
+}
+
+.predictive-banner .pred-item svg {
+    color: #10b981;
 }
 
 .pred-item { display: flex; align-items: center; gap: 12px; }
@@ -342,4 +348,23 @@
     padding: 20px;
     background: #f0fdf4;
     border-radius: 12px;
+}
+
+.lote-item.cancelado {
+    opacity: 0.6;
+    background: #f1f5f9;
+}
+
+.status-dot.CANCELADO {
+    background: #94a3b8; /* Cinza */
+}
+
+@media (max-width: 1100px) {
+    .charts-row-complex {
+        grid-template-columns: 1fr; /* Empilha os gráficos */
+    }
+
+    .precision-layout {
+        grid-template-columns: 1fr; /* Sidebar vai para cima dos detalhes */
+    }
 }

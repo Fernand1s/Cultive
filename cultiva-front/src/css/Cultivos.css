@@ -1,8 +1,9 @@
 /* =========================================
    SISTEMA DE DESIGN - CULTIVAMAIS CULTIVOS
-   ESTILO ULTRA-PREMIUM (VERDE)
+   ESTILO ULTRA-PREMIUM (LIMPO E ORGANIZADO)
    ========================================= */
 
+/* 1. GRID E ESTRUTURA DO CARD */
 .cultivos-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -27,7 +28,13 @@
     border-color: var(--v-soft);
 }
 
-/* Indicadores de Saúde */
+.card-finalizado {
+    background-color: #f8fafc;
+    border-color: #e2e8f0;
+    opacity: 0.95;
+}
+
+/* 2. INDICADORES DE SAÚDE E STATUS */
 .health-indicator {
     height: 5px;
     width: 100%;
@@ -35,10 +42,29 @@
 .health-saudavel { background: #22c55e; }
 .health-atencao { background: #eab308; }
 .health-critico { background: #ef4444; }
+.health-colhido { background: #64748b; }
 
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.status-ativo { background: #f0fdf4; color: #16a34a; }
+.status-colhido { background: #eff6ff; color: #1d4ed8; }
+.status-cancelado {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+/* 3. CONTEÚDO INTERNO */
 .cultivo-content {
     padding: 1.25rem;
     flex-grow: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .cultivo-header {
@@ -54,21 +80,6 @@
     color: var(--v-darker);
     margin: 4px 0 2px 0;
 }
-
-.cultivo-subtitle {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.status-badge {
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-.status-ativo { background: #f0fdf4; color: #16a34a; }
-.status-colhido { background: #eff6ff; color: #1d4ed8; }
 
 .cultivo-info-row {
     display: flex;
@@ -90,39 +101,157 @@
     border-radius: 4px;
 }
 
-/* Ações Inferiores no Card */
+/* 4. BOTÕES DE CONTROLE (EDITAR/APAGAR) */
+.btn-icon-sm {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-icon-sm:hover {
+    background: #f1f5f9;
+    color: #2563eb;
+    border-color: #2563eb;
+    transform: translateY(-2px);
+}
+
+.btn-icon-sm.danger:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+
+/* 5. AÇÕES RÁPIDAS (REGAR/PRAGA) */
 .cultivo-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    border-top: 1px solid var(--border-color);
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    padding: 15px 1.25rem;
+    border-top: 1px solid #f1f5f9;
+    margin-top: auto;
+    align-items: center;
 }
 
 .btn-action-cultivo {
-    padding: 12px;
-    border: none;
-    background: none;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    padding: 10px;
+    border-radius: 10px;
     font-size: 0.85rem;
     font-weight: 600;
+    border: none;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.btn-action-cultivo.water { color: #0284c7; border-right: 1px solid var(--border-color); }
-.btn-action-cultivo.water:hover { background: #f0f9ff; color: #0369a1; }
-.btn-action-cultivo.pest { color: #dc2626; }
-.btn-action-cultivo.pest:hover { background: #fef2f2; color: #b91c1c; }
+.btn-action-cultivo.water { background: #eff6ff; color: #2563eb; }
+.btn-action-cultivo.water:hover {
+    background: #2563eb;
+    color: white;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
 
-/* Modal de Eventos Específicos */
+.btn-action-cultivo.pest { background: #fff7ed; color: #ea580c; }
+.btn-action-cultivo.pest:hover {
+    background: #ea580c;
+    color: white;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
+}
+
+/* Feedback visual de última atividade no card */
+.last-activity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: #f1f5f9;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: #475569;
+    margin-top: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.last-activity-badge.water {
+    background: #f0f9ff;
+    color: #0369a1;
+    border-color: #bae6fd;
+}
+
+.last-activity-badge.pest {
+    background: #fffaf5;
+    color: #9a3412;
+    border-color: #ffedd5;
+}
+
+/* Ajuste na animação para indicar atualização */
+.cultivo-card.updating {
+    animation: pulse-border 1.5s infinite;
+}
+
+@keyframes pulse-border {
+    0% { border-color: var(--border-color); }
+    50% { border-color: #3b82f6; }
+    100% { border-color: var(--border-color); }
+}
+
+/* Estado quando a planta já possui uma praga registrada */
+.btn-action-cultivo.pest-active {
+    background: #ea580c; /* Laranja forte */
+    color: white;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+    border: 1px solid #c2410c;
+}
+
+.btn-action-cultivo.pest-active:hover {
+    background: #c2410c;
+    transform: translateY(-2px);
+}
+
+/* 6. BOX DE COLHEITA */
+.resumo-colheita-box {
+    margin-top: 15px;
+    padding: 12px;
+    background: #eff6ff;
+    border-radius: 12px;
+    border: 1px solid #bfdbfe;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.colheita-stat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #1e40af;
+}
+
+.colheita-stat span {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #60a5fa;
+}
+
+/* 7. MODAIS E ESTADOS GERAIS */
 .event-modal-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
     border-bottom: 1px solid #f1f5f9;
 }
 
@@ -138,34 +267,128 @@
 .bg-water-soft { background: #e0f2fe; color: #0ea5e9; }
 .bg-pest-soft { background: #fee2e2; color: #ef4444; }
 
+.input-error { border-color: #ef4444 !important; background-color: #fef2f2 !important; }
+.error-text { color: #ef4444; font-size: 0.75rem; margin-top: 5px; }
+
+/* 8. ANIMAÇÕES E RESPONSIVIDADE */
+.animate-pop-in { animation: popIn 0.3s cubic-bezier(0.26, 0.53, 0.74, 1.48); }
+@keyframes popIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
 @media (max-width: 768px) {
     .cultivos-grid { grid-template-columns: 1fr; }
 }
 
-/* Estados de Validação e Erro */
-.input-error {
-    border-color: #ef4444 !important;
-    background-color: #fef2f2 !important;
-    outline-color: #ef4444 !important;
+/* 9. ESTILOS ESPECÍFICOS DO HISTÓRICO (TIMELINE) */
+
+/* Container de cada item do histórico */
+.historico-item {
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    position: relative;
+    transition: all 0.2s ease;
 }
 
-.error-text {
-    color: #ef4444;
+.historico-item.irrigacao {
+    background: #f0f9ff; /* Azul bem claro */
+    border-left: 4px solid #0284c7;
+}
+
+.historico-item.praga {
+    background: #fff7ed; /* Laranja bem claro */
+    border-left: 4px solid #ea580c;
+}
+
+/* Badge de "Ocorrência Encerrada" no histórico */
+.badge-resolvido-historico {
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    color: #16a34a;
+    font-weight: 800;
+    background: #dcfce7;
+    padding: 2px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    border: 1px solid #bbf7d0;
+}
+
+/* Ajuste para o scroll do histórico não quebrar o modal */
+.modal-historico-body {
+    overflow-y: auto;
+    max-height: 60vh;
+    padding-right: 8px;
+    margin: 15px 0;
+}
+
+/* Customização da barra de rolagem para ficar limpa */
+.modal-historico-body::-webkit-scrollbar {
+    width: 6px;
+}
+.modal-historico-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+/* Container das Abas */
+.tabs-container {
+    display: flex;
+    gap: 10px;
+    margin: 1.5rem 0;
+    padding: 5px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    width: fit-content;
+}
+
+.tab-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-item.active {
+    background: white;
+    color: #16a34a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.tab-count {
     font-size: 0.75rem;
-    margin-top: 5px;
-    font-weight: 500;
+    background: #e2e8f0;
+    padding: 2px 6px;
+    border-radius: 10px;
+    color: #475569;
 }
 
-/* Estado de desabilitado para botões */
-.btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    filter: grayscale(0.5);
+.tab-item.active .tab-count {
+    background: #dcfce7;
+    color: #16a34a;
 }
 
-/* Ajuste no modal de eventos para scannability */
-.event-modal-header {
-    border-bottom: 1px solid #f1f5f9;
-    padding-bottom: 1rem;
-    margin-bottom: 1.25rem;
+/* Estado Vazio */
+.empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px;
+    color: #94a3b8;
+    background: #f8fafc;
+    border: 2px dashed #e2e8f0;
+    border-radius: 20px;
 }
