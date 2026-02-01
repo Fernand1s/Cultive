@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -51,7 +52,7 @@ public class Cultivo {
     private double quantidadeColhida;
 
     @OneToMany(mappedBy = "cultivo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference(value = "cultivo-eventos")
+    @JsonIgnore
     private List<Evento> eventosRegistrados = new ArrayList<>();
 
     public Cultivo(Planta plantaCultivada, AreaCultivo areaCultivo, LocalDate dataPlantio, double quantidadePlantada){

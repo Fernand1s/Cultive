@@ -28,9 +28,24 @@ public class AreaCultivoController {
         this.securityUtils = securityUtils;
     }
 
+    // MÉTODO AUXILIAR
+    private AreaCultivoDTO converterParaDTO(AreaCultivo area) {
+        return new AreaCultivoDTO(
+                area.getIdArea(),
+                area.getNomeArea(),
+                area.getLocalizacaoArea(),
+                area.getLatitudeArea(),
+                area.getLongitudeArea(),
+                area.getTamanhoArea(),
+                area.getTipoSolo(),
+                area.getQuantidadeLuz(),
+                area.getObservacaoArea()
+        );
+    }
+
     // CRIAR ÁREA
     @PostMapping
-    public ResponseEntity<AreaCultivo> criarAreaCultivo(@Valid @RequestBody AreaCultivoDTO areaDTO) {
+    public ResponseEntity<AreaCultivoDTO> criarAreaCultivo(@Valid @RequestBody AreaCultivoDTO areaDTO) {
         AreaCultivo novaArea = new AreaCultivo();
         novaArea.setNomeArea(areaDTO.getNomeArea());
         novaArea.setLocalizacaoArea(areaDTO.getLocalizacaoArea());
@@ -46,13 +61,17 @@ public class AreaCultivoController {
         logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
                 "Cadastrou nova área de cultivo: " + areaSalva.getNomeArea());
 
-        return ResponseEntity.ok(areaSalva);
+        return ResponseEntity.ok(converterParaDTO(areaSalva));
     }
 
     // LISTAR ÁREAS
     @GetMapping
-    public ResponseEntity<List<AreaCultivo>> listarAreas() {
-        return ResponseEntity.ok(areaCultivoService.listarTodas());
+    public ResponseEntity<List<AreaCultivoDTO>> listarAreas() {
+        List<AreaCultivoDTO> listaDTO = areaCultivoService.listarTodas()
+                .stream()
+                .map(this::converterParaDTO)
+                .toList();
+        return ResponseEntity.ok(listaDTO);
     }
 
     // OBTER DADOS CLIMÁTICOS
@@ -80,12 +99,12 @@ public class AreaCultivoController {
 
     // EDITAR ÁREA
     @PutMapping("/{id}")
-    public ResponseEntity<AreaCultivo> atualizarArea(@PathVariable Long id, @RequestBody AreaCultivo area) {
+    public ResponseEntity<AreaCultivoDTO> atualizarArea(@PathVariable Long id, @RequestBody AreaCultivo area) {
         AreaCultivo areaAtualizada = areaCultivoService.atualizarArea(id, area);
 
         logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
                 "Atualizou a área de cultivo: " + areaAtualizada.getNomeArea());
 
-        return ResponseEntity.ok(areaAtualizada);
+        return ResponseEntity.ok(converterParaDTO(areaAtualizada));
     }
 }

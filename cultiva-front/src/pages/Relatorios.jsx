@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    Droplets, Bug, RefreshCw, CheckCircle2, Activity, TrendingUp,
-    Search, Calendar, AlertTriangle, Leaf, Zap, FileSpreadsheet,
-    Target, Users, ClipboardCheck
+    Droplets, Bug, RefreshCw, CheckCircle2, Activity,
+    TrendingUp, Search, Calendar, AlertTriangle, Leaf,
+    Zap, FileSpreadsheet, Target, Users, ClipboardCheck
 } from 'lucide-react';
 import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
@@ -11,7 +11,7 @@ import {
 import { useNotify } from "../context/NotificationContext";
 import '../css/Relatorios.css';
 
-import { getHeaders, request } from "../services/api.js";
+import { areaService, cultivoService, relatorioService, userService, authService} from "../services/api.js";
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -24,6 +24,7 @@ const Relatorios = () => {
     const [cultivosTotal, setCultivosTotal] = useState([]);
     const [abaAtiva, setAbaAtiva] = useState('geral');
     const [loading, setLoading] = useState(false);
+    const [performanceArea, setPerformanceArea] = useState(null);
 
     // Filtros
     const [statusFiltro, setStatusFiltro] = useState('TODOS');
@@ -48,8 +49,8 @@ const Relatorios = () => {
 
         try {
             const [dAreas, dCultivos] = await Promise.all([
-                request('http://localhost:8090/api/areas', { headers: getHeaders() }),
-                request('http://localhost:8090/api/cultivos', { headers: getHeaders() })
+                areaService.listar(),
+                cultivoService.listar()
             ]);
 
             setAreas(Array.isArray(dAreas) ? dAreas : []);
@@ -89,37 +90,68 @@ const Relatorios = () => {
     }, [sincronizarBancoDeDados]);
 
     const analisarLoteDeep = async (cultivo) => {
-        if (loading) return;
+        // 1. Bloqueio de múltiplas requisições simultâneas e validação de entrada
+        if (loading || !cultivo) return;
+
         setLoading(true);
         setCultivoSelecionado(cultivo);
+        setPerformanceArea(null); // Limpa o estado de colheita anterior
 
-        setDetalhesLote({ totalAgua: 0, historicoPragas: [], previsaoColheita: 'Carregando...', compatibilidade: false });
+        // Reset de estado visual (Feedback de UX)
+        setDetalhesLote({
+            totalAgua: 0,
+            historicoPragas: [],
+            previsaoColheita: 'Calculando...',
+            compatibilidade: false
+        });
 
         try {
-            // Chamadas de telemetria protegidas com Token
-            const [aguaDTO, pragasVal, compatVal] = await Promise.all([
-                request(`http://localhost:8090/api/relatorios/agua/${cultivo.idCultivo}`, { headers: getHeaders() }),
-                request(`http://localhost:8090/api/relatorios/pragas/${cultivo.idCultivo}`, { headers: getHeaders() }),
-                request(`http://localhost:8090/api/relatorios/compatibilidade/${cultivo.plantaCultivada.idPlanta}/${cultivo.areaCultivo.idArea}`, { headers: getHeaders() })
+            // 2. Chamadas de telemetria e BI em paralelo para máxima performance
+            const [aguaDTO, pragasVal, compatVal, colheitaData] = await Promise.all([
+                relatorioService.consumoAgua(cultivo.idCultivo),
+                relatorioService.historicoPragas(cultivo.idCultivo),
+                relatorioService.compatibilidade(
+                    cultivo.plantaCultivada?.idPlanta,
+                    cultivo.areaCultivo?.idArea
+                ),
+                relatorioService.colheitaPorArea(cultivo.areaCultivo?.idArea)
             ]);
 
+            // 3. Processamento de Data de Colheita (Lógica de Negócio)
             let dataPrevista = cultivo.previsaoColheita || cultivo.dataColheitaFinal;
 
-            if (!dataPrevista) {
+            if (!dataPrevista && cultivo.dataPlantio) {
                 const dataPlantio = new Date(cultivo.dataPlantio);
-                const dias = cultivo.plantaCultivada?.cicloMedioDias || 0;
-                dataPrevista = new Date(dataPlantio.setDate(dataPlantio.getDate() + dias)).toISOString();
+                const cicloDias = cultivo.plantaCultivada?.cicloMedioDias || 0;
+
+                // Adiciona os dias do ciclo à data de plantio de forma segura
+                dataPlantio.setDate(dataPlantio.getDate() + cicloDias);
+                dataPrevista = dataPlantio;
             }
 
+            // 4. Auditoria e Rastreabilidade (Logs do Sistema)
+            const usuarioLogado = authService.obterUsuarioLogado();
+            const idUser = usuarioLogado?.idUsuario || usuarioLogado?.id;
+
+            await userService.registrarLog(
+                "Análise Diagnóstica",
+                `Acesso à telemetria avançada e histórico de colheita do lote #${cultivo.idCultivo} na área ${cultivo.areaCultivo?.nomeArea}`,
+                idUser
+            );
+
+            // 5. Atualização de estados com higienização de dados
+            setPerformanceArea(colheitaData);
+
             setDetalhesLote({
-                totalAgua: aguaDTO.totalVolumeLitros || 0,
+                totalAgua: aguaDTO?.totalVolumeLitros || 0,
                 historicoPragas: Array.isArray(pragasVal) ? pragasVal : [],
-                previsaoColheita: new Date(dataPrevista).toLocaleDateString('pt-BR'),
-                compatibilidade: compatVal
+                previsaoColheita: dataPrevista ? new Date(dataPrevista).toLocaleDateString('pt-BR') : 'Data Indefinida',
+                compatibilidade: !!compatVal // Força conversão para booleano
             });
 
         } catch (err) {
-            notify("Erro na telemetria profunda do lote.", "error");
+            console.error("Erro na telemetria profunda:", err);
+            notify("Falha ao sincronizar telemetria e dados de colheita.", "error");
         } finally {
             setLoading(false);
         }
@@ -143,151 +175,174 @@ const Relatorios = () => {
         };
     }, [cultivosTotal]);
 
-    const gerarPDF = () => {
-        // Inicializa o documento A4
-        const doc = new jsPDF('p', 'mm', 'a4');
+    const gerarPDF = async () => {
+        // 1. Identificação do usuário para o Log de Auditoria
+        const usuarioLogado = authService.obterUsuarioLogado();
+        const idUsuario = usuarioLogado?.idUsuario || usuarioLogado?.id;
 
-        // Definição Estrita de Cores (RGB) para evitar erros de argumento
-        const rV = 18, gV = 98, bV = 11;    // Verde CultivaMais
-        const rS = 71, gS = 85, bS = 105;   // Slate (Cinza Profissional)
-        const rB = 248, gB = 250, bB = 252; // Fundo Light
-        const rW = 255, gW = 255, bW = 255; // Branco
+        try {
+            // Inicializa o documento A4
+            const doc = new jsPDF('p', 'mm', 'a4');
 
-        // --- 1. CABEÇALHO CORPORATIVO ---
-        doc.setFillColor(rV, gV, bV);
-        doc.rect(0, 0, 210, 40, 'F');
+            // Definição Estrita de Cores (RGB)
+            const rV = 18, gV = 98, bV = 11;    // Verde CultivaMais
+            const rS = 71, gS = 85, bS = 105;   // Slate (Cinza Profissional)
+            const rW = 255, gW = 255, bW = 255; // Branco
 
-        doc.setTextColor(rW, gW, rW);
-        doc.setFontSize(24);
-        doc.setFont("helvetica", "bold");
-        doc.text("CultivaMais", 15, 22);
+            // --- 1. CABEÇALHO CORPORATIVO ---
+            doc.setFillColor(rV, gV, bV);
+            doc.rect(0, 0, 210, 40, 'F');
 
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "normal");
-        doc.text("SISTEMA DE INTELIGÊNCIA E MONITORAMENTO AGRÍCOLA", 15, 30);
-        doc.text("RELATÓRIO TÉCNICO DE DESEMPENHO DE SAFRA", 15, 34);
-
-        // Protocolo e Data (Canto Superior Direito)
-        const timestamp = new Date().toLocaleString('pt-BR');
-        doc.setFontSize(8);
-        doc.text(`PROTOCOLO: CRM-${Date.now().toString().slice(-6)}`, 155, 15);
-        doc.text(`EMISSÃO: ${timestamp}`, 155, 20);
-
-        // --- 2. PAINEL DE KPIs (QUADRO DE RESUMO) ---
-        doc.setFillColor(rW, gW, rW);
-        doc.setDrawColor(226, 232, 240);
-        doc.roundedRect(15, 48, 180, 28, 2, 2, 'FD');
-
-        // Labels
-        doc.setFontSize(8);
-        doc.setTextColor(rS, gS, bS);
-        doc.setFont("helvetica", "bold");
-        doc.text("SAÚDE DA SAFRA", 25, 56);
-        doc.text("LOTES EM MONITORAMENTO", 85, 56);
-        doc.text("ALERTAS DE RISCO", 145, 56);
-
-        // Valores Dinâmicos
-        doc.setFontSize(15);
-        doc.setTextColor(rV, gV, bV);
-        doc.text(`${statsGerais.taxaSaude}%`, 25, 66);
-
-        doc.setTextColor(15, 23, 42); // Navy Blue
-        doc.text(`${cultivosFiltrados.length} Unidades`, 85, 66);
-
-        const hasAlerts = statsGerais.alertas > 0;
-        doc.setTextColor(hasAlerts ? 185 : rV, hasAlerts ? 28 : gV, hasAlerts ? 28 : bV);
-        doc.text(`${statsGerais.alertas} Críticos`, 145, 66);
-
-        // --- 3. TABELA DE INVENTÁRIO DETALHADA ---
-        doc.setTextColor(15, 23, 42);
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "bold");
-        doc.text("Detalhamento por Lote e Estado Fitossanitário", 15, 90);
-
-        autoTable(doc, {
-            startY: 95,
-            head: [['ID', 'CULTURA', 'ÁREA / SETOR', 'STATUS', 'SANIDADE']],
-            body: cultivosFiltrados.map(c => [
-                { content: `#${c.idCultivo}`, styles: { fontStyle: 'bold' } },
-                c.plantaCultivada?.nomePopular?.toUpperCase() || 'N/A',
-                c.areaCultivo?.nomeArea || 'N/A',
-                c.statusCultivo?.replace('_', ' ') || 'N/A',
-                c.estadoPlanta || 'N/A'
-            ]),
-            theme: 'striped',
-            headStyles: {
-                fillColor: [rV, gV, bV],
-                fontSize: 9,
-                halign: 'center',
-                cellPadding: 4
-            },
-            styles: {
-                fontSize: 8,
-                cellPadding: 4,
-                valign: 'middle',
-                font: 'helvetica'
-            },
-            columnStyles: {
-                0: { width: 15, halign: 'center' },
-                4: { halign: 'center', fontStyle: 'bold' }
-            },
-            didParseCell: (data) => {
-                // Aplicação de cores semânticas diretamente na tabela do PDF
-                if (data.section === 'body' && data.column.index === 4) {
-                    const val = data.cell.raw;
-                    if (val === 'CRITICO') data.cell.styles.textColor = [185, 28, 28];
-                    if (val === 'ALERTA') data.cell.styles.textColor = [161, 98, 7];
-                    if (val === 'SAUDAVEL') data.cell.styles.textColor = [21, 128, 61];
-                }
-            }
-        });
-
-        // --- 4. ANÁLISE DE TELEMETRIA (SE SELECIONADO) ---
-        let finalY = doc.lastAutoTable.finalY + 15;
-
-        if (cultivoSelecionado) {
-            // Garantir que cabe na página, se não, criar nova
-            if (finalY > 230) { doc.addPage(); finalY = 20; }
-
-            doc.setFillColor(241, 245, 249);
-            doc.roundedRect(15, finalY, 180, 40, 2, 2, 'F');
-
-            doc.setFontSize(10);
-            doc.setTextColor(rV, gV, bV);
+            doc.setTextColor(rW, gW, rW);
+            doc.setFontSize(24);
             doc.setFont("helvetica", "bold");
-            doc.text(`DIAGNÓSTICO PROFUNDO: ${cultivoSelecionado.plantaCultivada?.nomePopular}`, 22, finalY + 10);
+            doc.text("CultivaMais", 15, 22);
 
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
+            doc.text("SISTEMA DE INTELIGÊNCIA E MONITORAMENTO AGRÍCOLA", 15, 30);
+            doc.text("RELATÓRIO TÉCNICO DE DESEMPENHO DE SAFRA", 15, 34);
+
+            // Protocolo e Data (Canto Superior Direito)
+            const timestamp = new Date().toLocaleString('pt-BR');
+            doc.setFontSize(8);
+            doc.text(`PROTOCOLO: CRM-${Date.now().toString().slice(-6)}`, 155, 15);
+            doc.text(`EMISSÃO: ${timestamp}`, 155, 20);
+
+            // --- 2. PAINEL DE KPIs (QUADRO DE RESUMO) ---
+            doc.setFillColor(rW, gW, rW);
+            doc.setDrawColor(226, 232, 240);
+            doc.roundedRect(15, 48, 180, 28, 2, 2, 'FD');
+
+            // Labels
             doc.setFontSize(8);
             doc.setTextColor(rS, gS, bS);
-            doc.setFont("helvetica", "normal");
-            doc.text(`• Acumulado Hídrico: ${detalhesLote.totalAgua} Litros aferidos`, 22, finalY + 20);
-            doc.text(`• Janela de Colheita: Estimada para ${detalhesLote.previsaoColheita}`, 22, finalY + 25);
-            doc.text(`• Índice de Solo: ${detalhesLote.compatibilidade ? 'COMPATÍVEL' : 'DIVERGENTE'}`, 22, finalY + 30);
-            doc.text(`• Responsáveis: ${cultivoSelecionado.areaCultivo.usuariosResponsaveis?.length || 0} técnico(s) alocado(s)`, 22, finalY + 35);
+            doc.setFont("helvetica", "bold");
+            doc.text("SAÚDE DA SAFRA", 25, 56);
+            doc.text("LOTES EM MONITORAMENTO", 85, 56);
+            doc.text("ALERTAS DE RISCO", 145, 56);
 
-            finalY += 50;
+            // Valores Dinâmicos
+            doc.setFontSize(15);
+            doc.setTextColor(rV, gV, bV);
+            doc.text(`${statsGerais.taxaSaude}%`, 25, 66);
+
+            doc.setTextColor(15, 23, 42); // Navy Blue
+            doc.text(`${cultivosFiltrados.length} Unidades`, 85, 66);
+
+            const hasAlerts = statsGerais.alertas > 0;
+            doc.setTextColor(hasAlerts ? 185 : rV, hasAlerts ? 28 : gV, hasAlerts ? 28 : bV);
+            doc.text(`${statsGerais.alertas} Críticos`, 145, 66);
+
+            // --- 3. TABELA DE INVENTÁRIO DETALHADA ---
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.text("Detalhamento por Lote e Estado Fitossanitário", 15, 90);
+
+            autoTable(doc, {
+                startY: 95,
+                head: [['ID', 'CULTURA', 'ÁREA / SETOR', 'STATUS', 'SANIDADE']],
+                body: cultivosFiltrados.map(c => [
+                    { content: `#${c.idCultivo}`, styles: { fontStyle: 'bold' } },
+                    c.plantaCultivada?.nomePopular?.toUpperCase() || 'N/A',
+                    c.areaCultivo?.nomeArea || 'N/A',
+                    c.statusCultivo?.replace('_', ' ') || 'N/A',
+                    c.estadoPlanta || 'N/A'
+                ]),
+                theme: 'striped',
+                headStyles: {
+                    fillColor: [rV, gV, bV],
+                    fontSize: 9,
+                    halign: 'center',
+                    cellPadding: 4
+                },
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 4,
+                    valign: 'middle',
+                    font: 'helvetica'
+                },
+                columnStyles: {
+                    0: { width: 15, halign: 'center' },
+                    4: { halign: 'center', fontStyle: 'bold' }
+                },
+                didParseCell: (data) => {
+                    if (data.section === 'body' && data.column.index === 4) {
+                        const val = data.cell.raw;
+                        if (val === 'CRITICO' || val === 'PRAGA') data.cell.styles.textColor = [185, 28, 28];
+                        if (val === 'ALERTA' || val === 'EM_ATENCAO') data.cell.styles.textColor = [161, 98, 7];
+                        if (val === 'SAUDAVEL') data.cell.styles.textColor = [21, 128, 61];
+                    }
+                }
+            });
+
+            // --- 4. ANÁLISE DE TELEMETRIA (SE SELECIONADO) ---
+            let finalY = doc.lastAutoTable.finalY + 15;
+
+            if (cultivoSelecionado) {
+                // 1. Verificar quebra de página ANTES de começar a desenhar o bloco
+                if (finalY > 220) {
+                    doc.addPage();
+                    finalY = 20;
+                }
+
+                // 2. Desenhar o fundo (Aumentei para 45mm para caber a nova linha de performance)
+                doc.setFillColor(241, 245, 249);
+                doc.roundedRect(15, finalY, 180, 45, 2, 2, 'F');
+
+                // 3. Título do Diagnóstico
+                doc.setFontSize(10);
+                doc.setTextColor(rV, gV, bV);
+                doc.setFont("helvetica", "bold");
+                doc.text(`DIAGNÓSTICO PROFUNDO: ${cultivoSelecionado.plantaCultivada?.nomePopular}`, 22, finalY + 10);
+
+                // 4. Detalhes Técnicos
+                doc.setFontSize(8);
+                doc.setTextColor(rS, gS, bS);
+                doc.setFont("helvetica", "normal");
+
+                doc.text(`• Acumulado Hídrico: ${detalhesLote.totalAgua} Litros aferidos`, 22, finalY + 18);
+                doc.text(`• Janela de Colheita: Estimada para ${detalhesLote.previsaoColheita}`, 22, finalY + 24);
+                doc.text(`• Índice de Solo: ${detalhesLote.compatibilidade ? 'COMPATÍVEL' : 'DIVERGENTE'}`, 22, finalY + 30);
+                doc.text(`• Responsáveis: ${cultivoSelecionado.areaCultivo.usuariosResponsaveis?.length || 0} técnico(s) alocado(s)`, 22, finalY + 36);
+
+                // 5. Histórico de Rendimento (Dentro do quadro, na última linha)
+                if (performanceArea) {
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`• Performance da Área: ${performanceArea.totalColhido || 0}kg colhidos historicamente`, 22, finalY + 42);
+                }
+
+                finalY += 55;
+            }
+
+            // --- 5. RODAPÉ TÉCNICO E PAGINAÇÃO ---
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setDrawColor(226, 232, 240);
+                doc.line(15, 282, 195, 282);
+                doc.setFontSize(7);
+                doc.setTextColor(rS, gS, bS);
+                doc.text("CultivaMais Platform - Software de Gestão Agrícola Enterprise", 15, 287);
+                doc.text(`Página ${i} de ${pageCount}`, 195, 287, { align: 'right' });
+            }
+
+            // 2. REGISTRO DE LOG DE AUDITORIA (Ponto chave da correção)
+            await userService.registrarLog(
+                "Exportação de Dados",
+                `Relatório PDF gerado com ${cultivosFiltrados.length} registros. Filtro status: ${statusFiltro}`,
+                idUsuario
+            );
+
+            // Exportação e Feedback
+            doc.save(`LAUDO_TECNICO_SAFRA_${Date.now()}.pdf`);
+            notify("Relatório técnico gerado e registrado com sucesso.", "success");
+
+        } catch (error) {
+            console.error("Erro ao gerar PDF:", error);
+            notify("Falha crítica ao gerar documento técnico.", "error");
         }
-
-        // --- 5. RODAPÉ TÉCNICO E PAGINAÇÃO ---
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-
-            doc.setDrawColor(226, 232, 240);
-            doc.line(15, 282, 195, 282);
-
-            doc.setFontSize(7);
-            doc.setTextColor(rS, gS, bS);
-            doc.text("CultivaMais Platform - Software de Gestão Agrícola Enterprise", 15, 287);
-            doc.text(`Página ${i} de ${pageCount}`, 195, 287, { align: 'right' });
-
-            doc.setFontSize(6);
-            doc.text("Este documento é uma cópia digital autêntica gerada a partir de dados de sensores de campo.", 105, 292, { align: 'center' });
-        }
-
-        // Exportação
-        doc.save(`LAUDO_TECNICO_SAFRA_${Date.now()}.pdf`);
-        notify("Relatório técnico de alta precisão gerado.", "success");
     };
 
     return (

@@ -32,22 +32,19 @@ export function Login() {
         try {
             const dadosDoBanco = await authService.login(email, senha);
 
-            const tokenParaSalvar = dadosDoBanco.token || "token-temporario-validado";
-            localStorage.setItem('token', tokenParaSalvar);
+            const idUsuario = dadosDoBanco.idUsuario || dadosDoBanco.id;
 
-            const usuarioParaSalvar = {
-                idUsuario: dadosDoBanco.idUsuario,
-                nomeUsuario: dadosDoBanco.nomeUsuario,
-                funcao: dadosDoBanco.funcao,
-                email: dadosDoBanco.email,
-                ativo: dadosDoBanco.ativo
-            };
+            await userService.registrarLog(
+                "Login",
+                `Usuário acessou o sistema via Web`,
+                idUsuario
+            );
 
-            localStorage.setItem('usuarioLogado', JSON.stringify(usuarioParaSalvar));
-            notify(`Bem-vindo, ${usuarioParaSalvar.nomeUsuario}!`, "success");
+            notify(`Bem-vindo, ${dadosDoBanco.nomeUsuario}!`, "success");
             navigate('/dashboard');
         } catch (error) {
-            notify("E-mail ou senha incorretos.", "error");
+            console.error(error);
+            notify(error.message || "E-mail ou senha incorretos.", "error");
         } finally {
             setLoading(false);
         }
@@ -56,14 +53,28 @@ export function Login() {
     const handleResetSenha = async (e) => {
         e.preventDefault();
         setLoading(true);
+
         if (!isSenhaValida) {
             notify("A senha não atende aos requisitos.", "error");
             setLoading(false);
             return;
         }
+
         try {
-            await userService.redefinirSenha(email, codigo, novaSenha);
+            await userService.redefinirSenha({
+                email,
+                codigo,
+                novaSenha
+            });
+
             notify("Senha alterada com sucesso!", "success");
+
+            await userService.registrarLog(
+                "Redefinição de Senha",
+                `Sucesso para o e-mail: ${email}`,
+                null
+            );
+
             setTimeout(() => {
                 setIsResetMode(false);
                 setSenha('');
@@ -71,7 +82,7 @@ export function Login() {
                 setNovaSenha('');
             }, 2000);
         } catch (error) {
-            notify("Erro ao redefinir. Verifique o código.", "error");
+            notify(error.message || "Erro ao redefinir. Verifique o código.", "error");
         } finally {
             setLoading(false);
         }

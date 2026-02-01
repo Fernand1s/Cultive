@@ -8,7 +8,7 @@ import {
 
 import { useNotify } from "../context/NotificationContext";
 
-import { request, getHeaders } from '../services/api';
+import { request, getHeaders, cultivoService, eventoService, userService as service, authService } from '../services/api';
 
 const Cultivos = () => {
     const notify = useNotify();
@@ -58,9 +58,9 @@ const Cultivos = () => {
         try {
             // Usando request + getHeaders para evitar o 403
             const [dadosAreas, dadosPlantas, dadosCultivos] = await Promise.all([
-                request('http://localhost:8090/api/areas', { headers: getHeaders() }),
-                request('http://localhost:8090/api/plantas', { headers: getHeaders() }),
-                request('http://localhost:8090/api/cultivos', { headers: getHeaders() })
+                request('/areas', { headers: getHeaders() }),
+                request('/plantas', { headers: getHeaders() }),
+                request('/cultivos', { headers: getHeaders() })
             ]);
 
             setAreas(dadosAreas);
@@ -113,7 +113,8 @@ const Cultivos = () => {
         if (carregando) return;
         setCarregando(true);
 
-        // Montagem do Payload respeitando os tipos do Java (Double e Long)
+        const usuarioLogado = authService.obterUsuarioLogado();
+
         const payload = {
             idPlanta: parseInt(formCultivo.idPlanta),
             idArea: parseInt(formCultivo.idArea),
@@ -123,29 +124,31 @@ const Cultivos = () => {
             estadoPlanta: formCultivo.estadoPlanta,
             observacaoCultivo: formCultivo.observacaoCultivo || "",
             quantidadeColhida: formCultivo.statusCultivo === 'COLHIDO' ? parseFloat(formCultivo.quantidadeColhida || 0) : null,
-            dataColheitaFinal: formCultivo.statusCultivo === 'COLHIDO' && formCultivo.dataColheitaFinal ? formCultivo.dataColheitaFinal : null        };
-
-        const url = editandoId
-            ? `http://localhost:8090/api/cultivos/${editandoId}`
-            : 'http://localhost:8090/api/cultivos';
+            dataColheitaFinal: formCultivo.statusCultivo === 'COLHIDO' && formCultivo.dataColheitaFinal ? formCultivo.dataColheitaFinal : null
+        };
 
         try {
-            const response = await fetch(url, {
-                method: editandoId ? 'PUT' : 'POST',
-                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                notify(editandoId ? "Cultivo atualizado!" : "Novo cultivo criado!", "success");
-                fecharModal();
-                carregarTudo();
+            if (editandoId) {
+                await cultivoService.atualizar(editandoId, payload);
+                await service.registrarLog(
+                    "Edição de Cultivo",
+                    `Atualizou dados do cultivo ID ${editandoId}`,
+                    usuarioLogado.idUsuario || usuarioLogado.id
+                );
+                notify("Cultivo atualizado!", "success");
             } else {
-                const erroMsg = await response.text();
-                notify(erroMsg || "Erro ao salvar cultivo.", "error");
+                await cultivoService.criar(payload);
+                await service.registrarLog(
+                    "Novo Cultivo",
+                    `Iniciou plantio na área ID ${payload.idArea}`,
+                    usuarioLogado.idUsuario || usuarioLogado.id
+                );
+                notify("Novo cultivo criado!", "success");
             }
-        } catch (err) {
-            notify("Erro de conexão com o servidor.", "error");
+            fecharModal();
+            carregarTudo();
+        } catch (error) {
+            notify(error.message || "Erro ao salvar cultivo.", "error");
         } finally {
             setCarregando(false);
         }
@@ -153,14 +156,22 @@ const Cultivos = () => {
 
     const executarExclusao = async () => {
         try {
-            await request(`http://localhost:8090/api/cultivos/${confirmacaoExclusao.id}`, {
-                method: 'DELETE',
-                headers: getHeaders()
-            });
+            const usuarioLogado = authService.obterUsuarioLogado();
+            await cultivoService.excluir(confirmacaoExclusao.id);
+
+            await service.registrarLog(
+                "Exclusão de Cultivo",
+                `Removeu o cultivo ID ${confirmacaoExclusao.id}`,
+                usuarioLogado.idUsuario || usuarioLogado.id
+            );
+
             carregarTudo();
-            notify("Cultivo removido com sucesso.", "success");
+            notify("Cultivo removido.", "success");
         } catch (error) {
-            notify("Erro ao excluir cultivo.", "error");
+            console.error("Erro ao excluir cultivo:", error);
+
+            const mensagemErro = error.response?.data?.message || "Não foi possível excluir o cultivo. Verifique se ele possui registros vinculados.";
+            notify(mensagemErro, "error");
         } finally {
             setConfirmacaoExclusao({ aberta: false, id: null });
         }
@@ -200,67 +211,69 @@ const Cultivos = () => {
         e.preventDefault();
         if (carregando) return;
 
-        if (acaoEvento.tipo === 'IRRIGACAO' && parseFloat(dadosEvento.volume) <= 0) {
+        if (acaoEvento.tipo === 'IRRIGACAO' && (!dadosEvento.volume || parseFloat(dadosEvento.volume) <= 0)) {
             notify("O volume de água deve ser maior que 0", "error");
             return;
         }
 
         setCarregando(true);
 
-        const isEdit = !!acaoEvento.idEvento;
-        const dataFormatada = dadosEvento.dataHora.length === 16
-            ? `${dadosEvento.dataHora}:00`
-            : dadosEvento.dataHora;
-
-        const usuarioLogado = JSON.parse(localStorage.getItem('usuario'));
-        const idUsuario = usuarioLogado?.id || 1;
-
-        const payloadEvento = {
-            dataHora: dataFormatada,
-            observacao: dadosEvento.obs || "",
-            idUsuario: idUsuario,
-            volumeAgua: acaoEvento.tipo === 'IRRIGACAO' ? parseFloat(dadosEvento.volume) : null,
-            metodo: acaoEvento.tipo === 'IRRIGACAO' ? dadosEvento.metodo : null,
-            nomePraga: acaoEvento.tipo === 'PRAGA' ? dadosEvento.nome : null,
-            nivel: acaoEvento.tipo === 'PRAGA' ? dadosEvento.nivel : null
-        };
-
-        const tipoEndpoint = acaoEvento.tipo === 'IRRIGACAO' ? 'irrigacao' : 'praga';
-
-        const url = isEdit
-            ? `http://localhost:8090/api/eventos/${tipoEndpoint}/${acaoEvento.idEvento}`
-            : `http://localhost:8090/api/eventos/${tipoEndpoint}/${acaoEvento.id}`;
-
         try {
-            await request(url, {
-                method: isEdit ? 'PUT' : 'POST',
-                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify(payloadEvento)
-            });
+            const usuarioLogado = authService.obterUsuarioLogado();
+            const idUserLogado = usuarioLogado?.idUsuario || usuarioLogado?.id;
+            const isEdit = !!acaoEvento.idEvento;
+
+            const dataFormatada = dadosEvento.dataHora.length === 16
+                ? `${dadosEvento.dataHora}:00`
+                : dadosEvento.dataHora;
+
+            const payloadEvento = {
+                dataHora: dataFormatada,
+                observacao: dadosEvento.obs || "",
+                idUsuario: idUserLogado,
+                volumeAgua: acaoEvento.tipo === 'IRRIGACAO' ? parseFloat(dadosEvento.volume) : null,
+                metodo: acaoEvento.tipo === 'IRRIGACAO' ? dadosEvento.metodo : null,
+                nomePraga: acaoEvento.tipo === 'PRAGA' ? dadosEvento.nome : null,
+                nivel: acaoEvento.tipo === 'PRAGA' ? dadosEvento.nivel : null
+            };
+
+            const servicoTipo = acaoEvento.tipo === 'IRRIGACAO' ? 'irrigacao' : 'praga';
+            const apiService = eventoService[servicoTipo];
+
+            if (isEdit) {
+                await apiService.atualizar(acaoEvento.idEvento, payloadEvento);
+            } else {
+                await apiService.registrar(acaoEvento.id, payloadEvento);
+            }
+
+            await service.registrarLog(
+                `${isEdit ? 'Edição' : 'Registro'} de ${acaoEvento.tipo}`,
+                `${acaoEvento.tipo === 'IRRIGACAO' ? 'Volume: ' + dadosEvento.volume + 'L' : 'Praga: ' + dadosEvento.nome}`,
+                idUserLogado
+            );
 
             if (acaoEvento.tipo === 'PRAGA' && !isEdit) {
                 const cultivoAtual = cultivos.find(c => c.idCultivo === acaoEvento.id);
-                const payloadAtualizacao = {
-                    ...cultivoAtual,
-                    idPlanta: cultivoAtual.plantaCultivada.idPlanta,
-                    idArea: cultivoAtual.areaCultivo.idArea,
-                    estadoPlanta: 'PRAGA'
-                };
-
-                await request(`http://localhost:8090/api/cultivos/${acaoEvento.id}`, {
-                    method: 'PUT',
-                    headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payloadAtualizacao)
-                });
+                if (cultivoAtual) {
+                    const payloadAtualizacao = {
+                        ...cultivoAtual,
+                        idPlanta: cultivoAtual.plantaCultivada.idPlanta,
+                        idArea: cultivoAtual.areaCultivo.idArea,
+                        estadoPlanta: 'PRAGA'
+                    };
+                    await cultivoService.atualizar(acaoEvento.id, payloadAtualizacao);
+                }
             }
 
             notify(isEdit ? "Registro atualizado!" : "Registro salvo com sucesso!", "success");
             setModalEventoAberto(false);
             setModalHistoricoAberto(false);
             carregarTudo();
+
         } catch (err) {
             console.error("Erro ao processar evento:", err);
-            notify("Erro ao registrar: Verifique os dados ou a conexão.", "error");
+            const msg = err.response?.data?.message || "Erro ao registrar: Verifique os dados ou a conexão.";
+            notify(msg, "error");
         } finally {
             setCarregando(false);
         }
@@ -269,10 +282,9 @@ const Cultivos = () => {
     const abrirHistorico = async (cultivo) => {
         setCultivoSelecionado(cultivo);
         try {
-            // Buscamos os dois tipos de eventos do backend
             const [irrigacoes, pragas] = await Promise.all([
-                request(`http://localhost:8090/api/eventos/irrigacao/cultivo/${cultivo.idCultivo}`, { headers: getHeaders() }),
-                request(`http://localhost:8090/api/eventos/praga/cultivo/${cultivo.idCultivo}`, { headers: getHeaders() })
+                eventoService.irrigacao.listarPorCultivo(cultivo.idCultivo),
+                eventoService.praga.listarPorCultivo(cultivo.idCultivo)
             ]);
 
             // Unificamos e ordenamos por data (mais recente primeiro)
@@ -292,10 +304,7 @@ const Cultivos = () => {
     const excluirEvento = async (idEvento, tipo) => {
         const endpoint = tipo === 'IRRIGACAO' ? 'irrigacao' : 'praga';
         try {
-            await request(`http://localhost:8090/api/eventos/${endpoint}/${idEvento}`, {
-                method: 'DELETE',
-                headers: getHeaders()
-            });
+            await eventoService[endpoint].excluir(idEvento);
             notify("Registro removido.", "success");
             // Atualiza a lista do modal e a tela principal
             abrirHistorico(cultivoSelecionado);
@@ -324,11 +333,7 @@ const Cultivos = () => {
                 estadoPlanta: 'SAUDAVEL'
             };
 
-            await request(`http://localhost:8090/api/cultivos/${idParaResolver}`, {
-                method: 'PUT',
-                headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-                body: JSON.stringify(payloadCultivo)
-            });
+            await cultivoService.atualizar(idParaResolver, payloadCultivo);
 
             notify("Planta recuperada com sucesso!", "success");
             setModalEventoAberto(false);
@@ -355,7 +360,7 @@ const Cultivos = () => {
         switch(health) {
             case 'SAUDAVEL': return { icon: CheckCircle2, text: 'Saudável', color: '#16a34a', class: 'health-saudavel' };
             case 'EM_ATENCAO': return { icon: AlertTriangle, text: 'Atenção', color: '#eab308', class: 'health-atencao' };
-            case 'COM_PRAGA': return { icon: Bug, text: 'Com Praga', color: '#f97316', class: 'health-atencao' };
+            case 'PRAGA': return { icon: Bug, text: 'Com Praga', color: '#f97316', class: 'health-atencao' };
             case 'CRITICO': return { icon: Activity, text: 'Crítico', color: '#ef4444', class: 'health-critico' };
             default: return { icon: Activity, text: health, color: '#64748b', class: '' };
         }
@@ -476,12 +481,12 @@ const Cultivos = () => {
                                             <Droplets size={18}/> Regar
                                         </button>
                                         <button
-                                            className={`btn-action-cultivo ${cultivo.estadoPlanta === 'COM_PRAGA' ? 'pest-active' : 'pest'}`}
+                                            className={`btn-action-cultivo ${cultivo.estadoPlanta === 'PRAGA' ? 'pest-active' : 'pest'}`}
                                             onClick={() => abrirModalEvento('PRAGA', cultivo)}
                                             disabled={!isAtivo}
                                             style={{ opacity: isAtivo ? 1 : 0.5 }}
                                         >
-                                            <Bug size={18}/> {cultivo.estadoPlanta === 'COM_PRAGA' ? 'Ver Praga' : 'Praga'}
+                                            <Bug size={18}/> {cultivo.estadoPlanta === 'PRAGA' ? 'Ver Praga' : 'Praga'}
                                         </button>
                                         <button className="btn-icon-sm" onClick={() => abrirHistorico(cultivo)} style={{ width: '40px', height: '40px' }}>
                                             <Clock size={18}/>
@@ -626,7 +631,7 @@ const Cultivos = () => {
                                                 <option value="CANCELADO">Cancelado</option> {/* AGORA SIM NO LUGAR CERTO */}
                                             </select>
                                         </div>
-                                        <div className="form-group"><label className="form-label">Saúde</label><select className="form-select" value={formCultivo.estadoPlanta} onChange={e => setFormCultivo({...formCultivo, estadoPlanta: e.target.value})}><option value="SAUDAVEL">Saudável</option><option value="EM_ATENCAO">Em Atenção</option><option value="COM_PRAGA">Com Praga</option><option value="CRITICO">Crítico</option></select></div>
+                                        <div className="form-group"><label className="form-label">Saúde</label><select className="form-select" value={formCultivo.estadoPlanta} onChange={e => setFormCultivo({...formCultivo, estadoPlanta: e.target.value})}><option value="SAUDAVEL">Saudável</option><option value="EM_ATENCAO">Em Atenção</option><option value="PRAGA">Com Praga</option><option value="CRITICO">Crítico</option></select></div>
                                         <div className="form-group"><label className="form-label">Qtd Colhida</label><input type="number" className="form-input" value={formCultivo.quantidadeColhida} onChange={e => setFormCultivo({...formCultivo, quantidadeColhida: e.target.value})}/></div>
                                         <div className="form-group"><label className="form-label">Data Colheita</label><input type="date" className="form-input" value={formCultivo.dataColheitaFinal} onChange={e => setFormCultivo({...formCultivo, dataColheitaFinal: e.target.value})}/></div>
                                     </div>

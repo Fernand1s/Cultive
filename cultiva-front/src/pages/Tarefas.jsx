@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useNotify } from "../context/NotificationContext";
 
-import { getHeaders, request } from "../services/api.js";
+import {getHeaders, request, tarefaService, userService} from "../services/api.js";
 
 const Tarefas = () => {
     const notify = useNotify();
@@ -44,9 +44,8 @@ const Tarefas = () => {
     }, [usuarioLogado]);
 
     const carregarTarefas = async () => {
-        const urlT = `http://localhost:8090/api/tarefas?idUsuario=${usuarioLogado.idUsuario}&funcao=${usuarioLogado.funcao}`;
         try {
-            const resT = await request(urlT, { headers: getHeaders() });
+            const resT = await tarefaService.listar(usuarioLogado.idUsuario, usuarioLogado.funcao);
             setTarefas(resT);
         } catch (err) {
             notify("Erro ao carregar tarefas.", "error");
@@ -55,7 +54,7 @@ const Tarefas = () => {
 
     const carregarUsuarios = async () => {
         try {
-            const resU = await request('http://localhost:8090/api/usuarios', { headers: getHeaders() });
+            const resU = await userService.listar();
             setUsuarios(resU);
         } catch (err) {
             console.warn("Usuário sem permissão para listar colaboradores.");
@@ -63,12 +62,12 @@ const Tarefas = () => {
     };
 
     const carregarDados = async () => {
-        const urlT = `http://localhost:8090/api/tarefas?idUsuario=${usuarioLogado.idUsuario}&funcao=${usuarioLogado.funcao}`;
         try {
             const [resT, resU] = await Promise.all([
-                request(urlT, { headers: getHeaders() }),
-                request('http://localhost:8090/api/usuarios', { headers: getHeaders() })
+                tarefaService.listar(usuarioLogado.idUsuario, usuarioLogado.funcao),
+                userService.listar()
             ]);
+
             setTarefas(resT);
             setUsuarios(resU);
         } catch (err) {
@@ -91,11 +90,15 @@ const Tarefas = () => {
         setCarregando(true);
 
         try {
-            await request(`http://localhost:8090/api/tarefas/${tarefa.id}/concluir?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
-                method: 'PATCH',
-                headers: getHeaders(),
-                body: JSON.stringify({ observacao })
-            });
+            await tarefaService.concluir(tarefa.id, usuarioLogado.idUsuario, { observacao });
+
+            // LOG DE CONCLUSÃO
+            await userService.registrarLog(
+                "Conclusão de Tarefa",
+                `Finalizou a tarefa: ${tarefa.titulo}`,
+                usuarioLogado.idUsuario
+            );
+
             await carregarDados();
             setModalObsAberto(false);
             notify("Tarefa concluída!", "success");
@@ -108,13 +111,18 @@ const Tarefas = () => {
 
     const cancelarTarefa = async (id) => {
         if (carregando) return;
+        const tarefa = tarefas.find(t => t.id === id);
         if (window.confirm('Deseja cancelar esta tarefa?')) {
             setCarregando(true);
             try {
-                await request(`http://localhost:8090/api/tarefas/${id}/cancelar?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
-                    method: 'PUT',
-                    headers: getHeaders()
-                });
+                await tarefaService.cancelar(id, usuarioLogado.idUsuario);
+
+                await userService.registrarLog(
+                    "Cancelamento de Tarefa",
+                    `Cancelou a tarefa: ${tarefa?.titulo || id}`,
+                    usuarioLogado.idUsuario
+                );
+
                 carregarDados();
             } catch (err) {
                 notify("Erro ao cancelar ou sem permissão.", "error");
@@ -129,10 +137,14 @@ const Tarefas = () => {
         if (window.confirm('Excluir definitivamente?')) {
             setCarregando(true);
             try {
-                await request(`http://localhost:8090/api/tarefas/${id}?idUsuarioLogado=${usuarioLogado.idUsuario}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
+                await tarefaService.excluir(id, usuarioLogado.idUsuario);
+
+                await userService.registrarLog(
+                    "Exclusão de Tarefa",
+                    `Removeu permanentemente a tarefa ID: ${id}`,
+                    usuarioLogado.idUsuario
+                );
+
                 carregarDados();
                 notify("Tarefa removida.", "success");
             } catch (err) {
@@ -159,21 +171,33 @@ const Tarefas = () => {
             idResponsavel: parseInt(responsavelFinal)
         };
 
-        const url = modoEdicao
-            ? `http://localhost:8090/api/tarefas/${idTarefaEditando}?idUsuarioLogado=${usuarioLogado.idUsuario}`
-            : `http://localhost:8090/api/tarefas?idCriador=${usuarioLogado.idUsuario}&idResponsavel=${responsavelFinal}`;
-
         try {
-            await request(url, {
-                method: modoEdicao ? 'PUT' : 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(corpo)
-            });
+            if (modoEdicao) {
+                await tarefaService.atualizar(idTarefaEditando, usuarioLogado.idUsuario, corpo);
+
+                await userService.registrarLog(
+                    "Edição de Tarefa",
+                    `Editou a tarefa: ${corpo.titulo}`,
+                    usuarioLogado.idUsuario
+                );
+
+                notify("Tarefa atualizada!", "success");
+            } else {
+                await tarefaService.criar(corpo, usuarioLogado.idUsuario, responsavelFinal);
+
+                await userService.registrarLog(
+                    "Atribuição de Tarefa",
+                    `Criou a tarefa: ${corpo.titulo} para o usuário ID: ${responsavelFinal}`,
+                    usuarioLogado.idUsuario
+                );
+
+                notify("Tarefa criada!", "success");
+            }
+
             await carregarDados();
             setModalAberto(false);
-            notify(modoEdicao ? "Tarefa atualizada!" : "Tarefa atribuída!", "success");
-        } catch (err) {
-            notify("Erro ao salvar tarefa.", "error");
+        } catch (error) {
+            notify(error.message || "Erro ao processar tarefa.", "error");
         } finally {
             setCarregando(false);
         }

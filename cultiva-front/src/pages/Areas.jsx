@@ -12,7 +12,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useNotify } from "../context/NotificationContext";
 
-import { request, getHeaders } from '../services/api';
+import { areaService, userService, authService, cultivoService } from '../services/api';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -93,7 +93,7 @@ const Areas = () => {
 
     const carregarAreas = async () => {
         try {
-            const dados = await request('http://localhost:8090/api/areas', { headers: getHeaders() });
+            const dados = await areaService.listar();
             setAreas(dados);
         } catch (error) {
             notify(error.message, "error");
@@ -147,13 +147,14 @@ const Areas = () => {
         setEditandoId(null);
         setNovaArea(estadoInicial);
     };
-    
+
     const salvarArea = async (e) => {
         e.preventDefault();
         if (salvando) return;
 
         setSalvando(true);
         try {
+            const usuarioLogado = authService.obterUsuarioLogado();
             const payload = {
                 ...novaArea,
                 tamanhoArea: parseFloat(novaArea.tamanhoArea),
@@ -161,13 +162,21 @@ const Areas = () => {
                 longitudeArea: parseFloat(novaArea.longitudeArea)
             };
 
-            const url = editandoId ? `http://localhost:8090/api/areas/${editandoId}` : 'http://localhost:8090/api/areas';
-
-            await request(url, {
-                method: editandoId ? 'PUT' : 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(payload)
-            });
+            if (editandoId) {
+                await areaService.atualizar(editandoId, payload);
+                await userService.registrarLog(
+                    `Editou Área: ${payload.nomeArea}`,
+                    `Alterou configurações da área ID ${editandoId}`,
+                    usuarioLogado.idUsuario || usuarioLogado.id
+                );
+            } else {
+                const resposta = await areaService.criar(payload);
+                await userService.registrarLog(
+                    `Criou Área: ${payload.nomeArea}`,
+                    `Cadastrou nova área de ${payload.tamanhoArea}ha`,
+                    usuarioLogado.idUsuario || usuarioLogado.id
+                );
+            }
 
             carregarAreas();
             fecharModal();
@@ -181,10 +190,15 @@ const Areas = () => {
 
     const executarExclusao = async () => {
         try {
-            await request(`http://localhost:8090/api/areas/${confirmacaoExclusao.id}`, {
-                method: 'DELETE',
-                headers: getHeaders()
-            });
+            const usuarioLogado = authService.obterUsuarioLogado();
+            await areaService.excluir(confirmacaoExclusao.id);
+
+            await userService.registrarLog(
+                `Excluiu Área: ${confirmacaoExclusao.nome}`,
+                `Removeu permanentemente a área ID ${confirmacaoExclusao.id}`,
+                usuarioLogado.idUsuario || usuarioLogado.id
+            );
+
             carregarAreas();
             notify("Área excluída!", "success");
             setConfirmacaoExclusao({ aberta: false, id: null, nome: '' });
@@ -200,7 +214,7 @@ const Areas = () => {
         }
 
         try {
-            const todos = await request('http://localhost:8090/api/cultivos', { headers: getHeaders() });
+            const todos = await cultivoService.listar();
             const filtrados = todos.filter(c => (c.idArea || c.areaCultivo?.idArea) === idArea);
             setCultivos(filtrados);
             setIdAreaSelecionada(idArea);

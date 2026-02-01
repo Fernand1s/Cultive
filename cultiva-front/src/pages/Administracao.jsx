@@ -215,6 +215,9 @@ const Administracao = () => {
 
         setSalvando(true);
         try {
+
+            const usuarioLogado = authService.obterUsuarioLogado();
+
             const usuarioParaSalvar = {
                 nomeUsuario: formData.nome,
                 email: formData.email,
@@ -223,11 +226,23 @@ const Administracao = () => {
             };
             if (usuarioEmEdicao) {
                 await userService.atualizar(usuarioEmEdicao.id, usuarioParaSalvar);
+                await userService.registrarLog(
+                    `Editou usuário: ${formData.nome}`,
+                    `Alterou dados do usuário ID ${usuarioEmEdicao.id}`,
+                    usuarioLogado.idUsuario || usuarioLogado.id
+                );
+
                 notify("Usuário atualizado com sucesso!", "success");
                 setSalvando(false);
             } else {
-                usuarioParaSalvar.senha = "CultivaMais@2026";
-                await userService.criar(usuarioParaSalvar);
+                const novoUsuario = await userService.criar(usuarioParaSalvar);
+
+                await userService.registrarLog(
+                    `Criou novo usuário: ${formData.nome}`,
+                    `Cadastrou usuário com e-mail ${formData.email}`,
+                    usuarioLogado.idUsuario || usuarioLogado.id
+                );
+
                 notify(`Usuário criado! Senha padrão: CultivaMais@2026`, "success");
                 setSalvando(false);
             }
@@ -247,11 +262,19 @@ const Administracao = () => {
         const novoStatus = !user.ativo;
         const acaoTexto = novoStatus ? 'Desbloqueado' : 'Bloqueado';
         try {
+            const usuarioLogado = authService.obterUsuarioLogado();
             await userService.atualizar(user.id, {
                 ativo: novoStatus,
                 contexto: 'alteracao_status',
                 acaoLog: novoStatus ? 'Desbloquear' : 'Bloquear'
             });
+
+            await userService.registrarLog(
+                `${user.ativo ? 'Bloqueou' : 'Desbloqueou'} usuário: ${user.nome}`,
+                `Status alterado para ${!user.ativo}`,
+                usuarioLogado.idUsuario || usuarioLogado.id
+            );
+
             notify(`Usuário ${user.nome} ${acaoTexto.toLowerCase()}!`, "info");
             fetchUsuarios();
         } catch (error) {
@@ -263,7 +286,16 @@ const Administracao = () => {
 
     const executarExclusao = async () => {
         try {
+            const usuarioLogado = authService.obterUsuarioLogado();
+
             await userService.excluir(confirmacaoExclusao.id);
+
+            await userService.registrarLog(
+                `Excluiu usuário: ${confirmacaoExclusao.nome}`,
+                `Remoção permanente do ID ${confirmacaoExclusao.id}`,
+                usuarioLogado.idUsuario || usuarioLogado.id
+            );
+
             notify(`Usuário ${confirmacaoExclusao.nome} removido.`, "success");
             setConfirmacaoExclusao({ aberta: false, id: null, nome: '' });
             fetchUsuarios();

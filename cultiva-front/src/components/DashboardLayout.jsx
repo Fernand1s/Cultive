@@ -54,15 +54,20 @@ export const DashboardLayout = ({ children }) => {
 
     // FUNÇÃO: Busca e ordena notificações
     const buscarNotificacoes = async () => {
+        const idUsuario = usuario?.idUsuario || usuario?.id;
+        if (!idUsuario) return;
+
         try {
-            const lista = await notificationService.listar();
+            const contagem = await notificationService.contarNaoLidas(idUsuario);
+            setTotalNaoLidas(contagem);
+
+            const lista = await notificationService.listar(idUsuario);
             if (Array.isArray(lista)) {
                 const ordenadas = lista.sort((a, b) => new Date(b.dataHora) - new Date(a.dataHora));
                 setNotificacoes(ordenadas);
-                setTotalNaoLidas(ordenadas.filter(n => !n.lida).length);
             }
         } catch (error) {
-            console.error("Erro ao buscar notificações", error);
+            console.error("Erro ao sincronizar notificações", error);
         }
     };
 
@@ -70,31 +75,30 @@ export const DashboardLayout = ({ children }) => {
     const handleAlternarStatusLida = async (id, statusAtual) => {
         try {
             if (statusAtual) {
-                await notificationService.marcarComoNaoLida(id);
+                await notificationService.marcarNaoLida(id);
             } else {
-                await notificationService.marcarComoLida(id);
+                await notificationService.marcarLida(id);
             }
             await buscarNotificacoes();
         } catch (error) {
-            console.error("Erro ao alterar status da notificação", error);
+            console.error("Erro ao alterar status", error);
         }
     };
 
     // FUNÇÃO: Marcar todas como lidas/não lidas
     const handleMarcarTodasStatus = async (marcarComoLida) => {
         const idUsuario = usuario?.idUsuario || usuario?.id;
-
         if (!idUsuario) return;
 
         try {
             if (marcarComoLida) {
-                await notificationService.marcarTodasComoLidas(idUsuario);
+                await notificationService.marcarTodasLidas(idUsuario);
             } else {
-                await notificationService.marcarTodasComoNaoLidas(idUsuario);
+                await notificationService.marcarTodasNaoLidas(idUsuario);
             }
             buscarNotificacoes();
         } catch (error) {
-            console.error("Erro ao alterar todas as notificações", error);
+            console.error("Erro ao alterar todas", error);
         }
     };
 
@@ -181,7 +185,11 @@ export const DashboardLayout = ({ children }) => {
                     <div className="dropdown-wrapper" ref={notificationRef}>
                         <button className={`icon-trigger-premium ${showNotifications ? 'active' : ''}`} onClick={() => setShowNotifications(!showNotifications)}>
                             <Bell size={20} />
-                            {totalNaoLidas > 0 && <span className="badge-premium">{totalNaoLidas}</span>}
+                            {totalNaoLidas > 0 && (
+                                <span className="badge-premium">
+                                    {totalNaoLidas > 99 ? '99+' : totalNaoLidas}
+                                </span>
+                            )}
                         </button>
 
                         {showNotifications && (

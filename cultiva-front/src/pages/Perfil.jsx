@@ -72,8 +72,14 @@ const Perfil = () => {
 
             await userService.atualizar(usuarioBanco.idUsuario, payload);
 
+            await userService.registrarLog(
+                "Atualização de Perfil",
+                `Alterou dados básicos. E-mail: ${formulario.email}`,
+                usuarioBanco.idUsuario
+            );
+
             const sessaoAtual = authService.obterUsuarioLogado();
-            localStorage.setItem('usuarioLogado', JSON.stringify({ ...sessaoAtual, ...formulario }));
+            localStorage.setItem('usuario_logado', JSON.stringify({ ...sessaoAtual, ...formulario }));
 
             notify('Perfil atualizado!', 'success');
         } catch (error) {
@@ -87,15 +93,24 @@ const Perfil = () => {
             notify('As senhas não conferem.', 'error');
             return;
         }
+
         try {
             await userService.atualizar(usuarioBanco.idUsuario, {
                 senhaAtual: dadosSenha.senhaAtual,
                 senha: dadosSenha.novaSenha
             });
+
+            await userService.registrarLog(
+                "Alteração de Senha",
+                "O usuário alterou a senha de acesso através do painel de perfil.",
+                usuarioBanco.idUsuario
+            );
+
             notify('Senha alterada com sucesso!', 'success');
             setDadosSenha({ senhaAtual: '', novaSenha: '', confirmarSenha: '' });
         } catch (error) {
-            notify(error.response?.data?.message || 'Erro ao alterar senha.', 'error');
+            const mensagem = error.message || 'Erro ao alterar senha.';
+            notify(mensagem, 'error');
         }
     };
 

@@ -5,6 +5,11 @@ const ENDPOINT_USUARIOS = `${API_ROOT}/usuarios`;
 const ENDPOINT_LOGS = `${API_ROOT}/logs`;
 const ENDPOINT_NOTIFICACOES = `${API_ROOT}/notificacoes`;
 const ENDPOINT_PLANTAS = `${API_ROOT}/plantas`;
+const ENDPOINT_TAREFAS = `${API_ROOT}/tarefas`;
+const ENDPOINT_AREAS = `${API_ROOT}/areas`;
+const ENDPOINT_CULTIVOS = `${API_ROOT}/cultivos`;
+const ENDPOINT_EVENTOS = `${API_ROOT}/eventos`;
+const ENDPOINT_RELATORIOS = `${API_ROOT}/relatorios`;
 
 export const getHeaders = () => {
     const token = localStorage.getItem('token');
@@ -13,20 +18,17 @@ export const getHeaders = () => {
     return headers;
 };
 
-// --- INTERCEPTOR DE REQUISIÇÃO (COM TOAST/ERROR TRIGGER) ---
+// --- INTERCEPTOR DE REQUISIÇÃO CENTRALIZADO ---
 export const request = async (url, options = {}) => {
     try {
         const response = await fetch(url, options);
 
-        // 401: Sessão Expirada
         if (response.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('usuario_logado');
-            // O erro será pego pelo catch do componente e exibido no Toast
             throw new Error("Sessão expirada. Por favor, faça login novamente.");
         }
 
-        // 403: MENSAGEM PARA O MODAL/TOAST DE BLOQUEIO
         if (response.status === 403) {
             throw new Error("Acesso Negado: Você não tem permissão para realizar esta ação.");
         }
@@ -38,9 +40,7 @@ export const request = async (url, options = {}) => {
 
         if (response.status === 204) return true;
         return await response.json();
-
     } catch (error) {
-        // Relança o erro para que o componente (Administracao.js) mostre o notify()
         throw error;
     }
 };
@@ -48,6 +48,7 @@ export const request = async (url, options = {}) => {
 // --- SERVIÇO DE AUTENTICAÇÃO ---
 export const authService = {
     login: async (email, senha) => {
+        // Usando fetch direto aqui para tratar erro de credenciais antes do interceptor
         const response = await fetch(`${ENDPOINT_USUARIOS}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -76,93 +77,109 @@ export const userService = {
     listar: () => request(ENDPOINT_USUARIOS, { headers: getHeaders() }),
     obterPorId: (id) => request(`${ENDPOINT_USUARIOS}/${id}`, { headers: getHeaders() }),
     listarLogs: () => request(ENDPOINT_LOGS, { headers: getHeaders() }),
-
-    registrarLog: async (acao, detalhes, usuarioId) => {
-        try {
-            await fetch(ENDPOINT_LOGS, {
-                method: "POST",
-                headers: getHeaders(),
-                body: JSON.stringify({ acao, detalhes, usuarioId, dataHora: new Date().toISOString() })
-            });
-        } catch (e) { console.error("Erro no log:", e); }
-    },
-
-    criar: (formData) => request(ENDPOINT_USUARIOS, {
-        method: "POST",
-        headers: getHeaders(),
-        body: JSON.stringify({
-            nomeUsuario: formData.nome || formData.nomeUsuario,
-            email: formData.email,
-            funcao: (formData.funcao || "OPERADOR_MAQUINAS").toUpperCase(),
-            senha: "CultivaMais@2026",
-            ativo: true
-        })
-    }),
-
-    atualizar: (id, dados) => {
-        const operador = authService.obterUsuarioLogado()?.nomeUsuario || "Sistema";
-        return request(`${ENDPOINT_USUARIOS}/${id}?operador=${encodeURIComponent(operador)}`, {
-            method: "PUT",
+    registrarLog: (acao, detalhes, usuarioId) => {
+        return request(ENDPOINT_LOGS, {
+            method: "POST",
             headers: getHeaders(),
-            body: JSON.stringify(dados)
+            body: JSON.stringify({
+                acao,
+                detalhes,
+                usuarioId,
+                dataHora: new Date().toISOString()
+            })
+        }).catch(e => {
+            console.error("Falha ao registrar log de auditoria:", e);
         });
     },
-
-    excluir: (id) => {
-        const operador = authService.obterUsuarioLogado()?.nomeUsuario || "Sistema";
-        return request(`${ENDPOINT_USUARIOS}/${id}?operador=${encodeURIComponent(operador)}`, {
-            method: "DELETE",
-            headers: getHeaders()
-        });
-    },
-
-    gerarCodigo: (email) => request(`${ENDPOINT_USUARIOS}/gerar-codigo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
+    criar: (formData) => request(ENDPOINT_USUARIOS, {
+        method: "POST", headers: getHeaders(),
+        body: JSON.stringify({ ...formData, senha: formData.senha || "CultivaMais@2026", ativo: true })
     }),
-
-    redefinirSenha: (email, codigo, novaSenha) => request(`${ENDPOINT_USUARIOS}/redefinir-senha`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, codigo, novaSenha })
-    })
+    atualizar: (id, dados) => request(`${ENDPOINT_USUARIOS}/${id}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) }),
+    excluir: (id) => request(`${ENDPOINT_USUARIOS}/${id}`, { method: "DELETE", headers: getHeaders() }),
+    gerarCodigo: (email) => request(`${ENDPOINT_USUARIOS}/gerar-codigo`, { method: "POST", headers: getHeaders(), body: JSON.stringify({ email }) }),
+    redefinirSenha: (dados) => request(`${ENDPOINT_USUARIOS}/redefinir-senha`, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) })
 };
 
-// --- SERVIÇO DE NOTIFICAÇÕES ---
-export const notificationService = {
-    // Busca as notificações do usuário logado
-    listar: () => {
-        const user = authService.obterUsuarioLogado();
-        const id = user?.idUsuario || user?.id; // Tenta capturar o ID de ambos os formatos
-        return id ? request(`${ENDPOINT_NOTIFICACOES}/usuario/${id}`, { headers: getHeaders() }) : [];
+// --- SERVIÇO DE TAREFAS ---
+export const tarefaService = {
+    listar: (idUsuario, funcao) => {
+        let url = ENDPOINT_TAREFAS;
+        const params = new URLSearchParams();
+        if (idUsuario) params.append('idUsuario', idUsuario);
+        if (funcao) params.append('funcao', funcao);
+        if (params.toString()) url += `?${params.toString()}`;
+        return request(url, { headers: getHeaders() });
     },
+    criar: (dados, idCriador, idResponsavel) =>
+        request(`${ENDPOINT_TAREFAS}?idCriador=${idCriador}&idResponsavel=${idResponsavel}`, {
+            method: "POST",
+            headers: getHeaders(),
+            body: JSON.stringify(dados)
+        }),
 
-    // Marca uma notificação individual como LIDA
-    marcarComoLida: (id) =>
-        request(`${ENDPOINT_NOTIFICACOES}/${id}/lida`, { method: "PATCH", headers: getHeaders() }),
-
-    // Marca uma notificação individual como NÃO LIDA (Novo!)
-    marcarComoNaoLida: (id) =>
-        request(`${ENDPOINT_NOTIFICACOES}/${id}/nao-lida`, { method: "PATCH", headers: getHeaders() }),
-
-    // Marca todas do usuário como LIDAS
-    marcarTodasComoLidas: (idUsuario) =>
-        request(`${ENDPOINT_NOTIFICACOES}/usuario/${idUsuario}/ler-todas`, { method: "PUT", headers: getHeaders() }),
-
-    // Marca todas do usuário como NÃO LIDAS (Novo!)
-    marcarTodasComoNaoLidas: (idUsuario) =>
-        request(`${ENDPOINT_NOTIFICACOES}/usuario/${idUsuario}/desler-todas`, { method: "PUT", headers: getHeaders() }),
-
-    // Exclui uma notificação
-    excluir: (id) =>
-        request(`${ENDPOINT_NOTIFICACOES}/${id}`, { method: "DELETE", headers: getHeaders() })
+    atualizar: (id, idUsuarioLogado, dados) => request(`${ENDPOINT_TAREFAS}/${id}?idUsuarioLogado=${idUsuarioLogado}`, {method: "PUT", headers: getHeaders(), body: JSON.stringify(dados)}),
+    concluir: (id, idUsuarioLogado, dados) => request(`${ENDPOINT_TAREFAS}/${id}/concluir?idUsuarioLogado=${idUsuarioLogado}`, { method: "PATCH",  headers: getHeaders(),  body: JSON.stringify(dados) }),
+    cancelar: (id, idUsuarioLogado) => request(`${ENDPOINT_TAREFAS}/${id}/cancelar?idUsuarioLogado=${idUsuarioLogado}`, {method: "PUT", headers: getHeaders() }),
+    excluir: (id, idUsuarioLogado) => request(`${ENDPOINT_TAREFAS}/${id}?idUsuarioLogado=${idUsuarioLogado}`, {method: "DELETE", headers: getHeaders() }),
 };
 
 // --- SERVIÇO DE PLANTAS ---
 export const plantaService = {
     listar: () => request(ENDPOINT_PLANTAS, { headers: getHeaders() }),
     criar: (dados) => request(ENDPOINT_PLANTAS, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
-    excluir: (id) => request(`${ENDPOINT_PLANTAS}/${id}`, { method: "DELETE", headers: getHeaders() }),
-    atualizar: (id, dados) => request(`${ENDPOINT_PLANTAS}/${id}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) })
+    atualizar: (id, dados) => request(`${ENDPOINT_PLANTAS}/${id}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) }),
+    excluir: (id) => request(`${ENDPOINT_PLANTAS}/${id}`, { method: "DELETE", headers: getHeaders() })
+};
+
+// --- SERVIÇO DE NOTIFICAÇÕES ---
+export const notificationService = {
+    listar: (idUsuario) => request(`${ENDPOINT_NOTIFICACOES}/usuario/${idUsuario}`, { headers: getHeaders() }),
+    contarNaoLidas: (idUsuario) => request(`${ENDPOINT_NOTIFICACOES}/usuario/${idUsuario}/contar-nao-lidas`, { headers: getHeaders() }),
+    marcarLida: (id) => request(`${ENDPOINT_NOTIFICACOES}/${id}/lida`, { method: "PATCH", headers: getHeaders() }),
+    marcarNaoLida: (id) => request(`${ENDPOINT_NOTIFICACOES}/${id}/nao-lida`, { method: "PATCH", headers: getHeaders() }),
+    marcarTodasLidas: (idUsuario) => request(`${ENDPOINT_NOTIFICACOES}/usuario/${idUsuario}/ler-todas`, { method: "PUT", headers: getHeaders() }),
+    marcarTodasNaoLidas: (idUsuario) => request(`${ENDPOINT_NOTIFICACOES}/usuario/${idUsuario}/desler-todas`, { method: "PUT", headers: getHeaders() }),
+    excluir: (id) => request(`${ENDPOINT_NOTIFICACOES}/${id}`, { method: "DELETE", headers: getHeaders() })
+};
+
+// --- SERVIÇO DE ÁREAS ---
+export const areaService = {
+    listar: () => request(ENDPOINT_AREAS, { headers: getHeaders() }),
+    criar: (dados) => request(ENDPOINT_AREAS, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
+    atualizar: (id, dados) => request(`${ENDPOINT_AREAS}/${id}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) }),
+    excluir: (id) => request(`${ENDPOINT_AREAS}/${id}`, { method: "DELETE", headers: getHeaders() }),
+    obterClima: (id) => request(`${ENDPOINT_AREAS}/${id}/clima`, { headers: getHeaders() })
+};
+
+// --- SERVIÇO DE CULTIVOS ---
+export const cultivoService = {
+    listar: () => request(ENDPOINT_CULTIVOS, { headers: getHeaders() }),
+    criar: (dados) => request(ENDPOINT_CULTIVOS, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
+    atualizar: (id, dados) => request(`${ENDPOINT_CULTIVOS}/${id}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) }),
+    excluir: (id) => request(`${ENDPOINT_CULTIVOS}/${id}`, { method: "DELETE", headers: getHeaders() })
+};
+
+// --- SERVIÇO DE EVENTOS (IRRIGAÇÃO E PRAGAS) ---
+export const eventoService = {
+    irrigacao: {
+        listarPorCultivo: (idCultivo) => request(`${ENDPOINT_EVENTOS}/irrigacao/cultivo/${idCultivo}`, { headers: getHeaders() }),
+        registrar: (idCultivo, dados) => request(`${ENDPOINT_EVENTOS}/irrigacao/${idCultivo}`, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
+        atualizar: (idEvento, dados) => request(`${ENDPOINT_EVENTOS}/irrigacao/${idEvento}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) }),
+        excluir: (idEvento) => request(`${ENDPOINT_EVENTOS}/irrigacao/${idEvento}`, { method: "DELETE", headers: getHeaders() })
+    },
+    praga: {
+        listarPorCultivo: (idCultivo) => request(`${ENDPOINT_EVENTOS}/praga/cultivo/${idCultivo}`, { headers: getHeaders() }),
+        registrar: (idCultivo, dados) => request(`${ENDPOINT_EVENTOS}/praga/${idCultivo}`, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
+        atualizar: (idEvento, dados) => request(`${ENDPOINT_EVENTOS}/praga/${idEvento}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) }),
+        excluir: (idEvento) => request(`${ENDPOINT_EVENTOS}/praga/${idEvento}`, { method: "DELETE", headers: getHeaders() })
+    }
+};
+
+// --- SERVIÇO DE RELATÓRIOS ---
+export const relatorioService = {
+    consumoAgua: (idCultivo) => request(`${ENDPOINT_RELATORIOS}/agua/${idCultivo}`, { headers: getHeaders() }),
+    colheitaPorArea: (idArea) => request(`${ENDPOINT_RELATORIOS}/colheita/${idArea}`, { headers: getHeaders() }),
+    compatibilidade: (idPlanta, idArea) => request(`${ENDPOINT_RELATORIOS}/compatibilidade/${idPlanta}/${idArea}`, { headers: getHeaders() }),
+    historicoPragas: (idCultivo) => request(`${ENDPOINT_RELATORIOS}/pragas/${idCultivo}`, { headers: getHeaders() })
 };

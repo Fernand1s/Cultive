@@ -4,9 +4,9 @@ import '../css/plantas.css';
 import {
     Trash2, Plus, Sprout, Clock, Pencil,
     Leaf, Cherry, Bean, Wheat, X, Microscope,
-    Droplets, Sun, Flower, AlertCircle
+    Droplets, Sun, Flower, AlertCircle, LeafyGreen
 } from 'lucide-react';
-import { plantaService, getHeaders } from "../services/api.js";
+import { plantaService, userService, authService } from "../services/api.js";
 import { useNotify } from "../context/NotificationContext";
 
 const Plantas = () => {
@@ -45,9 +45,11 @@ const Plantas = () => {
             case 'LEGUME':
                 return { icon: Bean, colorClass: 'bg-soft-purple', borderClass: 'border-top-legume', badgeStyle: { bg: '#faf5ff', color: '#9333ea' } };
             case 'FLOR':
-            case 'ERVA_MEDICINAL':
+                return { icon: Flower, colorClass: 'bg-soft-pink', borderClass: 'border-top-flor', badgeStyle: { bg: '#fdf2f8', color: '#db2777' } };
             case 'TEMPERO':
-                return { icon: Flower, colorClass: 'bg-soft-pink', borderClass: 'border-top-legume', badgeStyle: { bg: '#fdf2f8', color: '#db2777' } };
+                return { icon: LeafyGreen, colorClass: 'bg-soft-yellow', borderClass: 'border-top-hortalica', badgeStyle: { bg: '#ecfdf5', color: '#059669' } };
+            case 'ERVA_MEDICINAL':
+                return { icon: Microscope, colorClass: 'bg-soft-green', borderClass: 'border-top-hortalica', badgeStyle: { bg: '#f0fdf4', color: '#16a34a' } };
             default:
                 return { icon: Leaf, colorClass: 'bg-soft-green', borderClass: 'border-top-hortalica', badgeStyle: { bg: '#f0fdf4', color: '#16a34a' } };
         }
@@ -94,21 +96,33 @@ const Plantas = () => {
     };
 
     const executarExclusao = async () => {
+        const usuarioLogado = authService.obterUsuarioLogado();
+        const idUsuario = usuarioLogado?.idUsuario || usuarioLogado?.id;
+
         try {
             await plantaService.excluir(confirmacaoExclusao.id);
+
+            await userService.registrarLog(
+                "Exclusão de Catálogo",
+                `Removeu a espécie ${confirmacaoExclusao.nome} do sistema`,
+                idUsuario
+            );
+
             notify(`Planta removida.`, "success");
             carregarPlantas();
             setConfirmacaoExclusao({ aberta: false });
         } catch (err) {
-            notify("Erro ao excluir planta.", "error");
+            notify("Erro ao excluir planta. Verifique se ela está sendo usada em algum cultivo.", "error");
         }
     };
 
     const salvarPlanta = async (e) => {
         e.preventDefault();
-
         if (carregando) return;
+
         setCarregando(true);
+        const usuarioLogado = authService.obterUsuarioLogado();
+        const idUsuario = usuarioLogado?.idUsuario || usuarioLogado?.id;
 
         try {
             const dadosFormatados = {
@@ -116,18 +130,29 @@ const Plantas = () => {
                 cicloMedioDias: Number(novaPlanta.cicloMedioDias)
             };
 
-            let resultado;
             if (editandoId) {
-                await plantaService.atualizar(editandoId, dadosFormatados, { headers: getHeaders() });
+                await plantaService.atualizar(editandoId, dadosFormatados);
+
+                await userService.registrarLog(
+                    "Edição de Catálogo",
+                    `Atualizou os dados da espécie: ${novaPlanta.nomePopular}`,
+                    idUsuario
+                );
             } else {
-                await plantaService.criar(dadosFormatados, { headers: getHeaders() });
+                await plantaService.criar(dadosFormatados);
+
+                await userService.registrarLog(
+                    "Novo Registro no Catálogo",
+                    `Adicionou a espécie ${novaPlanta.nomePopular} ao banco fitotécnico`,
+                    idUsuario
+                );
             }
 
             notify("Dados salvos com sucesso!", "success");
             await carregarPlantas();
             fecharModal();
         } catch (err) {
-            notify(err.message || "Erro ao salvar planta. Verifique sua conexão.", "error");
+            notify(err.message || "Erro ao salvar planta.", "error");
         } finally {
             setCarregando(false);
         }

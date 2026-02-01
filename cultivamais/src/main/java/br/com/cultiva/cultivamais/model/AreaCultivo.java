@@ -31,7 +31,7 @@ public class AreaCultivo {
             joinColumns = @JoinColumn(name = "area_id"),
             inverseJoinColumns = @JoinColumn(name = "usuario_id")
     )
-    @JsonIgnoreProperties("areasAtendidas")
+    @JsonIgnore
     private List<Usuario> usuariosResponsaveis = new ArrayList<>();
 
     @OneToMany(mappedBy = "areaCultivo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

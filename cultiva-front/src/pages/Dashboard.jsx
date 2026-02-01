@@ -6,13 +6,13 @@ import {
     LayoutDashboard, Sprout, Map as CloudSun, Activity, Bug, ClipboardList,
     PieChart as IconeGrafico, TrendingUp, Leaf, ChevronLeft, ChevronRight,
     Sparkles, ArrowRight, X, ClipboardX, PackageOpen, CalendarOff, User,
-    Clock, CheckCircle2, RefreshCw, Gauge
+    Clock, CheckCircle2, RefreshCw, Gauge, Plus, Lightbulb
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area
 } from 'recharts';
-import { request, getHeaders } from '../services/api';
+import {cultivoService, tarefaService, plantaService, areaService} from '../services/api';
 
 // --- COMPONENTES VISUAIS DE ALTA FIDELIDADE ---
 
@@ -132,16 +132,13 @@ const Dashboard = () => {
     const carregarDadosGerais = useCallback(async () => {
         setLoading(true);
         try {
-            // 1. Usamos a função centralizada 'request' com os cabeçalhos de autenticação
-            // Isso resolve o erro 403, pois injeta o Token JWT automaticamente
             const [areas, plantasBrutas, cultivos, tarefas] = await Promise.all([
-                request('http://localhost:8090/api/areas', { headers: getHeaders() }),
-                request('http://localhost:8090/api/plantas', { headers: getHeaders() }),
-                request('http://localhost:8090/api/cultivos', { headers: getHeaders() }),
-                request('http://localhost:8090/api/tarefas', { headers: getHeaders() })
+                areaService.listar(),
+                plantaService.listar(),
+                cultivoService.listar(),
+                tarefaService.listar()
             ]);
 
-            // 2. Normalização de Plantas
             const plantas = plantasBrutas.map(p => ({
                 ...p,
                 solosRecomendados: Array.isArray(p.solosRecomendados)
@@ -149,7 +146,6 @@ const Dashboard = () => {
                     : []
             }));
 
-            // 3. Mapeamento de Áreas Ocupadas
             const idsAreasOcupadas = new Set(
                 cultivos
                     .filter(c => c.statusCultivo === 'ATIVO')
@@ -168,9 +164,7 @@ const Dashboard = () => {
                 // Busca Clima da Área (Tratado com request para evitar 403)
                 let dadosClima = { incidenciaSolarMedia: 5.5 };
                 try {
-                    const climaData = await request(`http://localhost:8090/api/areas/${area.idArea}/clima`, {
-                        headers: getHeaders()
-                    });
+                    const climaData = await areaService.obterClima(area.idArea);
                     if (climaData) dadosClima = climaData;
                 } catch (e) {
                     console.warn(`Aviso: Clima não disponível para área ${area.nomeArea}`);
@@ -250,9 +244,7 @@ const Dashboard = () => {
             setLoadingClima(true);
             try {
                 // Usando o seu serviço api.js que injeta o Bearer Token
-                const data = await request(`http://localhost:8090/api/areas/${idAreaClimaSelecionada}/clima`, {
-                    headers: getHeaders()
-                });
+                const data = await areaService.obterClima(idAreaClimaSelecionada);
                 setClima(data);
             } catch (error) {
                 console.error(`Erro ao buscar clima para área ${idAreaClimaSelecionada}:`, error);
@@ -368,10 +360,11 @@ const Dashboard = () => {
     // --- FUNÇÕES DE AÇÃO ---
     const confirmarPlantioRapido = async (e) => {
         e.preventDefault();
-
         if (loading) return;
 
         const sug = sugestoesInteligentes[indiceSugestao];
+        const usuarioLogado = authService.obterUsuarioLogado();
+        const idUsuario = usuarioLogado?.idUsuario || usuarioLogado?.id;
 
         if (!dadosPlantioRapido.quantidadePlantada || dadosPlantioRapido.quantidadePlantada <= 0) {
             notify("Informe uma quantidade válida para o plantio.", "error");
@@ -391,25 +384,27 @@ const Dashboard = () => {
         };
 
         try {
-            const res = await request('http://localhost:8090/api/cultivos', {
-                method: 'POST',
-                headers: {
-                    ...getHeaders(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
+            const res = await cultivoService.criar(payload);
+
+            await userService.registrarLog(
+                "Plantio Inteligente",
+                `Sistema sugeriu e usuário confirmou plantio de ${sug.plantaNome} na ${sug.areaNome}`,
+                idUsuario
+            );
 
             notify(`Sucesso! ${sug.plantaNome} plantado na área ${sug.areaNome}.`, "success");
 
             setModalPlantioAberto(false);
-            setDadosPlantioRapido({ quantidadePlantada: '', dataPlantio: new Date().toISOString().split('T')[0] });
+            setDadosPlantioRapido({
+                quantidadePlantada: '',
+                dataPlantio: new Date().toISOString().split('T')[0]
+            });
 
             await carregarDadosGerais();
 
         } catch (error) {
             console.error("Erro ao processar plantio rápido:", error);
-            notify(error.message || "Erro ao processar plantio. Verifique a conexão.", "error");
+            notify(error.message || "Erro ao processar plantio.", "error");
         } finally {
             setLoading(false);
         }
@@ -739,26 +734,64 @@ const Dashboard = () => {
 
             {modalPlantioAberto && (
                 <div className="modal-modern-overlay">
-                    <div className="modal-modern-content">
-                        <div className="modal-header">
-                            <h2><Sprout /> Confirmar Plantio Rápido</h2>
-                            <button onClick={() => setModalPlantioAberto(false)}><X /></button>
+                    <div className="modal-modern-content" style={{ maxWidth: '450px' }}>
+                        <div className="modal-header-flex">
+                            <h2 className="modal-title">
+                                <div className="icon-box bg-green-light" style={{ display: 'inline-flex', marginRight: '12px' }}>
+                                    <Sprout size={20} />
+                                </div>
+                                Confirmar Plantio
+                            </h2>
+                            <button className="btn-close-modal" onClick={() => setModalPlantioAberto(false)}>
+                                <X size={20} />
+                            </button>
                         </div>
-                        <div className="modal-info-box">
-                            Iniciando cultivo de <strong>{sugestoesInteligentes[indiceSugestao].plantaNome}</strong> no setor <strong>{sugestoesInteligentes[indiceSugestao].areaNome}</strong>.
+
+                        <div className="ai-suggestion-mini-banner">
+                            <div className="mini-banner-icon"> <Lightbulb size={20} color="#eab308" /></div>
+                            <div className="mini-banner-text">
+                                Iniciando <strong>{sugestoesInteligentes[indiceSugestao].plantaNome}</strong> <br/>
+                                no setor <strong>{sugestoesInteligentes[indiceSugestao].areaNome}</strong>
+                            </div>
                         </div>
-                        <form onSubmit={confirmarPlantioRapido}>
+
+                        <form onSubmit={confirmarPlantioRapido} className="modern-form">
                             <div className="form-group">
-                                <label>Quantidade de Sementes/Mudas</label>
-                                <input type="number" required value={dadosPlantioRapido.quantidadePlantada} onChange={e => setDadosPlantioRapido({...dadosPlantioRapido, quantidadePlantada: e.target.value})} />
+                                <label className="form-label">Quantidade de Sementes/Mudas</label>
+                                <div className="input-with-icon">
+                                    <Plus size={16} className="input-icon" />
+                                    <input
+                                        type="number"
+                                        className="form-input"
+                                        required
+                                        placeholder="Ex: 50"
+                                        value={dadosPlantioRapido.quantidadePlantada}
+                                        onChange={e => setDadosPlantioRapido({...dadosPlantioRapido, quantidadePlantada: e.target.value})}
+                                    />
+                                </div>
                             </div>
+
                             <div className="form-group">
-                                <label>Data de Início</label>
-                                <input type="date" required value={dadosPlantioRapido.dataPlantio} onChange={e => setDadosPlantioRapido({...dadosPlantioRapido, dataPlantio: e.target.value})} />
+                                <label className="form-label">Data de Início</label>
+                                <div className="input-with-icon">
+                                    <Clock size={16} className="input-icon" />
+                                    <input
+                                        type="date"
+                                        className="form-input"
+                                        required
+                                        value={dadosPlantioRapido.dataPlantio}
+                                        onChange={e => setDadosPlantioRapido({...dadosPlantioRapido, dataPlantio: e.target.value})}
+                                    />
+                                </div>
                             </div>
-                            <div className="modal-actions">
-                                <button type="button" className="btn-outline" onClick={() => setModalPlantioAberto(false)}>Cancelar</button>
-                                <button type="submit" className="btn-primary">Confirmar Plantio</button>
+
+                            <div className="modal-footer" style={{ marginTop: '20px', borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
+                                <button type="button" className="btn-outline" onClick={() => setModalPlantioAberto(false)}>
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="btn-primary" style={{ padding: '10px 24px' }}>
+                                    Confirmar Plantio
+                                </button>
                             </div>
                         </form>
                     </div>
