@@ -14,8 +14,6 @@ import {
 } from 'recharts';
 import {cultivoService, tarefaService, plantaService, areaService} from '../services/api';
 
-// --- COMPONENTES VISUAIS DE ALTA FIDELIDADE ---
-
 const StatCard = ({ title, value, subtext, icon: Icon, colorClass, trend }) => (
     <div className={`kpi-card animate-slide-up`}>
         <div className="kpi-header">
@@ -154,14 +152,13 @@ const Dashboard = () => {
 
             const areasLivres = areas.filter(a => !idsAreasOcupadas.has(a.idArea));
 
-            // 4. MOTOR DE INTELIGÊNCIA (Sugestões de Plantio)
+            // MOTOR DE INTELIGÊNCIA (Sugestões de Plantio)
             const novasSugestoes = [];
 
             for (const area of areasLivres) {
                 const soloDaArea = area.tipoSolo?.toString().trim().toUpperCase();
                 if (!soloDaArea) continue;
 
-                // Busca Clima da Área (Tratado com request para evitar 403)
                 let dadosClima = { incidenciaSolarMedia: 5.5 };
                 try {
                     const climaData = await areaService.obterClima(area.idArea);
@@ -204,7 +201,7 @@ const Dashboard = () => {
                 });
             }
 
-            // 5. ATUALIZAÇÃO DOS ESTADOS
+            // ATUALIZAÇÃO DOS ESTADOS
             setRawAreas(areas);
             setRawPlantas(plantas);
             setRawCultivos(cultivos);
@@ -212,7 +209,7 @@ const Dashboard = () => {
             setSugestoesInteligentes(novasSugestoes.sort((a, b) => b.score - a.score));
             setIndiceSugestao(0);
 
-            // 6. CÁLCULO DE KPIs
+            // CÁLCULO DE KPIs
             const ativos = cultivos.filter(c => c.statusCultivo === 'ATIVO');
             setKpis({
                 ativos: ativos.length,
@@ -226,7 +223,6 @@ const Dashboard = () => {
             }
 
         } catch (error) {
-            // Se a API retornar 403, a mensagem "Acesso Negado" cairá aqui:
             console.error("Erro crítico no Dashboard:", error.message);
             notify(error.message, "error");
         } finally {
@@ -243,7 +239,6 @@ const Dashboard = () => {
         const buscarClima = async () => {
             setLoadingClima(true);
             try {
-                // Usando o seu serviço api.js que injeta o Bearer Token
                 const data = await areaService.obterClima(idAreaClimaSelecionada);
                 setClima(data);
             } catch (error) {
@@ -498,8 +493,8 @@ const Dashboard = () => {
                                             <XAxis dataKey="name" axisLine={false} tickLine={false} />
                                             <YAxis axisLine={false} tickLine={false} />
                                             <Tooltip content={<CustomTooltip />} />
-                                            <Area type="monotone" dataKey="plantado" stroke="#0ea5e9" fill="url(#colorP)" name="Kg Plantado" />
-                                            <Area type="monotone" dataKey="colhido" stroke="#16a34a" fill="url(#colorC)" name="Kg Colhido" />
+                                            <Area type="monotone" dataKey="plantado" stroke="#0ea5e9" fill="url(#colorP)" name="Plantado" />
+                                            <Area type="monotone" dataKey="colhido" stroke="#16a34a" fill="url(#colorC)" name="Colhido" />
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -720,8 +715,8 @@ const Dashboard = () => {
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
                                         <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
                                         <Tooltip content={<CustomTooltip />} />
-                                        <Area type="monotone" dataKey="plantado" stroke="#0ea5e9" fill="url(#colorP)" name="Kg Plantado" strokeWidth={2} />
-                                        <Area type="monotone" dataKey="colhido" stroke="#16a34a" fill="none" name="Kg Colhido" strokeWidth={3} dot={{ r: 4, fill: '#16a34a' }} />
+                                        <Area type="monotone" dataKey="plantado" stroke="#0ea5e9" fill="url(#colorP)" name="Plantado" strokeWidth={2} />
+                                        <Area type="monotone" dataKey="colhido" stroke="#16a34a" fill="none" name="Colhido" strokeWidth={3} dot={{ r: 4, fill: '#16a34a' }} />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>

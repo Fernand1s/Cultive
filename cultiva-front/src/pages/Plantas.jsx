@@ -236,7 +236,7 @@ const Plantas = () => {
                                 </div>
                             </div>
 
-                            {/* RODAPÉ - Forçado para a base e contido lateralmente */}
+                            {/* RODAPÉ */}
                             <div className="user-actions-footer">
                                 <button className="btn-outline-sm" onClick={() => abrirModal(planta)}>
                                     <Pencil size={16} style={{marginRight: 8}}/> Editar

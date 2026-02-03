@@ -81,7 +81,6 @@ public class UsuarioController {
 
         Usuario atualizado = usuarioService.atualizarUsuario(id, dadosParaAtualizar);
 
-        // Define a ação para o Log de auditoria
         String operador = securityUtils.getNomeUsuarioLogado();
         String acao = "Editou usuário " + atualizado.getNomeUsuario();
 

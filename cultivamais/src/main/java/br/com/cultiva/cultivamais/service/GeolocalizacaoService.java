@@ -74,7 +74,6 @@ public class GeolocalizacaoService {
             return dados;
         } catch (Exception e) {
             System.err.println("Erro ao acessar API NASA POWER: " + e.getMessage());
-            // FALLBACK: Retorna valores médios seguros em caso de falha na API externa
             DadosSolares dadosFallback = new DadosSolares();
             dadosFallback.incidenciaSolarMedia = 5.2;
             dadosFallback.umidadeMedia = 65.0;
@@ -82,7 +81,7 @@ public class GeolocalizacaoService {
         }
     }
 
-    // FUNÇÃO: CALCULAR MÉDIA DOS VALORES NO JSON (Ignora valores de erro -999)
+    // CALCULAR MÉDIA DOS VALORES NO JSON (Ignora valores de erro -999)
     private double calcularMediaDoJson(JsonNode nodeDatas) {
         if (nodeDatas == null || nodeDatas.isMissingNode() || !nodeDatas.isObject()) {
             return 0.0;

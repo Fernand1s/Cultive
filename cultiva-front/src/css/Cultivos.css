@@ -1,9 +1,4 @@
-/* =========================================
-   SISTEMA DE DESIGN - CULTIVAMAIS CULTIVOS
-   ESTILO ULTRA-PREMIUM (LIMPO E ORGANIZADO)
-   ========================================= */
-
-/* 1. GRID E ESTRUTURA DO CARD */
+/* GRID E ESTRUTURA DO CARD */
 .cultivos-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

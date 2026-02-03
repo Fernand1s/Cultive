@@ -8,7 +8,7 @@ import {
 
 import { useNotify } from "../context/NotificationContext";
 
-import { request, getHeaders, cultivoService, eventoService, userService as service, authService } from '../services/api';
+import { request, getHeaders, cultivoService, eventoService, userService as service, authService, areaService, plantaService } from '../services/api';
 
 const Cultivos = () => {
     const notify = useNotify();
@@ -56,19 +56,22 @@ const Cultivos = () => {
     // --- CARREGAMENTO ---
     const carregarTudo = async () => {
         try {
-            // Usando request + getHeaders para evitar o 403
+            setCarregando(true);
+
             const [dadosAreas, dadosPlantas, dadosCultivos] = await Promise.all([
-                request('/areas', { headers: getHeaders() }),
-                request('/plantas', { headers: getHeaders() }),
-                request('/cultivos', { headers: getHeaders() })
+                areaService.listar(),
+                plantaService.listar(),
+                cultivoService.listar()
             ]);
 
-            setAreas(dadosAreas);
-            setPlantas(dadosPlantas);
-            setCultivos(dadosCultivos);
+            setAreas(dadosAreas || []);
+            setPlantas(dadosPlantas || []);
+            setCultivos(dadosCultivos || []);
         } catch (error) {
             console.error("Erro ao carregar dados:", error);
             notify("Erro ao carregar informações de cultivos.", "error");
+        } finally {
+            setCarregando(false);
         }
     };
 
@@ -130,19 +133,23 @@ const Cultivos = () => {
         try {
             if (editandoId) {
                 await cultivoService.atualizar(editandoId, payload);
+                /*
                 await service.registrarLog(
                     "Edição de Cultivo",
                     `Atualizou dados do cultivo ID ${editandoId}`,
                     usuarioLogado.idUsuario || usuarioLogado.id
                 );
+                */
                 notify("Cultivo atualizado!", "success");
             } else {
                 await cultivoService.criar(payload);
+                /*
                 await service.registrarLog(
                     "Novo Cultivo",
                     `Iniciou plantio na área ID ${payload.idArea}`,
                     usuarioLogado.idUsuario || usuarioLogado.id
                 );
+                */
                 notify("Novo cultivo criado!", "success");
             }
             fecharModal();
@@ -159,11 +166,13 @@ const Cultivos = () => {
             const usuarioLogado = authService.obterUsuarioLogado();
             await cultivoService.excluir(confirmacaoExclusao.id);
 
+            /*
             await service.registrarLog(
                 "Exclusão de Cultivo",
                 `Removeu o cultivo ID ${confirmacaoExclusao.id}`,
                 usuarioLogado.idUsuario || usuarioLogado.id
             );
+            */
 
             carregarTudo();
             notify("Cultivo removido.", "success");
@@ -189,7 +198,6 @@ const Cultivos = () => {
         });
 
         if (eventoParaEditar) {
-            // Preenche o form com dados existentes para EDIÇÃO
             setDadosEvento({
                 volume: eventoParaEditar.volumeAgua || '',
                 metodo: eventoParaEditar.metodo || 'GOTEJAMENTO',
@@ -246,11 +254,13 @@ const Cultivos = () => {
                 await apiService.registrar(acaoEvento.id, payloadEvento);
             }
 
+            /*
             await service.registrarLog(
                 `${isEdit ? 'Edição' : 'Registro'} de ${acaoEvento.tipo}`,
                 `${acaoEvento.tipo === 'IRRIGACAO' ? 'Volume: ' + dadosEvento.volume + 'L' : 'Praga: ' + dadosEvento.nome}`,
                 idUserLogado
             );
+            */
 
             if (acaoEvento.tipo === 'PRAGA' && !isEdit) {
                 const cultivoAtual = cultivos.find(c => c.idCultivo === acaoEvento.id);
@@ -287,7 +297,6 @@ const Cultivos = () => {
                 eventoService.praga.listarPorCultivo(cultivo.idCultivo)
             ]);
 
-            // Unificamos e ordenamos por data (mais recente primeiro)
             const unificado = [
                 ...irrigacoes.map(i => ({ ...i, tipo: 'IRRIGACAO' })),
                 ...pragas.map(p => ({ ...p, tipo: 'PRAGA' }))
@@ -306,7 +315,6 @@ const Cultivos = () => {
         try {
             await eventoService[endpoint].excluir(idEvento);
             notify("Registro removido.", "success");
-            // Atualiza a lista do modal e a tela principal
             abrirHistorico(cultivoSelecionado);
             carregarTudo();
         } catch (error) {

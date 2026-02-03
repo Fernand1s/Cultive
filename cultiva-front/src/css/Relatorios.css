@@ -356,15 +356,15 @@
 }
 
 .status-dot.CANCELADO {
-    background: #94a3b8; /* Cinza */
+    background: #94a3b8;
 }
 
 @media (max-width: 1100px) {
     .charts-row-complex {
-        grid-template-columns: 1fr; /* Empilha os gráficos */
+        grid-template-columns: 1fr;
     }
 
     .precision-layout {
-        grid-template-columns: 1fr; /* Sidebar vai para cima dos detalhes */
+        grid-template-columns: 1fr;
     }
 }

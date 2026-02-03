@@ -28,8 +28,6 @@ public class UsuarioCadastroDTO {
         this.senha = senha;
     }
 
-    // Getters e Setters
-
     public String getNomeUsuario() {
         return nomeUsuario;
     }

@@ -17,20 +17,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<StandardError> entityNotFound(ResourceNotFoundException e, HttpServletRequest request) {
         StandardError err = new StandardError();
         err.setTimestamp(Instant.now());
-        err.setStatus(HttpStatus.NOT_FOUND.value()); // Retorna 404
+        err.setStatus(HttpStatus.NOT_FOUND.value());
         err.setError("Recurso não encontrado");
-        err.setMessage(e.getMessage()); // A mensagem que você escreveu no Service
+        err.setMessage(e.getMessage());
         err.setPath(request.getRequestURI());
         
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(err);
     }
 
-    // Intercepta qualquer outro erro genérico (ex: NullPointer, Banco fora do ar)
+    // Intercepta qualquer outro erro genérico
     @ExceptionHandler(Exception.class)
     public ResponseEntity<StandardError> database(Exception e, HttpServletRequest request) {
         StandardError err = new StandardError();
         err.setTimestamp(Instant.now());
-        err.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value()); // Retorna 500
+        err.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
         err.setError("Erro interno do servidor");
         err.setMessage("Ocorreu um erro inesperado: " + e.getMessage());
         err.setPath(request.getRequestURI());

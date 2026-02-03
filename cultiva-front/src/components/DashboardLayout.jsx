@@ -52,7 +52,7 @@ export const DashboardLayout = ({ children }) => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // FUNÇÃO: Busca e ordena notificações
+    // Busca e ordena notificações
     const buscarNotificacoes = async () => {
         const idUsuario = usuario?.idUsuario || usuario?.id;
         if (!idUsuario) return;
@@ -71,7 +71,7 @@ export const DashboardLayout = ({ children }) => {
         }
     };
 
-    // FUNÇÃO: Marcar uma única notificação como lida
+    // Marcar uma única notificação como lida
     const handleAlternarStatusLida = async (id, statusAtual) => {
         try {
             if (statusAtual) {
@@ -85,7 +85,7 @@ export const DashboardLayout = ({ children }) => {
         }
     };
 
-    // FUNÇÃO: Marcar todas como lidas/não lidas
+    // Marcar todas como lidas/não lidas
     const handleMarcarTodasStatus = async (marcarComoLida) => {
         const idUsuario = usuario?.idUsuario || usuario?.id;
         if (!idUsuario) return;

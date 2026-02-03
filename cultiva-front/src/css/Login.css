@@ -1,7 +1,3 @@
-/* =========================================
-   ESTILO LOGIN - CULTIVAMAIS PREMIUM
-   ========================================= */
-
 .login-container {
     width: 100%;
     min-height: 100vh;
@@ -22,7 +18,7 @@
 html, body {
     margin: 0;
     padding: 0;
-    background-color: #14532d; /* Cor de segurança igual ao fim do gradiente */
+    background-color: #14532d;
 }
 
 /* Elementos decorativos de fundo */

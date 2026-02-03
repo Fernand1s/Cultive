@@ -92,7 +92,6 @@ const Tarefas = () => {
         try {
             await tarefaService.concluir(tarefa.id, usuarioLogado.idUsuario, { observacao });
 
-            // LOG DE CONCLUSÃO
             await userService.registrarLog(
                 "Conclusão de Tarefa",
                 `Finalizou a tarefa: ${tarefa.titulo}`,

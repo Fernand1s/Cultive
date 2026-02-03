@@ -16,12 +16,12 @@ public class JwtService {
     // FUNÇÃO: GERAÇÃO DO TOKEN JWT
     public String generateToken(Usuario usuario) {
         return Jwts.builder()
-                .setSubject(usuario.getEmail()) // Identificador principal
-                .claim("id", usuario.getIdUsuario()) // Payload: ID do usuário
-                .claim("funcao", usuario.getFuncao().toString()) // Payload: Permissão do usuário
-                .setIssuedAt(new Date()) // Data de emissão
-                .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // Expiração (24 horas)
-                .signWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes()), SignatureAlgorithm.HS256) // Assinatura HS256
+                .setSubject(usuario.getEmail())
+                .claim("id", usuario.getIdUsuario())
+                .claim("funcao", usuario.getFuncao().toString())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + 86400000))
+                .signWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes()), SignatureAlgorithm.HS256)
                 .compact();
     }
 }

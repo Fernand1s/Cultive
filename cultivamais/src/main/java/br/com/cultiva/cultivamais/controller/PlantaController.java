@@ -61,7 +61,6 @@ public class PlantaController {
     // EXCLUIR PLANTA
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
-        // Buscamos o nome antes de excluir para o log ficar informativo
         String nomePlanta = plantaService.buscarNomePlanta(id);
 
         plantaService.excluirPlanta(id);

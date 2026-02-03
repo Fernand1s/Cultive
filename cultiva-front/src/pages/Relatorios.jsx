@@ -56,7 +56,6 @@ const Relatorios = () => {
             setAreas(Array.isArray(dAreas) ? dAreas : []);
             setCultivosTotal(Array.isArray(dCultivos) ? dCultivos : []);
 
-            // No arquivo Relatorios.js, dentro de sincronizarBancoDeDados
             const categorias = [
                 {
                     name: 'Saudável',
@@ -90,12 +89,12 @@ const Relatorios = () => {
     }, [sincronizarBancoDeDados]);
 
     const analisarLoteDeep = async (cultivo) => {
-        // 1. Bloqueio de múltiplas requisições simultâneas e validação de entrada
+        // Bloqueio de múltiplas requisições simultâneas e validação de entrada
         if (loading || !cultivo) return;
 
         setLoading(true);
         setCultivoSelecionado(cultivo);
-        setPerformanceArea(null); // Limpa o estado de colheita anterior
+        setPerformanceArea(null);
 
         // Reset de estado visual (Feedback de UX)
         setDetalhesLote({
@@ -106,7 +105,7 @@ const Relatorios = () => {
         });
 
         try {
-            // 2. Chamadas de telemetria e BI em paralelo para máxima performance
+            // Chamadas de telemetria e BI em paralelo para máxima performance
             const [aguaDTO, pragasVal, compatVal, colheitaData] = await Promise.all([
                 relatorioService.consumoAgua(cultivo.idCultivo),
                 relatorioService.historicoPragas(cultivo.idCultivo),
@@ -117,19 +116,18 @@ const Relatorios = () => {
                 relatorioService.colheitaPorArea(cultivo.areaCultivo?.idArea)
             ]);
 
-            // 3. Processamento de Data de Colheita (Lógica de Negócio)
+            // Processamento de Data de Colheita (Lógica de Negócio)
             let dataPrevista = cultivo.previsaoColheita || cultivo.dataColheitaFinal;
 
             if (!dataPrevista && cultivo.dataPlantio) {
                 const dataPlantio = new Date(cultivo.dataPlantio);
                 const cicloDias = cultivo.plantaCultivada?.cicloMedioDias || 0;
 
-                // Adiciona os dias do ciclo à data de plantio de forma segura
                 dataPlantio.setDate(dataPlantio.getDate() + cicloDias);
                 dataPrevista = dataPlantio;
             }
 
-            // 4. Auditoria e Rastreabilidade (Logs do Sistema)
+            // Auditoria e Rastreabilidade (Logs do Sistema)
             const usuarioLogado = authService.obterUsuarioLogado();
             const idUser = usuarioLogado?.idUsuario || usuarioLogado?.id;
 
@@ -139,7 +137,7 @@ const Relatorios = () => {
                 idUser
             );
 
-            // 5. Atualização de estados com higienização de dados
+            // Atualização de estados com higienização de dados
             setPerformanceArea(colheitaData);
 
             setDetalhesLote({
@@ -176,7 +174,6 @@ const Relatorios = () => {
     }, [cultivosTotal]);
 
     const gerarPDF = async () => {
-        // 1. Identificação do usuário para o Log de Auditoria
         const usuarioLogado = authService.obterUsuarioLogado();
         const idUsuario = usuarioLogado?.idUsuario || usuarioLogado?.id;
 
@@ -189,7 +186,7 @@ const Relatorios = () => {
             const rS = 71, gS = 85, bS = 105;   // Slate (Cinza Profissional)
             const rW = 255, gW = 255, bW = 255; // Branco
 
-            // --- 1. CABEÇALHO CORPORATIVO ---
+            // --- CABEÇALHO CORPORATIVO ---
             doc.setFillColor(rV, gV, bV);
             doc.rect(0, 0, 210, 40, 'F');
 
@@ -209,7 +206,7 @@ const Relatorios = () => {
             doc.text(`PROTOCOLO: CRM-${Date.now().toString().slice(-6)}`, 155, 15);
             doc.text(`EMISSÃO: ${timestamp}`, 155, 20);
 
-            // --- 2. PAINEL DE KPIs (QUADRO DE RESUMO) ---
+            // --- PAINEL DE KPIs (QUADRO DE RESUMO) ---
             doc.setFillColor(rW, gW, rW);
             doc.setDrawColor(226, 232, 240);
             doc.roundedRect(15, 48, 180, 28, 2, 2, 'FD');
@@ -234,7 +231,7 @@ const Relatorios = () => {
             doc.setTextColor(hasAlerts ? 185 : rV, hasAlerts ? 28 : gV, hasAlerts ? 28 : bV);
             doc.text(`${statsGerais.alertas} Críticos`, 145, 66);
 
-            // --- 3. TABELA DE INVENTÁRIO DETALHADA ---
+            // --- TABELA DE INVENTÁRIO DETALHADA ---
             doc.setTextColor(15, 23, 42);
             doc.setFontSize(11);
             doc.setFont("helvetica", "bold");
@@ -277,27 +274,23 @@ const Relatorios = () => {
                 }
             });
 
-            // --- 4. ANÁLISE DE TELEMETRIA (SE SELECIONADO) ---
+            // --- ANÁLISE DE TELEMETRIA (SE SELECIONADO) ---
             let finalY = doc.lastAutoTable.finalY + 15;
 
             if (cultivoSelecionado) {
-                // 1. Verificar quebra de página ANTES de começar a desenhar o bloco
                 if (finalY > 220) {
                     doc.addPage();
                     finalY = 20;
                 }
 
-                // 2. Desenhar o fundo (Aumentei para 45mm para caber a nova linha de performance)
                 doc.setFillColor(241, 245, 249);
                 doc.roundedRect(15, finalY, 180, 45, 2, 2, 'F');
 
-                // 3. Título do Diagnóstico
                 doc.setFontSize(10);
                 doc.setTextColor(rV, gV, bV);
                 doc.setFont("helvetica", "bold");
                 doc.text(`DIAGNÓSTICO PROFUNDO: ${cultivoSelecionado.plantaCultivada?.nomePopular}`, 22, finalY + 10);
 
-                // 4. Detalhes Técnicos
                 doc.setFontSize(8);
                 doc.setTextColor(rS, gS, bS);
                 doc.setFont("helvetica", "normal");
@@ -307,7 +300,6 @@ const Relatorios = () => {
                 doc.text(`• Índice de Solo: ${detalhesLote.compatibilidade ? 'COMPATÍVEL' : 'DIVERGENTE'}`, 22, finalY + 30);
                 doc.text(`• Responsáveis: ${cultivoSelecionado.areaCultivo.usuariosResponsaveis?.length || 0} técnico(s) alocado(s)`, 22, finalY + 36);
 
-                // 5. Histórico de Rendimento (Dentro do quadro, na última linha)
                 if (performanceArea) {
                     doc.setFont("helvetica", "bold");
                     doc.text(`• Performance da Área: ${performanceArea.totalColhido || 0}kg colhidos historicamente`, 22, finalY + 42);
@@ -316,7 +308,7 @@ const Relatorios = () => {
                 finalY += 55;
             }
 
-            // --- 5. RODAPÉ TÉCNICO E PAGINAÇÃO ---
+            // --- RODAPÉ TÉCNICO E PAGINAÇÃO ---
             const pageCount = doc.internal.getNumberOfPages();
             for (let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
@@ -328,7 +320,7 @@ const Relatorios = () => {
                 doc.text(`Página ${i} de ${pageCount}`, 195, 287, { align: 'right' });
             }
 
-            // 2. REGISTRO DE LOG DE AUDITORIA (Ponto chave da correção)
+            // REGISTRO DE LOG DE AUDITORIA (Ponto chave da correção)
             await userService.registrarLog(
                 "Exportação de Dados",
                 `Relatório PDF gerado com ${cultivosFiltrados.length} registros. Filtro status: ${statusFiltro}`,

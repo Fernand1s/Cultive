@@ -22,7 +22,6 @@ import Perfil from "./pages/Perfil";
 const RotaAdmin = ({ children }) => {
     const usuario = authService.obterUsuarioLogado();
 
-    // Verifica se existe usuário e se a função é ADMINISTRADOR
     if (usuario?.funcao !== 'ADMINISTRADOR') {
         return <Navigate to="/dashboard" replace />;
     }

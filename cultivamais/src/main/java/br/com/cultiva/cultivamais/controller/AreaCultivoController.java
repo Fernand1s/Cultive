@@ -28,7 +28,7 @@ public class AreaCultivoController {
         this.securityUtils = securityUtils;
     }
 
-    // MÉTODO AUXILIAR
+    // METODO AUXILIAR
     private AreaCultivoDTO converterParaDTO(AreaCultivo area) {
         return new AreaCultivoDTO(
                 area.getIdArea(),
@@ -85,7 +85,6 @@ public class AreaCultivoController {
     // EXCLUIR ÁREA
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluirArea(@PathVariable Long id) {
-        // Busca a área para registrar o nome no log antes de deletar
         AreaCultivo area = areaCultivoService.buscarPorId(id);
         String nomeArea = area.getNomeArea();
 

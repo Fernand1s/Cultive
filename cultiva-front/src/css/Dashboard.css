@@ -1,12 +1,7 @@
-/* =========================================
-   SISTEMA DE DESIGN - CULTIVAMAIS DASHBOARD
-   VERSÃO ULTRA-PREMIUM (PALETA VERDE)
-   ========================================= */
-
 /* Layout Base */
 .dashboard-wrapper {
     animation: fadeIn 0.5s ease-out;
-    padding: 20px; /* Igual ao padding da página de relatórios */
+    padding: 20px;
     min-height: 100vh;
     margin-top: var(--navbar-height)
 }
@@ -15,15 +10,15 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px; /* Igual ao margin-bottom da .bi-header */
+    margin-bottom: 30px;
 }
 
 .dashboard-header h1 {
-    font-size: 2rem; /* Aumentado de 1.875 para 2rem para igualar ao .main-title */
+    font-size: 2rem;
     font-weight: 800;
     color: var(--text-primary);
     margin: 0;
-    letter-spacing: -0.5px; /* Igualado ao relatório */
+    letter-spacing: -0.5px;
 }
 
 .dashboard-header p {
@@ -125,7 +120,7 @@
     box-shadow: var(--shadow-premium);
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Corta qualquer vazamento acidental */
+    overflow: hidden;
 }
 
 .chart-header {
@@ -214,7 +209,7 @@
 
 .filter-bar {
     display: flex;
-    flex-wrap: wrap; /* Permite quebrar linha se a tela for pequena */
+    flex-wrap: wrap;
     gap: 1.5rem;
     padding: 1.25rem;
     background: white;
@@ -242,7 +237,6 @@
     font-family: inherit;
 }
 
-/* Fix para a navegação de produção não vazar */
 .filter-row-container {
     display: flex;
     gap: 15px;
@@ -268,7 +262,7 @@
     opacity: 0.8;
     cursor: wait;
     background: #f8fafc;
-    pointer-events: none; /* Evita cliques múltiplos */
+    pointer-events: none;
 }
 
 .btn-sync.spinning svg {
@@ -297,7 +291,7 @@
 /* Container Principal da Aba Geral */
 .charts-main-grid {
     display: grid;
-    grid-template-columns: 1.6fr 1fr; /* Balanço maior que o Clima */
+    grid-template-columns: 1.6fr 1fr;
     gap: 24px;
     align-items: stretch;
 }
@@ -305,7 +299,7 @@
 /* Fix para o Recharts não quebrar o layout */
 .chart-wrapper-fixed {
     width: 100%;
-    height: 350px; /* Altura fixa para manter consistência */
+    height: 350px;
     position: relative;
     margin-top: auto;
 }
@@ -383,7 +377,7 @@
 /* Responsividade para Tablets e Celulares */
 @media (max-width: 1024px) {
     .charts-main-grid {
-        grid-template-columns: 1fr; /* Empilha em telas menores */
+        grid-template-columns: 1fr;
     }
 }
 
@@ -392,9 +386,9 @@
     background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
     border: 1px solid #bbf7d0;
     border-radius: var(--radius-xl);
-    padding: 1.5rem 60px; /* Padding lateral maior para as setas */
+    padding: 1.5rem 60px;
     display: flex;
-    justify-content: center; /* Centraliza o conteúdo interno */
+    justify-content: center;
     align-items: center;
     margin-bottom: 2.5rem;
     box-shadow: 0 10px 25px -5px rgba(22, 163, 74, 0.1);
@@ -413,7 +407,7 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: white; /* Troquei para branco para destacar no verde claro */
+    background: white;
     border: 1px solid #bbf7d0;
     color: var(--v-primary);
     cursor: pointer;

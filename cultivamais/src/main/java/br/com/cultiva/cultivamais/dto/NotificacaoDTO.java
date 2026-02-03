@@ -23,8 +23,6 @@ public class NotificacaoDTO {
         this.lida = lida;
     }
 
-    // Getters e Setters
-
     public Long getId() {
         return id;
     }

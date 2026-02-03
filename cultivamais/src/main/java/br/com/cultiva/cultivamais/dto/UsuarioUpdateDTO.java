@@ -28,8 +28,6 @@ public class UsuarioUpdateDTO {
         this.ativo = ativo;
     }
 
-    // Getters e Setters...
-
     public String getNomeUsuario() {
         return nomeUsuario;
     }

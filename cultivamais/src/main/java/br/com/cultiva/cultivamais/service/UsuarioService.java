@@ -168,7 +168,7 @@ public class UsuarioService {
         return false;
     }
 
-    // MÉTODO AUXILIAR PARA NOTIFICAR ADMINISTRADORES
+    // METODO AUXILIAR PARA NOTIFICAR ADMINISTRADORES
     private void notificarAdministradores(String titulo, String mensagem, String tipo) {
         usuarioRepository.findAll().stream()
                 .filter(u -> u.getFuncao() != null)

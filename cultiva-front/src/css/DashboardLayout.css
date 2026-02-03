@@ -1,7 +1,3 @@
-/* =========================================
-   CULTIVAMAIS PREMIUM - DASHBOARD COMPLETO
-   ========================================= */
-
 /* Layout Estrutural Principal */
 .dashboard-container {
     display: flex;
@@ -232,7 +228,7 @@
     color: #ef4444;
     width: 32px;
     height: 32px;
-    border-radius: 10px; /* Bordas arredondadas suaves */
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -253,7 +249,7 @@
     color: white;
     border-color: #ef4444;
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
-    transform: scale(1.1) !important; /* Aumenta um pouco ao focar */
+    transform: scale(1.1) !important;
 }
 
 /* Feedback de clique */
@@ -261,7 +257,6 @@
     transform: scale(0.95) !important;
 }
 
-/* Ajuste no card para garantir que o texto não fique por baixo do botão */
 .notif-content {
     padding-right: 25px;
 }
@@ -353,7 +348,7 @@
 
 /* --- BOTÃO MOBILE MENU (HAMBURGUER) --- */
 .mobile-menu-toggle {
-    display: none; /* Escondido no desktop */
+    display: none;
     background: none;
     border: none;
     color: white;
@@ -394,46 +389,44 @@
 
 @media (max-width: 1024px) {
     .breadcrumb-simple { display: none; }
-    /* Mantém os nomes visíveis se o usuário escolher abrir no tablet */
     .sidebar-open .nav-label-text { display: block; opacity: 1; width: auto; }
 }
 
 @media (max-width: 768px) {
-    /* 1. HEADER COM RESPIRO NAS BORDAS */
+    /* HEADER COM RESPIRO NAS BORDAS */
     .top-header-premium {
         left: 0 !important;
         right: 0 !important;
         width: 100% !important;
-        padding: 0 20px !important; /* Aumentado para o perfil não colar no canto */
+        padding: 0 20px !important;
         justify-content: space-between !important;
         box-sizing: border-box;
     }
 
-    /* 2. GRUPO DE AÇÕES (Notificação + Perfil) */
+    /* GRUPO DE AÇÕES (Notificação + Perfil) */
     .header-actions {
         display: flex !important;
         align-items: center;
-        gap: 12px !important; /* Espaço entre os ícones */
+        gap: 12px !important;
         margin-left: auto !important;
     }
 
-    /* 3. DROPDOWN DE NOTIFICAÇÕES (Largura Controlada) */
+    /* DROPDOWN DE NOTIFICAÇÕES (Largura Controlada) */
     .notifications-dropdown-premium {
         position: fixed !important;
         top: calc(var(--header-height) + 10px);
-        /* Centraliza o dropdown ou mantém margens laterais */
         left: 15px !important;
         right: 15px !important;
         width: auto !important;
-        max-width: 400px !important; /* Impede que ele fique gigante em tablets */
-        margin: 0 auto; /* Centraliza se houver espaço */
+        max-width: 400px !important;
+        margin: 0 auto;
         z-index: 2100;
     }
 
-    /* 4. PERFIL E AVATAR */
+    /* PERFIL E AVATAR */
     .user-profile-premium {
         padding: 4px !important;
-        margin-right: 2px; /* Pequeno ajuste extra para afastar da borda */
+        margin-right: 2px;
     }
 
     .u-avatar-premium {
@@ -442,7 +435,7 @@
         border: 2px solid rgba(255,255,255,0.1);
     }
 
-    /* 5. SIDEBAR E BOTÕES */
+    /* SIDEBAR E BOTÕES */
     .mobile-menu-toggle {
         display: flex !important;
         min-width: 35px;
@@ -458,12 +451,11 @@
         transform: translateX(0) !important;
     }
 
-    /* Ajuste fino na logo para não apertar */
     .logo-text-header {
         font-size: 1.1rem !important;
     }
 
-    /* 6. RESET GERAL MOBILE */
+    /* RESET GERAL MOBILE */
     .user-meta-info, .header-v-divider, .breadcrumb-simple {
         display: none !important;
     }
@@ -534,7 +526,6 @@
     font-weight: 500;
 }
 
-/* Card unread com destaque */
 .notif-card.unread {
     background: #f0fdf4;
     border-left: 4px solid var(--v-primary);
@@ -544,7 +535,6 @@
     font-weight: 800;
 }
 
-/* Scrollbar fina para o dropdown */
 .drop-body-premium::-webkit-scrollbar {
     width: 6px;
 }
@@ -562,7 +552,6 @@
     background: #cbd5e1;
 }
 
-/* Linha inferior da notificação para alinhar hora e botão */
 .notif-footer-row {
     display: flex;
     justify-content: space-between;
@@ -572,7 +561,6 @@
     border-top: 1px solid rgba(0, 0, 0, 0.03);
 }
 
-/* Ajuste no botão Marcar Todas para garantir clique */
 .mark-all-btn {
     z-index: 10;
     pointer-events: auto !important;
@@ -604,7 +592,6 @@
     border-color: #cbd5e1;
 }
 
-/* Quando está não lida, o botão sugere "Marcar como lida" (destaque verde) */
 .status-toggle-btn.is-unread {
     background: #ecfdf5;
     color: #059669;
@@ -632,7 +619,6 @@
     color: white;
 }
 
-/* Ajuste no card para não parecer clicável se já estiver lido */
 .notif-card:not(.unread) {
     cursor: default;
 }

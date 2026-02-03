@@ -100,8 +100,6 @@ public class NotificacaoService {
         }
     }
 
-    // --- AGENDAMENTOS (LOGICA AUTOMÁTICA) ---
-
     // VERIFICAR NECESSIDADE DE IRRIGAÇÃO (CADA 6 HORAS)
     @Scheduled(fixedRate = 21600000)
     @Transactional

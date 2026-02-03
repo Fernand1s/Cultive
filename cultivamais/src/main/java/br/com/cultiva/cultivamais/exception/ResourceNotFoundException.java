@@ -2,7 +2,6 @@ package br.com.cultiva.cultivamais.exception;
 
 import java.io.Serial;
 
-// Esta classe representa o erro "Não Encontrado" personalizado
 public class ResourceNotFoundException extends RuntimeException {
     
     @Serial

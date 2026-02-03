@@ -28,7 +28,7 @@ public class AlertaClimaticoService {
         this.usuarioRepository = usuarioRepository;
     }
 
-    // FUNÇÃO: VERIFICAÇÃO AGENDADA (Executa diariamente às 07:00 da manhã)
+    // VERIFICAÇÃO AGENDADA (Executa diariamente às 07:00 da manhã)
     @Scheduled(cron = "0 0 7 * * *")
     public void verificarCondicoesClimaticas() {
         List<AreaCultivo> areas = areaCultivoRepository.findAll();
@@ -61,7 +61,7 @@ public class AlertaClimaticoService {
         }
     }
 
-    // FUNÇÃO: DISPARO DE NOTIFICAÇÃO PARA ADMINISTRADORES
+    // DISPARO DE NOTIFICAÇÃO PARA ADMINISTRADORES
     private void criarAlertaParaAdmins(List<Usuario> admins, String titulo, String mensagem) {
         for (Usuario admin : admins) {
             notificacaoService.criarNotificacao(
