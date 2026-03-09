@@ -327,8 +327,7 @@ const Administracao = () => {
     );
 
     return (
-        <div className="main-content animate-fade-in">
-            <div className="admin-header">
+        <div className="main-content animate-fade-in" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', width: '100%', boxSizing: 'border-box' }}>            <div className="admin-header">
                 <div>
                     <h2 className="dashboard-title">Administração</h2>
                     <p className="dashboard-subtitle">Gestão de acessos e segurança.</p>

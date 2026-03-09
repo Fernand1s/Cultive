@@ -1,0 +1,158 @@
+/* Importando uma fonte moderna e limpa (Inter) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+
+.loading-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    /* MESMO FUNDO DA TELA DE LOGIN */
+    background: linear-gradient(135deg, #16a34a 0%, #14532d 100%);
+    background-size: cover;
+    background-color: #14532d;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    animation: fadeIn 0.6s ease-out;
+    overflow: hidden;
+}
+
+/* O mesmo elemento decorativo de fundo do Login para manter consistência */
+.loading-container::before {
+    content: "";
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    top: -250px;
+    right: -100px;
+    pointer-events: none;
+}
+
+/* Glassmorphism alinhado com o card de Login */
+.loading-glass-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Mesmo card branco do login */
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 3rem 4rem;
+    border-radius: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+    animation: fadeInScale 0.5s ease-out;
+}
+
+.logo-wrapper {
+    position: relative;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Brilho pulsante ajustado para o card branco */
+.logo-glow {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0) 70%);
+    border-radius: 50%;
+    animation: pulseGlow 2.5s ease-in-out infinite;
+    z-index: 1;
+}
+
+/* Animação suave de flutuação para a logo */
+.loading-logo {
+    width: 130px;
+    position: relative;
+    z-index: 2;
+    animation: float 3s ease-in-out infinite;
+}
+
+.loading-title {
+    /* Mesma cor e peso do título do Login */
+    color: #14532d;
+    font-size: 2.25rem;
+    font-weight: 800;
+    margin: 0 0 20px 0;
+    letter-spacing: -1px;
+}
+
+/* Destaca o sinal de + do seu logo */
+.title-highlight {
+    color: #16a34a; /* Cor do botão do login */
+}
+
+/* --- BARRA DE CARREGAMENTO --- */
+.loading-bar-container {
+    width: 220px;
+    height: 6px;
+    background-color: #e2e8f0; /* Cor da borda dos inputs do login */
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.loading-bar {
+    width: 40%;
+    height: 100%;
+    background-color: #16a34a; /* Cor do botão de login */
+    border-radius: 8px;
+    animation: loadingSlide 1.5s ease-in-out infinite;
+}
+
+.loading-text {
+    /* Mesma cor do subtitle do Login */
+    color: #64748b;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Reticências animadas (...) */
+.loading-dots::after {
+    content: '';
+    animation: ellipsis 1.5s infinite;
+}
+
+/* --- KEYFRAMES --- */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Mesma animação de entrada do card de login */
+@keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+}
+
+@keyframes pulseGlow {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.8); opacity: 0.9; }
+}
+
+@keyframes loadingSlide {
+    0% { transform: translateX(-100%); width: 20%; }
+    50% { transform: translateX(50%); width: 60%; }
+    100% { transform: translateX(250%); width: 20%; }
+}
+
+@keyframes ellipsis {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+    100% { content: ''; }
+}

@@ -22,13 +22,15 @@
     --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
 }
 
-/* Layout Geral */
+/* Layout Geral - AJUSTADO AQUI */
 .main-content {
     padding: 2.5rem;
     max-width: 1400px;
     margin: 0 auto;
-    background-color: var(--bg-app);
+    background-color: var(--bg-app) !important; /* Força o fundo cinza claro */
     min-height: 100vh;
+    width: 100%; /* Garante que ocupe a tela toda */
+    box-sizing: border-box; /* Impede que o padding quebre a largura */
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 

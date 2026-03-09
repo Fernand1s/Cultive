@@ -1,8 +1,12 @@
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { authService } from "./services/api";
 
 // Importe do Contexto de Notificação
 import { NotificationProvider } from "./context/NotificationContext";
+
+// Importe do Componente de Loading (NOVO)
+import { LoadingScreen } from "./components/LoadingScreen";
 
 import { Login } from "./pages/Login";
 import { DashboardLayout } from "./components/DashboardLayout";
@@ -30,6 +34,26 @@ const RotaAdmin = ({ children }) => {
 };
 
 const App = () => {
+    const [isAppLoading, setIsAppLoading] = useState(() => {
+        const jaCarregou = sessionStorage.getItem('cultiva_carregado');
+        return !jaCarregou;
+    });
+
+    useEffect(() => {
+        if (isAppLoading) {
+            const timer = setTimeout(() => {
+                setIsAppLoading(false);
+                sessionStorage.setItem('cultiva_carregado', 'true');
+            }, 2000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [isAppLoading]);
+
+    if (isAppLoading) {
+        return <LoadingScreen />;
+    }
+
     return (
         <NotificationProvider>
             <BrowserRouter>
