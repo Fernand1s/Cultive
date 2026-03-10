@@ -343,7 +343,7 @@ const Administracao = () => {
                         <h3 className="shortcut-title">Gerenciar Usuários</h3>
                         <p className="dashboard-subtitle">Buscar e editar equipe.</p>
                     </div>
-                    <div className="icon-circle blue"><Users size={24} /></div>
+                    <div className="icon-circle blue"><Users size={24} /></div>]
                 </div>
                 <div onClick={fetchLogs} className="shortcut-card green">
                     <div>
