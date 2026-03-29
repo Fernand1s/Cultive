@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import '../App.css';
-import '../css/plantas.css';
+import '../css/Plantas.css';
 import {
     Trash2, Plus, Sprout, Clock, Pencil,
     Leaf, Cherry, Bean, Wheat, X, Microscope,

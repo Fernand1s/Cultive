@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { authService, userService } from "../services/api";
 import { LogIn, Key, ArrowLeft, Check, Eye, EyeOff } from 'lucide-react';
 import { useNotify } from "../context/NotificationContext";
-import '../css/login.css';
+import '../css/Login.css';
+import CultiveLogo from '../assets/CultiveLogo.png';
 
 export function Login() {
     const navigate = useNavigate();
@@ -104,73 +105,52 @@ export function Login() {
 
     return (
         <div className="login-container">
-            <div className="login-card">
-                <h1 className="login-title">
-                    {isResetMode ? 'Nova Senha' : 'Cultiva+'}
-                </h1>
-                <p className="login-subtitle">
-                    {isResetMode ? 'Defina sua nova senha de acesso.' : 'Acesse o painel de gestão agrícola.'}
-                </p>
 
-                <form className="login-form" onSubmit={isResetMode ? handleResetSenha : handleLogin}>
+            <div className="login-content-wrapper">
 
-                    <div className="input-group">
-                        <label className="input-label">E-mail Corporativo</label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="login-input"
-                            placeholder="exemplo@cultiva.com"
-                            required
-                        />
+
+                <div className="login-branding">
+                    <img src={CultiveLogo} alt="Cultiva+ Logo" className="login-logo-img" />
+                    <div className="branding-text">
+                        <h2>Cultive+</h2>
+                        {/*<p>Gestão Agrícola Inteligente</p>*/}
                     </div>
+                </div>
 
-                    {!isResetMode ? (
+                <div className="login-card">
+                    <h1 className="login-title">
+                        {isResetMode ? 'Nova Senha' : ''
+                           // : 'Cultiva+'
+                        }
+                    </h1>
+                    <p className="login-subtitle">
+                        {isResetMode ? 'Defina sua nova senha de acesso.' : 'Acesse o painel de gestão agrícola.'}
+                    </p>
+
+                    <form className="login-form" onSubmit={isResetMode ? handleResetSenha : handleLogin}>
+
                         <div className="input-group">
-                            <label className="input-label">Senha</label>
-                            <div className="input-wrapper">
-                                <input
-                                    type={mostrarSenha ? "text" : "password"}
-                                    value={senha}
-                                    onChange={(e) => setSenha(e.target.value)}
-                                    className="login-input"
-                                    placeholder="••••••••"
-                                    required
-                                />
-                                <button
-                                    type="button"
-                                    className="btn-toggle-password"
-                                    onClick={() => setMostrarSenha(!mostrarSenha)}
-                                >
-                                    {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
-                                </button>
-                            </div>
+                            <label className="input-label">E-mail Corporativo</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="login-input"
+                                placeholder="exemplo@cultiva.com"
+                                required
+                            />
                         </div>
-                    ) : (
-                        <>
-                            <div className="input-group">
-                                <label className="input-label">Código de Autorização</label>
-                                <input
-                                    type="text"
-                                    value={codigo}
-                                    onChange={(e) => setCodigo(e.target.value.toUpperCase())}
-                                    className="login-input input-code"
-                                    placeholder="XXXXXX"
-                                    maxLength={6}
-                                    required
-                                />
-                            </div>
 
+                        {!isResetMode ? (
                             <div className="input-group">
-                                <label className="input-label">Nova Senha</label>
+                                <label className="input-label">Senha</label>
                                 <div className="input-wrapper">
                                     <input
                                         type={mostrarSenha ? "text" : "password"}
-                                        value={novaSenha}
-                                        onChange={(e) => setNovaSenha(e.target.value)}
+                                        value={senha}
+                                        onChange={(e) => setSenha(e.target.value)}
                                         className="login-input"
-                                        placeholder="Digite a nova senha"
+                                        placeholder="••••••••"
                                         required
                                     />
                                     <button
@@ -181,57 +161,97 @@ export function Login() {
                                         {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                 </div>
-
-                                <div className="requisitos-container">
-                                    <p className="requisitos-titulo">Segurança da Senha:</p>
-                                    <RequisitoSenha valido={temTamanho} texto="Mínimo de 8 caracteres" />
-                                    <RequisitoSenha valido={temMaiuscula} texto="Uma letra maiúscula" />
-                                    <RequisitoSenha valido={temMinuscula} texto="Uma letra minúscula" />
-                                    <RequisitoSenha valido={temNumero} texto="Pelo menos um número" />
-                                    <RequisitoSenha valido={temEspecial} texto="Símbolo especial (@ # $ %)" />
-                                </div>
                             </div>
-                        </>
-                    )}
+                        ) : (
+                            <>
+                                <div className="input-group">
+                                    <label className="input-label">Código de Autorização</label>
+                                    <input
+                                        type="text"
+                                        value={codigo}
+                                        onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                                        className="login-input input-code"
+                                        placeholder="XXXXXX"
+                                        maxLength={6}
+                                        required
+                                    />
+                                </div>
 
-                    <button
-                        type="submit"
-                        className="btn-login"
-                        disabled={loading || (isResetMode && !isSenhaValida)}
-                    >
-                        {loading ? 'Validando...' : (
-                            isResetMode ? (
-                                <><Key size={18} /> Redefinir Senha</>
-                            ) : (
-                                <><LogIn size={18} /> Entrar no Sistema</>
-                            )
+                                <div className="input-group">
+                                    <label className="input-label">Nova Senha</label>
+                                    <div className="input-wrapper">
+                                        <input
+                                            type={mostrarSenha ? "text" : "password"}
+                                            value={novaSenha}
+                                            onChange={(e) => setNovaSenha(e.target.value)}
+                                            className="login-input"
+                                            placeholder="Digite a nova senha"
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn-toggle-password"
+                                            onClick={() => setMostrarSenha(!mostrarSenha)}
+                                        >
+                                            {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+                                        </button>
+                                    </div>
+
+                                    <div className="requisitos-container">
+                                        <p className="requisitos-titulo">Segurança da Senha:</p>
+                                        <RequisitoSenha valido={temTamanho} texto="Mínimo de 8 caracteres" />
+                                        <RequisitoSenha valido={temMaiuscula} texto="Uma letra maiúscula" />
+                                        <RequisitoSenha valido={temMinuscula} texto="Uma letra minúscula" />
+                                        <RequisitoSenha valido={temNumero} texto="Pelo menos um número" />
+                                        <RequisitoSenha valido={temEspecial} texto="Símbolo especial (@ # $ %)" />
+                                    </div>
+                                </div>
+                            </>
                         )}
-                    </button>
-                </form>
 
-                <div className="login-footer">
-                    {isResetMode ? (
                         <button
-                            type="button"
-                            className="link-action"
-                            onClick={() => setIsResetMode(false)}
+                            type="submit"
+                            className="btn-login"
+                            disabled={loading || (isResetMode && !isSenhaValida)}
                         >
-                            <ArrowLeft size={16} /> Voltar para o Login
+                            {loading ? 'Validando...' : (
+                                isResetMode ? (
+                                    <><Key size={18} /> Redefinir Senha</>
+                                ) : (
+                                    <><LogIn size={18} /> Entrar no Sistema</>
+                                )
+                            )}
                         </button>
-                    ) : (
-                        <>
-                            <p className="footer-text">Problemas com acesso?</p>
+                    </form>
+
+                    <div className="login-footer">
+                        {isResetMode ? (
                             <button
                                 type="button"
                                 className="link-action"
-                                onClick={() => setIsResetMode(true)}
+                                onClick={() => setIsResetMode(false)}
                             >
-                                <Key size={16} /> Redefinir minha senha
+                                <ArrowLeft size={16} /> Voltar para o Login
                             </button>
-                        </>
-                    )}
+                        ) : (
+                            <>
+                                <p className="footer-text">Problemas com acesso?</p>
+                                <button
+                                    type="button"
+                                    className="link-action"
+                                    onClick={() => setIsResetMode(true)}
+                                >
+                                    <Key size={16} /> Redefinir minha senha
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </div>
+
+
             </div>
+
+
         </div>
     );
 }

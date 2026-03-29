@@ -4,10 +4,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #16a34a 0%, #14532d 100%);
+    //background: linear-gradient(135deg, #16a34a 0%, #14532d 100%);
+    background: linear-gradient(rgba(20, 83, 45, 0.80), rgba(20, 83, 45, 0.80)),
+    url('../assets/CultiveBackgroud.png') no-repeat center center;
     background-attachment: fixed;
     background-size: cover;
-    background-color: #14532d;
+    //background-color: #14532d;
     position: relative;
     overflow-x: hidden;
     overflow-y: auto;
@@ -20,6 +22,50 @@ html, body {
     padding: 0;
     background-color: #14532d;
 }
+
+.login-content-wrapper {
+    display: flex;
+    flex-direction: row; /* Lado a lado */
+    align-items: center;
+    justify-content: center;
+    gap: 400px; /* Espaço entre a logo e o card */
+    z-index: 10;
+    max-width: 1200px;
+    width: 100%;
+}
+
+.login-branding {
+    display: flex;
+    flex-direction: column; /* Texto embaixo da logo */
+    align-items: center;
+    text-align: center;
+    color: white;
+    animation: fadeInScale 0.6s ease-out;
+}
+
+.login-logo-img {
+    width: 380px; /* Ajuste conforme necessário */
+    height: auto;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+
+}
+
+.branding-text h2 {
+    font-size: 3rem;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -2px;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.7));
+}
+
+.branding-text p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    font-weight: 300;
+    margin-top: 5px;
+}
+
 
 /* Elementos decorativos de fundo */
 .login-container::before {
@@ -41,7 +87,7 @@ html, body {
     border-radius: 24px;
     width: 100%;
     max-width: 420px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     z-index: 10;
     animation: fadeInScale 0.5s ease-out;
     height: fit-content;

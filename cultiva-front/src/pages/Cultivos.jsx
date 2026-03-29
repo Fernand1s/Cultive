@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import '../App.css';
-import '../css/cultivos.css';
+import '../css/Cultivos.css';
 import {
     Trash2, Plus, Calendar, Activity, Pencil, Droplets,
     Bug, Sprout, MapPin, Flag, CheckCircle2, AlertTriangle, X, Save, TrendingUp, Clock, AlertCircle

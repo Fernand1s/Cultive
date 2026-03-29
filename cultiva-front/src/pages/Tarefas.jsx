@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import '../App.css';
-import '../css/tarefas.css';
+import '../css/Tarefas.css';
 import {
     Plus, Calendar, Trash2, User,
     CheckCircle2, Edit2, Ban, StickyNote, ClipboardList, X, Clock
