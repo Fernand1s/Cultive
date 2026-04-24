@@ -435,15 +435,19 @@ const Cultivos = () => {
                                 <div className={`health-indicator ${isFinalizado ? 'health-colhido' : health.class}`}></div>
                                 <div className="cultivo-content">
                                     <div className="cultivo-header">
-                                        <div>
-                                            <span className={`status-badge ${statusInfo.class}`}>{statusInfo.text}</span>
-                                            <h3 className="cultivo-title">{cultivo.plantaCultivada?.nomePopular || 'Planta Removida'}</h3>
-                                            <p className="cultivo-subtitle">Plantio: {formatarData(cultivo.dataPlantio)}</p>
+                                        <div className="cultivo-title-box">                                           
+                                            <div>
+                                                <h3 className="cultivo-title">{cultivo.plantaCultivada?.nomePopular || 'Planta Removida'}</h3>
+                                                <p className="cultivo-subtitle">Plantio: {formatarData(cultivo.dataPlantio)}</p>
+                                            </div>  
+                                            <span className={`status-badge ${statusInfo.class}`}>{statusInfo.text}</span>                    
                                         </div>
+                                        {/** 
                                         <div style={{display:'flex', gap:'5px'}}>
                                             <button onClick={() => abrirModal(cultivo)} className="btn-icon-sm" title="Editar"><Pencil size={14}/></button>
                                             <button onClick={() => setConfirmacaoExclusao({aberta: true, id: cultivo.idCultivo})} className="btn-icon-sm danger" title="Excluir"><Trash2 size={14}/></button>
                                         </div>
+                                        */}
                                     </div>
 
                                     {!isFinalizado ? (
@@ -480,6 +484,7 @@ const Cultivos = () => {
 
                                 {!isFinalizado && (
                                     <div className="cultivo-actions">
+                                        {/** 
                                         <button
                                             className="btn-action-cultivo water"
                                             onClick={() => abrirModalEvento('IRRIGACAO', cultivo)}
@@ -487,7 +492,8 @@ const Cultivos = () => {
                                             style={{ opacity: isAtivo ? 1 : 0.5 }}
                                         >
                                             <Droplets size={18}/> Regar
-                                        </button>
+                                        </button>*/}
+
                                         <button
                                             className={`btn-action-cultivo ${cultivo.estadoPlanta === 'PRAGA' ? 'pest-active' : 'pest'}`}
                                             onClick={() => abrirModalEvento('PRAGA', cultivo)}
@@ -496,8 +502,15 @@ const Cultivos = () => {
                                         >
                                             <Bug size={18}/> {cultivo.estadoPlanta === 'PRAGA' ? 'Ver Praga' : 'Praga'}
                                         </button>
-                                        <button className="btn-icon-sm" onClick={() => abrirHistorico(cultivo)} style={{ width: '40px', height: '40px' }}>
+
+                                        <button className="btn-icon-sm" onClick={() => abrirHistorico(cultivo)}>
                                             <Clock size={18}/>
+                                        </button>
+
+                                        <button className="btn-icon-sm"  onClick={() => abrirModal(cultivo)} title="Editar"><Pencil size={18}/>
+                                        </button>
+
+                                        <button className="btn-icon-sm" onClick={() => setConfirmacaoExclusao({aberta: true, id: cultivo.idCultivo})}  title="Excluir"><Trash2 size={18}/>
                                         </button>
                                     </div>
                                 )}

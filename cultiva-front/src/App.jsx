@@ -18,9 +18,11 @@ import Plantas from "./pages/Plantas";
 import Cultivos from "./pages/Cultivos";
 import Dashboard from "./pages/Dashboard";
 import Tarefas from "./pages/Tarefas";
+import Estoque from "./pages/Estoque.jsx";
 import Administracao from "./pages/Administracao";
 import Relatorios from "./pages/Relatorios";
 import Perfil from "./pages/Perfil";
+
 
 // --- COMPONENTE DE PROTEÇÃO ADMIN ---
 const RotaAdmin = ({ children }) => {
@@ -70,8 +72,10 @@ const App = () => {
                         <Route path="/plantas" element={<DashboardLayout><Plantas /></DashboardLayout>} />
                         <Route path="/cultivos" element={<DashboardLayout><Cultivos /></DashboardLayout>} />
                         <Route path="/tarefas" element={<DashboardLayout><Tarefas /></DashboardLayout>} />
+                        <Route path="/estoque" element={<DashboardLayout><Estoque /></DashboardLayout>} />
                         <Route path="/relatorios" element={<DashboardLayout><Relatorios /></DashboardLayout>} />
                         <Route path="/perfil" element={<DashboardLayout><Perfil /></DashboardLayout>} />
+
 
                         {/* --- ROTA ADMIN --- */}
                         <Route path="/admin" element={

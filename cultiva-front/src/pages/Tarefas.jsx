@@ -311,23 +311,26 @@ const Tarefas = () => {
 
             {/* MODAL CRIAR/EDITAR */}
             {modalAberto && (
-                <div className="modal-modern-overlay">
-                    <div className="modal-modern-content">
-                        <div className="modal-header-premium">
+                <div className="modal-modern-overlay-tarefa">
+                    <div className="modal-modern-content-tarefa">
+                        <div className="modal-header-premium-tarefa">
                             <h2>{modoEdicao ? 'Ajustar Detalhes' : 'Nova Atribuição'}</h2>
-                            <X size={20} onClick={() => setModalAberto(false)} style={{cursor:'pointer'}}/>
+                        
+                            <button className="btn-close-modal" onClick={() => setModalAberto(false)}><X size={20} /></button>
+                        
+
                         </div>
-                        <form onSubmit={salvarTarefa} className="form-premium">
-                            <div className="form-group">
+                        <form onSubmit={salvarTarefa} className="form-premium-tarefa">
+                            <div className="form-group-tarefa">
                                 <label className="input-label">Título da Tarefa</label>
                                 <input className="login-input" placeholder="O que precisa ser feito?" value={novaTarefa.titulo} onChange={e => setNovaTarefa({...novaTarefa, titulo: e.target.value})} required />
                             </div>
-                            <div className="form-group">
+                            <div className="form-group-tarefa">
                                 <label className="input-label">Instruções Adicionais</label>
                                 <textarea className="login-input" style={{minHeight:'80px'}} placeholder="Descreva os detalhes..." value={novaTarefa.descricao} onChange={e => setNovaTarefa({...novaTarefa, descricao: e.target.value})} />
                             </div>
-                            <div className="form-row" style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'15px'}}>
-                                <div className="form-group">
+                            <div className="form-row-tarefa" style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'15px'}}>
+                                <div className="form-group-tarefa">
                                     <label className="input-label">Urgência</label>
                                     <select className="login-input" value={novaTarefa.prioridade} onChange={e => setNovaTarefa({...novaTarefa, prioridade: e.target.value})}>
                                         <option value="BAIXA">Baixa</option>
@@ -335,12 +338,12 @@ const Tarefas = () => {
                                         <option value="ALTA">Alta</option>
                                     </select>
                                 </div>
-                                <div className="form-group">
+                                <div className="form-group-tarefa">
                                     <label className="input-label">Data Limite</label>
                                     <input type="date" className="login-input" value={novaTarefa.dataPrazo} onChange={e => setNovaTarefa({...novaTarefa, dataPrazo: e.target.value})} required />
                                 </div>
                             </div>
-                            <div className="form-group">
+                            <div className="form-group-tarefa">
                                 <label className="input-label">Responsável pela Execução</label>
                                 <select
                                     className="login-input"
@@ -355,9 +358,9 @@ const Tarefas = () => {
                                     )}
                                 </select>
                             </div>
-                            <div className="modal-footer" style={{borderTop:'1px solid #f1f5f9', paddingTop:'20px', marginTop:'20px'}}>
-                                <button type="button" onClick={() => setModalAberto(false)} className="link-action" style={{color:'#64748b'}}>Descartar</button>
-                                <button type="submit" className="btn-login" style={{marginTop:0, padding:'10px 30px'}} disabled={carregando}>{carregando ? "Sincronizando..." : "Confirmar Tarefa"}</button>
+                            <div className="modal-footer-tarefa" style={{borderTop:'1px solid #f1f5f9', paddingTop:'20px', marginTop:'20px'}}>
+                                <button type="button" onClick={() => setModalAberto(false)} className="link-action-tarefa" style={{color:'#64748b'}}>Descartar</button>
+                                <button type="submit" className="btn-login-tarefa" style={{marginTop:0, padding:'10px 30px'}} disabled={carregando}>{carregando ? "Sincronizando..." : "Confirmar Tarefa"}</button>
                             </div>
                         </form>
                     </div>

@@ -209,8 +209,8 @@ const Plantas = () => {
                                         <PlantIcon size={22} />
                                     </div>
                                     <span className="plant-badge" style={{ backgroundColor: config.badgeStyle.bg, color: config.badgeStyle.color }}>
-                        {formatarTexto(planta.tipoPlanta)}
-                    </span>
+                                        {formatarTexto(planta.tipoPlanta)}
+                                    </span>
                                 </div>
 
                                 <h3 className="plant-name">{planta.nomePopular}</h3>
@@ -241,8 +241,9 @@ const Plantas = () => {
                                 <button className="btn-outline-sm" onClick={() => abrirModal(planta)}>
                                     <Pencil size={16} style={{marginRight: 8}}/> Editar
                                 </button>
+                                
                                 <button
-                                    className="btn-delete-user"
+                                    className="btn-delete-planta"
                                     onClick={() => abrirConfirmacaoExclusao(planta.idPlanta, planta.nomePopular)}
                                 >
                                     <Trash2 size={16} />

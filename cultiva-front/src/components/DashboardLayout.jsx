@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authService, notificationService } from '../services/api';
 import '../css/DashboardLayout.css';
 import {
-    Home, MapPin, Sprout, Wheat, BarChart3,
+    Home, MapPin, Sprout, Wheat, BarChart3, Warehouse,
     CheckSquare, Shield, LogOut, Bell, User,
     ChevronLeft, ChevronRight, Trash2, MailOpen, Mail, CheckCircle2
 } from 'lucide-react';
@@ -144,10 +144,11 @@ export const DashboardLayout = ({ children }) => {
 
                 <nav className="sidebar-nav">
                     <div onClick={closeSidebarMobile}>
-                        <NavItem to="/dashboard" icon={<Home size={20}/>} label="Início" active={isActive('/dashboard')} open={isSidebarOpen} />
+                        <NavItem to="/dashboard" icon={<Home size={20}/>} label="Dashboard" active={isActive('/dashboard')} open={isSidebarOpen} />
                         <NavItem to="/areas" icon={<MapPin size={20}/>} label="Áreas" active={isActive('/areas')} open={isSidebarOpen} />
                         <NavItem to="/plantas" icon={<Sprout size={20}/>} label="Plantas" active={isActive('/plantas')} open={isSidebarOpen} />
                         <NavItem to="/cultivos" icon={<Wheat size={20}/>} label="Cultivos" active={isActive('/cultivos')} open={isSidebarOpen} />
+                        <NavItem to="/estoque" icon={<Warehouse size={20}/>} label="Estoque" active={isActive('/estoque')} open={isSidebarOpen} />
                         <NavItem to="/tarefas" icon={<CheckSquare size={20}/>} label="Tarefas" active={isActive('/tarefas')} open={isSidebarOpen} />
                         <NavItem to="/relatorios" icon={<BarChart3 size={20}/>} label="Relatórios" active={isActive('/relatorios')} open={isSidebarOpen} />
                     </div>
@@ -172,7 +173,7 @@ export const DashboardLayout = ({ children }) => {
 
                     <div className="header-logo-container">
                         <Sprout size={28} color="white" className="logo-icon-premium" />
-                        <span className="logo-text-header">Cultiva<span className="v-soft-text">+</span></span>
+                        <span className="logo-text-header">Cultive<span className="v-soft-text">+</span></span>
                     </div>
 
                     <div className="header-v-divider opacity-20 hiding-mobile"></div>

@@ -34,17 +34,22 @@
     height: 5px;
     width: 100%;
 }
+
 .health-saudavel { background: #22c55e; }
 .health-atencao { background: #eab308; }
 .health-critico { background: #ef4444; }
 .health-colhido { background: #64748b; }
 
 .status-badge {
-    padding: 2px 8px;
+    padding: 4px 8px;
     border-radius: 6px;
     font-size: 0.65rem;
     font-weight: 800;
     text-transform: uppercase;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .status-ativo { background: #f0fdf4; color: #16a34a; }
 .status-colhido { background: #eff6ff; color: #1d4ed8; }
@@ -67,6 +72,13 @@
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 1rem;
+    
+}
+
+.cultivo-title-box{
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
 }
 
 .cultivo-title {
@@ -101,8 +113,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
     background: white;
@@ -124,10 +136,9 @@
     border-color: #fca5a5;
 }
 
-/* 5. AÇÕES RÁPIDAS (REGAR/PRAGA) */
+/* 5. AÇÕES RÁPIDAS (REGAR/PRAGA/ADAMENTO/EDITAR/EXCLUIR) */
 .cultivo-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
+    display: flex;
     gap: 10px;
     padding: 15px 1.25rem;
     border-top: 1px solid #f1f5f9;
@@ -147,6 +158,8 @@
     border: none;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 40px;
+    width: 100%;
 }
 
 .btn-action-cultivo.water { background: #eff6ff; color: #2563eb; }

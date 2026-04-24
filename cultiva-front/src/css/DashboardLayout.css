@@ -11,7 +11,9 @@
 .sidebar {
     position: fixed;
     left: 0; top: 0; bottom: 0;
-    background: linear-gradient(180deg, var(--v-darker) 0%, #0a3d08 100%);
+    /*background: linear-gradient(180deg, var(--v-darker) 0%, #0a3d08 100%);*/
+    /*background: var(--brand-gradient);*/
+    background: linear-gradient(180deg, var(--v-primary) 10%, #0a3d08 100%);
     z-index: 1000;
     transition: var(--transition);
     display: flex;
@@ -104,7 +106,8 @@
     position: fixed;
     top: 0; right: 0;
     height: var(--header-height);
-    background: var(--v-darker);
+    /*background: var(--v-darker); */
+    background: var(--brand-gradient);
     display: flex;
     align-items: center;
     justify-content: space-between;

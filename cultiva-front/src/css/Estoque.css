@@ -1,0 +1,188 @@
+.task-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 2.5rem;
+}
+
+.task-item {
+    background: white;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+}
+
+.task-item:hover {
+    transform: translateY(-2px);
+    border-color: #16a34a;
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.08);
+}
+
+/* Indicador de Status Lateral */
+.task-status-indicator {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+}
+
+/* Checkbox Customizado Cultiva+ */
+.custom-checkbox-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    min-width: 24px;
+    height: 24px;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    display: grid;
+    place-content: center;
+    transition: all 0.2s;
+}
+
+.custom-checkbox:checked {
+    background-color: #16a34a;
+    border-color: #16a34a;
+}
+
+.custom-checkbox:checked::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    background-color: white;
+}
+
+/* Conteúdo */
+.task-content {
+    flex-grow: 1;
+}
+
+.task-main-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.task-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.task-desc {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin: 0 0 10px 0;
+    line-height: 1.4;
+}
+
+/* Badges e Meta */
+.priority-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.prio-alta { background: #fee2e2; color: #dc2626; }
+.prio-media { background: #fef9c3; color: #a16207; }
+.prio-baixa { background: #f0fdf4; color: #16a34a; }
+
+.task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.meta-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #f1f5f9;
+}
+
+/* Estados Especiais */
+.task-item.completed {
+    background: #fcfcfc;
+    opacity: 0.8;
+}
+
+.task-item.completed .task-title {
+    text-decoration: line-through;
+    color: #94a3b8;
+}
+
+.task-item.atrasada {
+    border-color: #fecaca;
+    background: #fffafa;
+}
+
+/* Seções */
+.section-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 40px 0 20px 0;
+}
+
+.section-divider span {
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+
+.section-divider::after {
+    content: "";
+    height: 1px;
+    background: #e2e8f0;
+    width: 100%;
+}
+
+/* Empty State */
+.empty-state-tasks {
+    padding: 60px;
+    text-align: center;
+    background: white;
+    border-radius: 24px;
+    border: 2px dashed #e2e8f0;
+}
+
+/* Botões de Ação */
+.task-actions {
+    display: flex;
+    gap: 6px;
+}
+
+@media (max-width: 768px) {
+    .task-item { flex-direction: column; align-items: flex-start; }
+    .task-actions { width: 100%; justify-content: flex-end; border-top: 1px solid #f1f5f9; pt: 10px; }
+}

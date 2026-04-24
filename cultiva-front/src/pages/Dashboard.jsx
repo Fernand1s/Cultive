@@ -407,7 +407,9 @@ const Dashboard = () => {
 
     return (
         <div className="dashboard-wrapper animate-fade-in">
+            {/**
             <header className="dashboard-header">
+                
                 <div>
                     <h1>Dashboard Analytics</h1>
                     <p>Inteligência de dados para sua safra</p>
@@ -415,9 +417,12 @@ const Dashboard = () => {
                 <button className={`btn-sync ${loading ? 'spinning' : ''}`} onClick={carregarDadosGerais}>
                     <RefreshCw size={18} /> {loading ? 'Sincronizando...' : 'Sincronizar Dados'}
                 </button>
+                
             </header>
+            */}
 
             {/* Banner AI */}
+            {/** 
             {activeTab === 'geral' && sugestoesInteligentes.length > 0 && (
                 <div className="ai-suggestion-banner">
                     {sugestoesInteligentes.length > 1 && (
@@ -449,21 +454,30 @@ const Dashboard = () => {
                         </button>
                     )}
                 </div>
-            )}
+            )}*/}
 
             <div className="kpi-grid">
                 <StatCard title="Cultivos Ativos" value={kpis.ativos} subtext="Lotes em campo" icon={Sprout} colorClass="bg-green-light" />
                 <StatCard title="Sanidade Global" value={`${kpis.ativos > 0 ? Math.round((kpis.saudaveis/kpis.ativos)*100) : 0}%`} subtext="Plantas saudáveis" icon={Activity} colorClass="bg-blue-light" trend={kpis.saudaveis < kpis.ativos ? 'bad' : 'good'} />
                 <StatCard title="Pendências" value={kpis.tarefasPendentes} subtext="Tarefas para hoje" icon={ClipboardList} colorClass="bg-orange-light" />
-                <StatCard title="Áreas Disponíveis" value={rawAreas.length - kpis.ativos} subtext="Capacidade ociosa" icon={CloudSun} colorClass="bg-purple-light" />
+                <StatCard title="Áreas Disponíveis" value={rawAreas.length - kpis.ativos > 0 ? rawAreas.length - kpis.ativos : 0} subtext="Capacidade ociosa" icon={CloudSun} colorClass="bg-purple-light" />
+                {/*<StatCard title="Áreas Disponíveis" value={rawAreas.length - kpis.ativos} subtext="Capacidade ociosa" icon={CloudSun} colorClass="bg-purple-light" />*/}
             </div>
 
             <nav className="tabs-container">
-                {tabs.map(tab => (
+                <div className="tabs-group">
+                    {tabs.map(tab => (
                     <button key={tab.id} className={`tab-button ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}>
                         {tab.icon} {tab.label}
                     </button>
-                ))}
+                    ))}
+                </div>
+                
+                <div className="sync-button-wrapper">
+                    <button className={`btn-sync ${loading ? 'spinning' : ''}`} onClick={carregarDadosGerais}>
+                        <RefreshCw size={18} /> {loading ? 'Sincronizando...' : 'Sincronizar Dados'}
+                    </button>
+                </div>
             </nav>
 
             <main className="tab-content">
