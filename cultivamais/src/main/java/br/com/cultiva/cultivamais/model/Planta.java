@@ -19,6 +19,10 @@ public class Planta {
 
     private int cicloMedioDias;
     private String descricaoPlanta;
+
+    @jakarta.persistence.Column(columnDefinition = "TEXT")
+    private String fotoPlanta;
+
     private boolean excluido = false;
 
     @Enumerated(EnumType.STRING)
@@ -46,6 +50,7 @@ public class Planta {
     public TipoPlanta getTipoPlanta(){ return this.tipoPlanta; }
     public int getCicloMedioDias(){ return this.cicloMedioDias; }
     public String getDescricaoPlanta(){ return this.descricaoPlanta; }
+    public String getFotoPlanta() { return fotoPlanta; }
     public Set<TipoSolo> getSolosRecomendados() { return this.solosRecomendados; }
     public QuantidadeLuz getLuzRecomendada() { return luzRecomendada; }
     public QuantidadeAgua getAguaRecomendada() { return aguaRecomendada; } // Getter Água
@@ -58,6 +63,7 @@ public class Planta {
     public void setTipoPlanta(TipoPlanta tipoPlanta){ this.tipoPlanta = tipoPlanta; }
     public void setCicloMedioDias(int cicloMedioDias){ this.cicloMedioDias = cicloMedioDias; }
     public void setDescricaoPlanta(String descricaoPlanta){ this.descricaoPlanta = descricaoPlanta; }
+    public void setFotoPlanta(String fotoPlanta) { this.fotoPlanta = fotoPlanta; }
     public void setSolosRecomendados(Set<TipoSolo> solosRecomendados) { this.solosRecomendados = solosRecomendados; }
     public void setLuzRecomendada(QuantidadeLuz luzRecomendada) { this.luzRecomendada = luzRecomendada; }
     public void setAguaRecomendada(QuantidadeAgua aguaRecomendada) { this.aguaRecomendada = aguaRecomendada; } // Setter Água

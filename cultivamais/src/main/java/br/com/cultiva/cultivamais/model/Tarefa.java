@@ -3,6 +3,7 @@ package br.com.cultiva.cultivamais.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 public class Tarefa {
@@ -20,9 +21,21 @@ public class Tarefa {
     private String categoria;
     private LocalDateTime dataPrazo;
 
+    private String subcategoria;
+
+    @Column(columnDefinition = "TEXT")
+    private String informacoesExtras;
+
     private boolean concluida;
     private boolean cancelada = false;
+    private boolean emObservacao = false;
     private String observacaoConclusao;
+
+    @Column(columnDefinition = "TEXT")
+    private String fotoConclusao;
+
+    @Column(columnDefinition = "TEXT")
+    private String insumosUsadosJson;
 
     private LocalDateTime dataCriacao;
     private LocalDateTime dataConclusao;
@@ -37,11 +50,22 @@ public class Tarefa {
     @JsonIgnoreProperties({"tarefasAtribuidas", "tarefasCriadas", "senha", "hibernateLazyInitializer", "handler"})
     private Usuario criador;
 
+    @ManyToOne(fetch = FetchType.EAGER, optional = true)
+    @JoinColumn(name = "area_cultivo_id", nullable = true)
+    @JsonIgnore
+    private AreaCultivo areaCultivo;
+
+    @ManyToOne(fetch = FetchType.EAGER, optional = true)
+    @JoinColumn(name = "cultivo_id", nullable = true)
+    @JsonIgnore
+    private Cultivo cultivo;
+
     public Tarefa() {}
 
     public StatusTarefa getStatus() {
         if (this.cancelada) return StatusTarefa.CANCELADA;
         if (this.concluida) return StatusTarefa.CONCLUIDA;
+        if (this.emObservacao) return StatusTarefa.EM_OBSERVACAO;
         return StatusTarefa.PENDENTE;
     }
 
@@ -102,21 +126,26 @@ public class Tarefa {
         this.concluida = concluida;
     }
 
-    public boolean isCancelada() {
-        return cancelada;
-    }
+    public String getSubcategoria() { return subcategoria; }
+    public void setSubcategoria(String subcategoria) { this.subcategoria = subcategoria; }
 
-    public void setCancelada(boolean cancelada) {
-        this.cancelada = cancelada;
-    }
+    public String getInformacoesExtras() { return informacoesExtras; }
+    public void setInformacoesExtras(String informacoesExtras) { this.informacoesExtras = informacoesExtras; }
 
-    public String getObservacaoConclusao() {
-        return observacaoConclusao;
-    }
+    public boolean isCancelada() { return cancelada; }
+    public void setCancelada(boolean cancelada) { this.cancelada = cancelada; }
 
-    public void setObservacaoConclusao(String observacaoConclusao) {
-        this.observacaoConclusao = observacaoConclusao;
-    }
+    public boolean isEmObservacao() { return emObservacao; }
+    public void setEmObservacao(boolean emObservacao) { this.emObservacao = emObservacao; }
+
+    public String getObservacaoConclusao() { return observacaoConclusao; }
+    public void setObservacaoConclusao(String observacaoConclusao) { this.observacaoConclusao = observacaoConclusao; }
+
+    public String getFotoConclusao() { return fotoConclusao; }
+    public void setFotoConclusao(String fotoConclusao) { this.fotoConclusao = fotoConclusao; }
+
+    public String getInsumosUsadosJson() { return insumosUsadosJson; }
+    public void setInsumosUsadosJson(String insumosUsadosJson) { this.insumosUsadosJson = insumosUsadosJson; }
 
     public LocalDateTime getDataCriacao() {
         return dataCriacao;
@@ -149,4 +178,10 @@ public class Tarefa {
     public void setCriador(Usuario criador) {
         this.criador = criador;
     }
+
+    public AreaCultivo getAreaCultivo() { return areaCultivo; }
+    public void setAreaCultivo(AreaCultivo areaCultivo) { this.areaCultivo = areaCultivo; }
+
+    public Cultivo getCultivo() { return cultivo; }
+    public void setCultivo(Cultivo cultivo) { this.cultivo = cultivo; }
 }

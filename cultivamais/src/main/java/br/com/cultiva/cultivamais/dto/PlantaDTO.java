@@ -20,7 +20,8 @@
         private int cicloMedioDias;
     
         private String descricaoPlanta;
-    
+        private String fotoPlanta;
+
         @NotNull(message = "A recomendação de luz é obrigatória")
         private QuantidadeLuz luzRecomendada;
     
@@ -86,13 +87,11 @@
             this.cicloMedioDias = cicloMedioDias;
         }
 
-        public String getDescricaoPlanta() {
-            return descricaoPlanta;
-        }
+        public String getDescricaoPlanta() { return descricaoPlanta; }
+        public void setDescricaoPlanta(String descricaoPlanta) { this.descricaoPlanta = descricaoPlanta; }
 
-        public void setDescricaoPlanta(String descricaoPlanta) {
-            this.descricaoPlanta = descricaoPlanta;
-        }
+        public String getFotoPlanta() { return fotoPlanta; }
+        public void setFotoPlanta(String fotoPlanta) { this.fotoPlanta = fotoPlanta; }
 
         public QuantidadeLuz getLuzRecomendada() {
             return luzRecomendada;

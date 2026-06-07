@@ -20,6 +20,8 @@ public class UsuarioCadastroDTO {
 
     private FuncaoUsuario funcao;
 
+    private String fotoPerfil;
+
     public UsuarioCadastroDTO () {}
 
     public UsuarioCadastroDTO(String nomeUsuario, String email, String senha) {
@@ -58,5 +60,13 @@ public class UsuarioCadastroDTO {
 
     public void setFuncao(FuncaoUsuario funcao) {
         this.funcao = funcao;
+    }
+
+    public String getFotoPerfil() {
+        return fotoPerfil;
+    }
+
+    public void setFotoPerfil(String fotoPerfil) {
+        this.fotoPerfil = fotoPerfil;
     }
 }

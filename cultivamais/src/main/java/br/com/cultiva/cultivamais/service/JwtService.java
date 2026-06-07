@@ -15,10 +15,12 @@ public class JwtService {
 
     // FUNÇÃO: GERAÇÃO DO TOKEN JWT
     public String generateToken(Usuario usuario) {
+        String tenantSchema = br.com.cultiva.cultivamais.multitenant.TenantContext.getCurrentTenant();
         return Jwts.builder()
                 .setSubject(usuario.getEmail())
                 .claim("id", usuario.getIdUsuario())
                 .claim("funcao", usuario.getFuncao().toString())
+                .claim("tenantSchema", tenantSchema != null ? tenantSchema : "public")
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + 86400000))
                 .signWith(Keys.hmacShaKeyFor(SECRET_KEY.getBytes()), SignatureAlgorithm.HS256)

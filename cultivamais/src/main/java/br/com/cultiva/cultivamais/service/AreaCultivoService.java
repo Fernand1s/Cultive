@@ -49,10 +49,14 @@ public class AreaCultivoService {
                     areaExistente.setLocalizacaoArea(dadosAtualizados.getLocalizacaoArea());
                     areaExistente.setTamanhoArea(dadosAtualizados.getTamanhoArea());
                     areaExistente.setTipoSolo(dadosAtualizados.getTipoSolo());
+                    areaExistente.setQuantidadeLuz(dadosAtualizados.getQuantidadeLuz());
+                    areaExistente.setTopografia(dadosAtualizados.getTopografia());
+                    areaExistente.setStatusArea(dadosAtualizados.getStatusArea());
+                    areaExistente.setCulturaAnterior(dadosAtualizados.getCulturaAnterior());
+                    areaExistente.setObservacaoArea(dadosAtualizados.getObservacaoArea());
 
                     if (dadosAtualizados.getLatitudeArea() != null)
                         areaExistente.setLatitudeArea(dadosAtualizados.getLatitudeArea());
-
                     if (dadosAtualizados.getLongitudeArea() != null)
                         areaExistente.setLongitudeArea(dadosAtualizados.getLongitudeArea());
 

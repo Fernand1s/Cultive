@@ -30,7 +30,7 @@ html, body {
     justify-content: center;
     gap: 400px; /* Espaço entre a logo e o card */
     z-index: 10;
-    max-width: 1200px;
+    //max-width: 100%;
     width: 100%;
 }
 
@@ -44,9 +44,9 @@ html, body {
 }
 
 .login-logo-img {
-    width: 380px; /* Ajuste conforme necessário */
+    width: 480px; /* Ajuste conforme necessário */
     height: auto;
-    margin-bottom: 20px;
+    //margin-bottom: 20px;
     filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
 
 }

@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import br.com.cultiva.cultivamais.model.AreaCultivo;
+import br.com.cultiva.cultivamais.model.StatusArea;
+import br.com.cultiva.cultivamais.model.Topografia;
 import br.com.cultiva.cultivamais.service.AreaCultivoService;
 import br.com.cultiva.cultivamais.service.GeolocalizacaoService;
 import br.com.cultiva.cultivamais.service.GeolocalizacaoService.DadosSolares;
@@ -39,28 +41,35 @@ public class AreaCultivoController {
                 area.getTamanhoArea(),
                 area.getTipoSolo(),
                 area.getQuantidadeLuz(),
-                area.getObservacaoArea()
+                area.getObservacaoArea(),
+                area.getTopografia(),
+                area.getStatusArea(),
+                area.getCulturaAnterior()
         );
+    }
+
+    private void mapearCampos(AreaCultivo entidade, AreaCultivoDTO dto) {
+        entidade.setNomeArea(dto.getNomeArea());
+        entidade.setLocalizacaoArea(dto.getLocalizacaoArea());
+        entidade.setLatitudeArea(dto.getLatitudeArea());
+        entidade.setLongitudeArea(dto.getLongitudeArea());
+        entidade.setTamanhoArea(dto.getTamanhoArea());
+        entidade.setTipoSolo(dto.getTipoSolo());
+        entidade.setQuantidadeLuz(dto.getQuantidadeLuz());
+        entidade.setTopografia(dto.getTopografia());
+        entidade.setStatusArea(dto.getStatusArea());
+        entidade.setCulturaAnterior(dto.getCulturaAnterior());
+        entidade.setObservacaoArea(dto.getObservacaoArea());
     }
 
     // CRIAR ÁREA
     @PostMapping
     public ResponseEntity<AreaCultivoDTO> criarAreaCultivo(@Valid @RequestBody AreaCultivoDTO areaDTO) {
         AreaCultivo novaArea = new AreaCultivo();
-        novaArea.setNomeArea(areaDTO.getNomeArea());
-        novaArea.setLocalizacaoArea(areaDTO.getLocalizacaoArea());
-        novaArea.setLatitudeArea(areaDTO.getLatitudeArea());
-        novaArea.setLongitudeArea(areaDTO.getLongitudeArea());
-        novaArea.setTamanhoArea(areaDTO.getTamanhoArea());
-        novaArea.setTipoSolo(areaDTO.getTipoSolo());
-        novaArea.setQuantidadeLuz(areaDTO.getQuantidadeLuz());
-        novaArea.setObservacaoArea(areaDTO.getObservacaoArea());
-
+        mapearCampos(novaArea, areaDTO);
         AreaCultivo areaSalva = areaCultivoService.criarAreaCultivo(novaArea);
-
         logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
                 "Cadastrou nova área de cultivo: " + areaSalva.getNomeArea());
-
         return ResponseEntity.ok(converterParaDTO(areaSalva));
     }
 
@@ -98,12 +107,12 @@ public class AreaCultivoController {
 
     // EDITAR ÁREA
     @PutMapping("/{id}")
-    public ResponseEntity<AreaCultivoDTO> atualizarArea(@PathVariable Long id, @RequestBody AreaCultivo area) {
-        AreaCultivo areaAtualizada = areaCultivoService.atualizarArea(id, area);
-
+    public ResponseEntity<AreaCultivoDTO> atualizarArea(@PathVariable Long id, @RequestBody AreaCultivoDTO dto) {
+        AreaCultivo areaExistente = areaCultivoService.buscarPorId(id);
+        mapearCampos(areaExistente, dto);
+        AreaCultivo areaAtualizada = areaCultivoService.atualizarArea(id, areaExistente);
         logService.registrarLog(securityUtils.getNomeUsuarioLogado(),
                 "Atualizou a área de cultivo: " + areaAtualizada.getNomeArea());
-
         return ResponseEntity.ok(converterParaDTO(areaAtualizada));
     }
 }

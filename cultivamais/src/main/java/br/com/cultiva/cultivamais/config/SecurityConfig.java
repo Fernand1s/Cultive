@@ -44,15 +44,18 @@ public class SecurityConfig {
                         // Rotas públicas
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/api/usuarios/login", "/api/usuarios/gerar-codigo", "/api/usuarios/redefinir-senha").permitAll()
+                        .requestMatchers("/api/tenants/register").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
                         // Proteção da Administração: Apenas administradores acessam logs e gestão de usuários
                         .requestMatchers("/api/logs/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/usuarios/logout-global").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.GET, "/api/usuarios").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/usuarios").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/usuarios/**").hasRole("ADMINISTRADOR")
 
                         .requestMatchers(HttpMethod.GET, "/api/areas/**", "/api/plantas/**", "/api/cultivos/**", "/api/tarefas/**").authenticated()
+                        .requestMatchers("/api/estoque/**").authenticated()
 
                         .anyRequest().authenticated()
                 )

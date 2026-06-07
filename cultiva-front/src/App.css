@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after {
-    box-sizing: border-box;
+   //box-sizing: border-box;
 }
 
 html {
@@ -88,7 +88,7 @@ body {
     background: rgba(255, 255, 255, 0.4);
     backdrop-filter: blur(8px);
     border-radius: var(--radius-xl);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    //border: 1px solid rgba(255, 255, 255, 0.5);
     padding: 24px;
 }
 
@@ -135,14 +135,16 @@ body {
 
 /* Melhoria no scrollbar global para combinar com o background */
 ::-webkit-scrollbar {
-    width: 8px;
+    width: 10px;
+    border-radius: 30px;
+    background: transparent;
 }
 ::-webkit-scrollbar-track {
     background: var(--bg-app);
 }
 ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 10px;
+    border-radius: 30px;
     border: 2px solid var(--bg-app);
 }
 ::-webkit-scrollbar-thumb:hover {

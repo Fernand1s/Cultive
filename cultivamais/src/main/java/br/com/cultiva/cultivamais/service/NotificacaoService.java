@@ -107,14 +107,26 @@ public class NotificacaoService {
         List<Cultivo> todosCultivos = cultivoRepository.findAll();
         LocalDateTime limite = LocalDateTime.now().minusHours(24);
 
-        for (Cultivo cultivo : todosCultivos) {
-            boolean irrigadoRecentemente = cultivo.getEventosRegistrados().stream()
-                    .anyMatch(e -> e.getDataHora().isAfter(limite) && e instanceof Irrigacao);
+        // O alerta de irrigação é enviado para qualquer usuário do sistema
+        List<Usuario> todosUsuarios = usuarioRepository.findAll();
+        if (todosUsuarios.isEmpty()) return;
 
-            if (!irrigadoRecentemente && !cultivo.getAreaCultivo().getUsuariosResponsaveis().isEmpty()) {
-                Usuario responsavel = cultivo.getAreaCultivo().getUsuariosResponsaveis().get(0);
-                criarNotificacao(responsavel.getIdUsuario(), "Planta com sede!",
-                        "O cultivo de " + cultivo.getPlanta().getNomePopular() + " não é irrigado há mais de 24h.", "ALERTA");
+        for (Cultivo cultivo : todosCultivos) {
+            // Somente cultivos em campo precisam de irrigação
+            if (cultivo.getStatusCultivo() != StatusCultivo.ATIVO
+                    && cultivo.getStatusCultivo() != StatusCultivo.EM_PRODUCAO) {
+                continue;
+            }
+
+            boolean irrigadoRecentemente = cultivo.getEventosRegistrados().stream()
+                    .anyMatch(e -> e instanceof Irrigacao && e.getDataHora() != null && e.getDataHora().isAfter(limite));
+
+            if (!irrigadoRecentemente) {
+                String nomePlanta = cultivo.getPlanta() != null ? cultivo.getPlanta().getNomePopular() : "cultivo";
+                for (Usuario u : todosUsuarios) {
+                    criarNotificacao(u.getIdUsuario(), "Planta com sede!",
+                            "O cultivo de " + nomePlanta + " não é irrigado há mais de 24h.", "ALERTA");
+                }
 
                 logService.registrarLog("SISTEMA", "Gerou alerta de irrigação para cultivo ID: " + cultivo.getIdCultivo());
             }

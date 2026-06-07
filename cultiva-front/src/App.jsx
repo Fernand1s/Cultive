@@ -22,6 +22,7 @@ import Estoque from "./pages/Estoque.jsx";
 import Administracao from "./pages/Administracao";
 import Relatorios from "./pages/Relatorios";
 import Perfil from "./pages/Perfil";
+import Suporte from "./pages/Suporte";
 
 
 // --- COMPONENTE DE PROTEÇÃO ADMIN ---
@@ -75,6 +76,7 @@ const App = () => {
                         <Route path="/estoque" element={<DashboardLayout><Estoque /></DashboardLayout>} />
                         <Route path="/relatorios" element={<DashboardLayout><Relatorios /></DashboardLayout>} />
                         <Route path="/perfil" element={<DashboardLayout><Perfil /></DashboardLayout>} />
+                        <Route path="/suporte" element={<DashboardLayout><Suporte /></DashboardLayout>} />
 
 
                         {/* --- ROTA ADMIN --- */}

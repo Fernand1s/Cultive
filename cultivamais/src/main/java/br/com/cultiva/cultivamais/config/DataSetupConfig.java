@@ -1,9 +1,9 @@
 package br.com.cultiva.cultivamais.config;
 
-import br.com.cultiva.cultivamais.model.FuncaoUsuario;
-import br.com.cultiva.cultivamais.model.Usuario;
-import br.com.cultiva.cultivamais.repository.UsuarioRepository;
-import br.com.cultiva.cultivamais.service.UsuarioService;
+import br.com.cultiva.cultivamais.dto.TenantRegistrationDTO;
+import br.com.cultiva.cultivamais.model.Tenant;
+import br.com.cultiva.cultivamais.repository.TenantRepository;
+import br.com.cultiva.cultivamais.service.TenantService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,22 +11,39 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class DataSetupConfig {
 
+    // =========================================================
+    //  TENANTS MASTER — Edite aqui para adicionar novas empresas
+    // =========================================================
+    private static final Object[][] TENANTS_MASTER = {
+        // { nomeEmpresa,       schemaName,     adminNome,           adminEmail,              adminSenha      }
+        { "Lotus",              "tenant_lotus", "Administrador Lotus", "admin@lotus.com.br",   "Lotus@2026"   },
+        { "Horta Divertida",   "tenant_horta", "Administrador Horta", "admin@horta.com.br",   "Horta@2026"   },
+    };
+    // =========================================================
+
     @Bean
-    CommandLineRunner setupInicial(UsuarioRepository repository, UsuarioService service) {
+    CommandLineRunner setupInicial(TenantRepository tenantRepository, TenantService tenantService) {
         return args -> {
-            if (repository.count() == 0) {
-                System.out.println(">>> Banco vazio detectado. Criando administrador inicial...");
+            // Garante que o tenant padrão (schema "public") está registrado
+            if (!tenantRepository.existsBySchemaName("public")) {
+                tenantRepository.save(new Tenant("Sistema Padrão", "public"));
+                System.out.println(">>> Tenant padrão 'public' registrado.");
+            }
 
-                Usuario admin = new Usuario();
-                admin.setNomeUsuario("Administrador");
-                admin.setEmail("admin@cultiva.com");
-                admin.setSenha("Admin@123");
-                admin.setFuncao(FuncaoUsuario.ADMINISTRADOR);
-                admin.setAtivo(true);
+            // Cria os tenants master configurados acima (pulsa silenciosamente se já existir)
+            for (Object[] cfg : TENANTS_MASTER) {
+                String schema = (String) cfg[1];
+                if (tenantRepository.existsBySchemaName(schema)) continue;
 
-                service.criarUsuario(admin);
+                TenantRegistrationDTO dto = new TenantRegistrationDTO();
+                dto.setNomeEmpresa((String) cfg[0]);
+                dto.setSchemaName(schema);
+                dto.setAdminNome((String) cfg[2]);
+                dto.setAdminEmail((String) cfg[3]);
+                dto.setAdminSenha((String) cfg[4]);
 
-                System.out.println(">>> Usuário admin@cultiva.com criado com sucesso!");
+                tenantService.registrarTenant(dto);
+                System.out.printf(">>> Tenant '%s' criado — login: %s%n", cfg[0], cfg[3]);
             }
         };
     }

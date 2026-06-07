@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     User, Mail, Shield, Save, Key,
-    Bell, Check, X, Eye, EyeOff, Lock, ChevronRight
+    Bell, Check, X, Eye, EyeOff, Lock, ChevronRight, Camera
 } from 'lucide-react';
 import { userService, authService } from '../services/api';
 import { useNotify } from "../context/NotificationContext";
@@ -17,7 +17,8 @@ const Perfil = () => {
 
     const [formulario, setFormulario] = useState({
         nomeUsuario: '',
-        email: ''
+        email: '',
+        fotoPerfil: null
     });
 
     const [dadosSenha, setDadosSenha] = useState({
@@ -51,13 +52,22 @@ const Perfil = () => {
             setUsuarioBanco(dados);
             setFormulario({
                 nomeUsuario: dados.nomeUsuario || '',
-                email: dados.email || ''
+                email: dados.email || '',
+                fotoPerfil: dados.fotoPerfil || null
             });
         } catch (error) {
             notify('Erro ao carregar perfil.', 'error');
         } finally {
             setCarregando(false);
         }
+    };
+
+    const handleFotoChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => setFormulario(f => ({ ...f, fotoPerfil: reader.result }));
+        reader.readAsDataURL(file);
     };
 
     const handleSalvarDados = async (e) => {
@@ -67,7 +77,8 @@ const Perfil = () => {
                 nomeUsuario: formulario.nomeUsuario,
                 email: formulario.email,
                 funcao: usuarioBanco.funcao,
-                ativo: usuarioBanco.ativo
+                ativo: usuarioBanco.ativo,
+                fotoPerfil: formulario.fotoPerfil
             };
 
             await userService.atualizar(usuarioBanco.idUsuario, payload);
@@ -93,9 +104,17 @@ const Perfil = () => {
             notify('As senhas não conferem.', 'error');
             return;
         }
+        if (!isSenhaValida) {
+            notify('A nova senha não atende aos requisitos de segurança.', 'error');
+            return;
+        }
 
         try {
             await userService.atualizar(usuarioBanco.idUsuario, {
+                nomeUsuario: usuarioBanco.nomeUsuario,
+                email: usuarioBanco.email,
+                funcao: usuarioBanco.funcao,
+                ativo: usuarioBanco.ativo,
                 senhaAtual: dadosSenha.senhaAtual,
                 senha: dadosSenha.novaSenha
             });
@@ -130,12 +149,19 @@ const Perfil = () => {
         <div className="main-content animate-fade-in">
             <div className="perfil-header">
                 <div className="header-content">
-                    <div className="avatar-circle">
-                        <User size={48} color="#16a34a" />
+                    <div className="avatar-circle perfil-avatar-upload" onClick={() => document.getElementById('upload-perfil-foto').click()}>
+                        {formulario.fotoPerfil
+                            ? <img src={formulario.fotoPerfil} alt="Foto de perfil" className="perfil-foto-header" />
+                            : <User size={48} color="#16a34a" />}
+                        <div className="perfil-camera-overlay">
+                            <Camera size={20} color="white" />
+                        </div>
+                        <input type="file" accept="image/*" id="upload-perfil-foto" onChange={handleFotoChange} style={{ display: 'none' }} />
                     </div>
                     <div className="user-info-header">
                         <h2>{formulario.nomeUsuario}</h2>
                         <span className="role-badge">{usuarioBanco?.funcao}</span>
+                        <p className="perfil-foto-hint">Clique na foto para alterar</p>
                     </div>
                 </div>
             </div>

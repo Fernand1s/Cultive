@@ -164,7 +164,7 @@
 }
 
 /* Rodapé de Ações do Card */
-.user-actions-footer {
+.user-actions-footer-planta {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -222,4 +222,165 @@
 @media (max-width: 768px) {
     .plants-grid { grid-template-columns: 1fr; }
     .form-compact-grid { grid-template-columns: 1fr; }
+}
+/* ══════════════════════════════════════════════════════════
+   FOTO NO CARD DA PLANTA
+══════════════════════════════════════════════════════════ */
+.plant-card-foto-header {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+}
+
+.plant-card-foto-header img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.plant-card:hover .plant-card-foto-header img {
+    transform: scale(1.05);
+}
+
+.plant-card-foto-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   MODAL DE DETALHES
+══════════════════════════════════════════════════════════ */
+.plant-detalhe-content {
+    background: white;
+    border-radius: 24px;
+    width: 540px;
+    max-width: 95vw;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.plant-detalhe-foto-header {
+    position: relative;
+    height: 220px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.plant-detalhe-foto-header img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.plant-detalhe-close {
+    position: absolute !important;
+    top: 12px;
+    right: 12px;
+    background: rgba(255,255,255,0.9) !important;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+}
+
+.plant-detalhe-color-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 20px;
+    flex-shrink: 0;
+}
+
+.plant-detalhe-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.plant-detalhe-nome {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 4px;
+    line-height: 1.3;
+}
+
+.plant-detalhe-cientifico {
+    font-size: 0.85rem;
+    font-style: italic;
+    color: #94a3b8;
+    margin: 0;
+}
+
+.plant-detalhe-footer {
+    padding: 14px 20px;
+    border-top: 1px solid #f1f5f9;
+    background: white;
+    display: flex;
+    justify-content: right;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   UPLOAD DE FOTO NO FORMULÁRIO
+══════════════════════════════════════════════════════════ */
+.planta-foto-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8fafc;
+    border: 2px dashed #e2e8f0;
+    border-radius: 14px;
+    padding: 16px 24px;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    /*width: 100%;*/
+    justify-content: center;
+}
+
+.planta-foto-upload-btn:hover {
+    border-color: #16a34a;
+    color: #16a34a;
+    background: #f0fdf4;
+}
+
+.planta-foto-form-preview {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.planta-foto-form-preview img {
+    width: 100%;
+    max-height: 180px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+}
+
+.planta-foto-remover {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #fee2e2;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 12px;
+    color: #ef4444;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
 }

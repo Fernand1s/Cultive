@@ -12,7 +12,7 @@ import {
     PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area
 } from 'recharts';
-import {cultivoService, tarefaService, plantaService, areaService} from '../services/api';
+import {cultivoService, tarefaService, plantaService, areaService, authService, userService} from '../services/api';
 
 const StatCard = ({ title, value, subtext, icon: Icon, colorClass, trend }) => (
     <div className={`kpi-card animate-slide-up`}>
@@ -80,6 +80,9 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
+const COLORS = { green: '#16a34a', orange: '#f59e0b', blue: '#0ea5e9', red: '#ef4444', purple: '#8b5cf6', gray: '#94a3b8', yellow: '#eab308' };
+const PIE_COLORS = [COLORS.green, COLORS.blue, COLORS.orange, COLORS.purple];
+
 // --- COMPONENTE PRINCIPAL ---
 
 const Dashboard = () => {
@@ -115,8 +118,6 @@ const Dashboard = () => {
     const [filtroTipo, setFiltroTipo] = useState('geral');
     const [filtroId, setFiltroId] = useState('');
 
-    const COLORS = { green: '#16a34a', orange: '#f59e0b', blue: '#0ea5e9', red: '#ef4444', purple: '#8b5cf6', gray: '#94a3b8', yellow: '#eab308' };
-    const PIE_COLORS = [COLORS.green, COLORS.blue, COLORS.orange, COLORS.purple];
 
     const tabs = [
         { id: 'geral', label: 'Visão Geral', icon: <LayoutDashboard size={18} /> },
@@ -218,8 +219,8 @@ const Dashboard = () => {
                 tarefasConcluidas: tarefas.filter(t => t.concluida).length
             });
 
-            if (areas.length > 0 && !idAreaClimaSelecionada) {
-                setIdAreaClimaSelecionada(areas[0].idArea);
+            if (areas.length > 0) {
+                setIdAreaClimaSelecionada(prev => prev || areas[0].idArea);
             }
 
         } catch (error) {
@@ -228,7 +229,7 @@ const Dashboard = () => {
         } finally {
             setLoading(false);
         }
-    }, [notify, idAreaClimaSelecionada]);
+    }, [notify]);
 
     useEffect(() => { carregarDadosGerais(); }, [carregarDadosGerais]);
 
@@ -260,11 +261,11 @@ const Dashboard = () => {
         ativos.forEach(c => {
             const estado = (c.estadoPlanta || '').toUpperCase();
 
-            if (estado === 'SAUDAVEL' || estado === 'EXCELENTE') {
+            if (estado === 'SAUDAVEL') {
                 counts.SAUDAVEL++;
-            } else if (estado === 'EM_ATENCAO' || estado === 'ALERTA') {
+            } else if (estado === 'ATENCAO') {
                 counts.ATENCAO++;
-            } else if (estado === 'PRAGA' || estado === 'CRITICO' || estado === 'DOENCA') {
+            } else if (estado === 'PRAGA' || estado === 'CRITICO') {
                 counts.CRITICO++;
             }
         });
@@ -274,7 +275,7 @@ const Dashboard = () => {
             { name: 'Atenção', valor: counts.ATENCAO, fill: COLORS.orange },
             { name: 'Crítico', valor: counts.CRITICO, fill: COLORS.red }
         ];
-    }, [rawCultivos, COLORS]);
+    }, [rawCultivos]);
 
     const dadosTarefasAnaliticos = useMemo(() => {
         const inicio = new Date(filtroTarefaInicio).getTime();
@@ -342,8 +343,8 @@ const Dashboard = () => {
             const itemP = dataGrafico.find(d => d.mesIndex === dataP.getMonth() && d.ano === dataP.getFullYear());
             if (itemP) itemP.plantado += (c.quantidadePlantada || 0);
 
-            // Processa Colheita (Status conforme Swagger: 'COLHIDO' ou 'FINALIZADO')
-            if ((c.statusCultivo === 'COLHIDO' || c.statusCultivo === 'FINALIZADO') && c.dataColheitaFinal) {
+            // Processa Colheita
+            if (c.statusCultivo === 'COLHIDO' && c.dataColheitaFinal) {
                 const dataC = new Date(c.dataColheitaFinal);
                 const itemC = dataGrafico.find(d => d.mesIndex === dataC.getMonth() && d.ano === dataC.getFullYear());
                 if (itemC) itemC.colhido += (c.quantidadeColhida || 0);
@@ -614,8 +615,12 @@ const Dashboard = () => {
                                 <User size={18} className="icon-primary" />
                                 <select className="select-modern" value={filtroResponsavel} onChange={e => setFiltroResponsavel(e.target.value)}>
                                     <option value="TODOS">Todos Colaboradores</option>
-                                    {[...new Set(rawTarefas.map(t => t.responsavel?.nomeUsuario))].filter(Boolean).map(n => (
-                                        <option key={n} value={n}>{n}</option>
+                                    {[...new Map(
+                                        rawTarefas
+                                            .filter(t => t.responsavel?.idUsuario)
+                                            .map(t => [t.responsavel.idUsuario, t.responsavel.nomeUsuario])
+                                    ).entries()].map(([id, nome]) => (
+                                        <option key={id} value={String(id)}>{nome}</option>
                                     ))}
                                 </select>
                             </div>

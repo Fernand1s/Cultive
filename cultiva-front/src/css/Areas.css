@@ -78,12 +78,13 @@
     background: var(--card-surface);
     border-radius: var(--radius-xl);
     border: 1px solid var(--border-color);
-    padding: 1.75rem;
+    padding: 0 1.75rem 1.75rem;
     position: relative;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: var(--shadow-premium);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .area-card:hover {
@@ -91,11 +92,33 @@
     border-color: var(--v-medium);
 }
 
+/* Barra colorida de status no topo do card */
+.area-status-bar {
+    height: 5px;
+    margin: 0 -1.75rem 1.25rem;
+    width: calc(100% + 3.5rem);
+}
+
 .area-card-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
+    gap: 10px;
+}
+
+.area-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-top: 6px;
+    white-space: nowrap;
 }
 
 .area-title {
@@ -170,29 +193,29 @@
     padding: 20px;
 }
 
-.modal-modern-content {
+.modal-modern-content-area {
     background: white;
     border-radius: 24px;
     padding: 2rem;
     width: 100%;
-    max-width: 850px;
+    max-width: 900px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
     position: relative;
-    max-height: 90vh;
+    /*height: 900px;*/
     display: flex;
     flex-direction: column;
     overflow: hidden;
 }
 
-.modal-modern-content form {
+.modal-modern-content-area form {
     overflow-y: auto;
     padding-right: 10px;
 }
 
-.modal-modern-content form::-webkit-scrollbar {
+.modal-modern-content-area form::-webkit-scrollbar {
     width: 6px;
 }
-.modal-modern-content form::-webkit-scrollbar-thumb {
+.modal-modern-content-area form::-webkit-scrollbar-thumb {
     background: #e2e8f0;
     border-radius: 10px;
 }
@@ -284,7 +307,7 @@
 
 /* Mapa Custom */
 .map-container-wrapper {
-    height: 300px;
+    height: 500px;
     border-radius: 16px;
     overflow: hidden;
     border: 1px solid var(--border-color);
@@ -306,4 +329,30 @@
     .modal-modern-content { padding: 1.5rem; }
     .kpi-grid { grid-template-columns: 1fr; }
     .areas-grid { grid-template-columns: 1fr; }
+}
+/* ── Seção de título dentro do formulário ─────────────── */
+.area-form-section-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #94a3b8;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 14px;
+}
+
+/* ── Container de cultivos dentro do card ─────────────── */
+.cultivos-list-container {
+    background: #f8fafc;
+    padding: 14px;
+    margin-top: 14px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    animation: slideDown 0.3s ease-out;
+}
+
+/* ── KPI com 4 colunas ────────────────────────────────── */
+@media (min-width: 1024px) {
+    .kpi-grid { grid-template-columns: repeat(4, 1fr); }
 }

@@ -5,7 +5,8 @@ import '../css/Administracao.css';
 import {
     UserPlus, Trash2, Search, Edit, Ban, CheckCircle,
     X, ShieldAlert, FileText, Key, AlertCircle,
-    Users, Activity, Lock, ChevronDown, ChevronUp, Calendar
+    Users, Activity, Lock, ChevronDown, ChevronUp, Calendar, Eye, EyeOff, Check, CheckCircle as CheckCircleIcon,
+    Copy, ClipboardCheck, Camera
 } from 'lucide-react';
 
 // Importação do sistema de notificações
@@ -30,11 +31,12 @@ const Administracao = () => {
 
     const [modalAberta, setModalAberta] = useState(false);
     const [usuarioEmEdicao, setUsuarioEmEdicao] = useState(null);
-    const [formData, setFormData] = useState({ nome: '', email: '', tipo: 'TECNICO_AGRICOLA' });
+    const [formData, setFormData] = useState({ nome: '', email: '', senha: '', confirmarSenha: '', tipo: 'TECNICO_AGRICOLA', fotoPreview: null });
 
     const [modalCodigo, setModalCodigo] = useState(false);
     const [codigoGerado, setCodigoGerado] = useState('');
     const [usuarioNomeCodigo, setUsuarioNomeCodigo] = useState('');
+    const [copiado, setCopiado] = useState(false);
 
     const [logs, setLogs] = useState([]);
     const [modalLogsOpen, setModalLogsOpen] = useState(false);
@@ -200,56 +202,86 @@ const Administracao = () => {
 
     // --- UI HELPERS ---
     const focarBuscaUsuario = () => searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) || searchInputRef.current?.focus();
-    const abrirModalCriacao = () => { setUsuarioEmEdicao(null); setFormData({ nome: '', email: '', tipo: 'TECNICO_AGRICOLA' }); setModalAberta(true); };
-    const abrirModalEdicao = (user) => { setUsuarioEmEdicao(user); setFormData({ nome: user.nome, email: user.email, tipo: user.tipo }); setModalAberta(true); };
-    const fecharModal = () => { setModalAberta(false); setUsuarioEmEdicao(null); setFormData({ nome: '', email: '', tipo: 'TECNICO_AGRICOLA' })};
+    const abrirModalCriacao = () => { setUsuarioEmEdicao(null); setFormData({ nome: '', email: '', senha: '', confirmarSenha: '', tipo: 'TECNICO_AGRICOLA', fotoPreview: null }); setModalAberta(true); };
+    const abrirModalEdicao = (user) => { setUsuarioEmEdicao(user); setFormData({ nome: user.nome, email: user.email, senha: '', confirmarSenha: '', tipo: user.tipo, fotoPreview: user.fotoPerfil || null }); setModalAberta(true); };
+    const fecharModal = () => { setModalAberta(false); setUsuarioEmEdicao(null); setFormData({ nome: '', email: '', senha: '', confirmarSenha: '', tipo: 'TECNICO_AGRICOLA', fotoPreview: null }); };
     const getIniciais = (nome) => nome ? nome.substring(0, 2).toUpperCase() : '??';
+
+    const handleFotoChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => setFormData(f => ({ ...f, fotoPreview: reader.result }));
+        reader.readAsDataURL(file);
+    };
+
+    // --- VALIDAÇÃO DE EMAIL ---
+    const isEmailValido = (email) => {
+        const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regexEmail.test(email);
+    };
 
     // --- AÇÕES DO SISTEMA ---
     const handleSalvar = async () => {
         if (salvando) return;
+
         if (!formData.nome || !formData.email) {
-            notify("Preencha todos os campos obrigatórios.", "error");
+            notify("Nome e e-mail são obrigatórios.", "error");
             return;
+        }
+        if (!isEmailValido(formData.email)) {
+            notify("E-mail inválido. Digite um e-mail válido.", "error");
+            return;
+        }
+
+        if (!usuarioEmEdicao) {
+            // Criação: senha obrigatória e deve atender requisitos
+            if (!formData.senha || !formData.confirmarSenha || !isSenhaValida) {
+                notify("Preencha a senha atendendo todos os requisitos.", "error");
+                return;
+            }
+        } else if (formData.senha) {
+            // Edição: se senha foi digitada, valida normalmente
+            if (!isSenhaValida) {
+                notify("A nova senha não atende aos requisitos de segurança.", "error");
+                return;
+            }
+            if (formData.senha !== formData.confirmarSenha) {
+                notify("As senhas não coincidem.", "error");
+                return;
+            }
         }
 
         setSalvando(true);
         try {
-
-            const usuarioLogado = authService.obterUsuarioLogado();
-
-            const usuarioParaSalvar = {
-                nomeUsuario: formData.nome,
-                email: formData.email,
-                funcao: formData.tipo,
-                ativo: true
-            };
             if (usuarioEmEdicao) {
-                await userService.atualizar(usuarioEmEdicao.id, usuarioParaSalvar);
-                await userService.registrarLog(
-                    `Editou usuário: ${formData.nome}`,
-                    `Alterou dados do usuário ID ${usuarioEmEdicao.id}`,
-                    usuarioLogado.idUsuario || usuarioLogado.id
-                );
-
+                const payload = {
+                    nomeUsuario: formData.nome,
+                    email: formData.email,
+                    funcao: formData.tipo,
+                    ativo: usuarioEmEdicao.ativo,
+                    fotoPerfil: formData.fotoPreview,
+                    ...(formData.senha ? { senha: formData.senha } : {})
+                };
+                await userService.atualizar(usuarioEmEdicao.id, payload);
                 notify("Usuário atualizado com sucesso!", "success");
-                setSalvando(false);
             } else {
-                const novoUsuario = await userService.criar(usuarioParaSalvar);
-
-                await userService.registrarLog(
-                    `Criou novo usuário: ${formData.nome}`,
-                    `Cadastrou usuário com e-mail ${formData.email}`,
-                    usuarioLogado.idUsuario || usuarioLogado.id
-                );
-
-                notify(`Usuário criado! Senha padrão: CultivaMais@2026`, "success");
-                setSalvando(false);
+                await userService.criar({
+                    nomeUsuario: formData.nome,
+                    email: formData.email,
+                    senha: formData.senha,
+                    funcao: formData.tipo,
+                    ativo: true,
+                    fotoPerfil: formData.fotoPreview
+                });
+                notify("Usuário criado com sucesso!", "success");
             }
             await fetchUsuarios();
             fecharModal();
         } catch (error) {
-            notify("Erro ao salvar: " + (error.response?.data?.message || error.message), "error");
+            notify("Erro ao salvar: " + (error.message || "Tente novamente."), "error");
+        } finally {
+            setSalvando(false);
         }
     };
 
@@ -262,39 +294,23 @@ const Administracao = () => {
         const novoStatus = !user.ativo;
         const acaoTexto = novoStatus ? 'Desbloqueado' : 'Bloqueado';
         try {
-            const usuarioLogado = authService.obterUsuarioLogado();
             await userService.atualizar(user.id, {
-                ativo: novoStatus,
-                contexto: 'alteracao_status',
-                acaoLog: novoStatus ? 'Desbloquear' : 'Bloquear'
+                nomeUsuario: user.nome,
+                email: user.email,
+                funcao: user.tipo,
+                ativo: novoStatus
             });
-
-            await userService.registrarLog(
-                `${user.ativo ? 'Bloqueou' : 'Desbloqueou'} usuário: ${user.nome}`,
-                `Status alterado para ${!user.ativo}`,
-                usuarioLogado.idUsuario || usuarioLogado.id
-            );
 
             notify(`Usuário ${user.nome} ${acaoTexto.toLowerCase()}!`, "info");
             fetchUsuarios();
         } catch (error) {
             notify(`Erro ao alterar status do usuário.`, "error");
-        } finally {
-            setSalvando(false);
         }
     };
 
     const executarExclusao = async () => {
         try {
-            const usuarioLogado = authService.obterUsuarioLogado();
-
             await userService.excluir(confirmacaoExclusao.id);
-
-            await userService.registrarLog(
-                `Excluiu usuário: ${confirmacaoExclusao.nome}`,
-                `Remoção permanente do ID ${confirmacaoExclusao.id}`,
-                usuarioLogado.idUsuario || usuarioLogado.id
-            );
 
             notify(`Usuário ${confirmacaoExclusao.nome} removido.`, "success");
             setConfirmacaoExclusao({ aberta: false, id: null, nome: '' });
@@ -316,15 +332,48 @@ const Administracao = () => {
         }
     };
 
-    const executarLogoutGeral = () => {
+    const executarLogoutGeral = async () => {
         setConfirmacaoLogoutGeral(false);
-        notify("Comando de logout global enviado com sucesso.", "success");
+        try {
+            await userService.logoutGlobal();
+            notify("Todas as sessões foram encerradas. Você será redirecionado ao login.", "success");
+            setTimeout(() => authService.logout(), 1500);
+        } catch (error) {
+            notify("Erro ao executar logout global.", "error");
+        }
     };
 
     const usuariosFiltrados = usuarios.filter(u =>
         (u.nome && u.nome.toLowerCase().includes(termoBusca.toLowerCase())) ||
         (u.email && u.email.toLowerCase().includes(termoBusca.toLowerCase()))
     );
+
+    
+    const [mostrarSenha, setMostrarSenha] = useState(false);
+    const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+
+    // --- VALIDAÇÃO EM TEMPO REAL ---
+    const temTamanho = formData.senha.length >= 8;
+    const temMaiuscula = /[A-Z]/.test(formData.senha);
+    const temMinuscula = /[a-z]/.test(formData.senha);
+    const temNumero = /[0-9]/.test(formData.senha);
+    const temEspecial = /[@#$%^&+=!]/.test(formData.senha);
+    const isSenhaValida = temTamanho && temMaiuscula && temMinuscula && temNumero && temEspecial;
+
+    const RequisitoSenha = ({ valido, texto }) => (
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '0.75rem',
+            color: valido ? '#16a34a' : '#94a3b8',
+            marginBottom: '4px'
+        }}>
+            {valido ? <Check size={14} strokeWidth={3} /> : <div style={{width: 6, height: 6, borderRadius: '50%', background: '#cbd5e1', marginLeft: 4}} />}
+            <span style={{ fontWeight: valido ? '600' : '400' }}>{texto}</span>
+        </div>
+    );
+
 
     return (
         <div className="main-content animate-fade-in" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', width: '100%', boxSizing: 'border-box' }}>            <div className="admin-header">
@@ -343,7 +392,7 @@ const Administracao = () => {
                         <h3 className="shortcut-title">Gerenciar Usuários</h3>
                         <p className="dashboard-subtitle">Buscar e editar equipe.</p>
                     </div>
-                    <div className="icon-circle blue"><Users size={24} /></div>]
+                    <div className="icon-circle blue"><Users size={24} /></div>
                 </div>
                 <div onClick={fetchLogs} className="shortcut-card green">
                     <div>
@@ -383,8 +432,10 @@ const Administracao = () => {
                             <button className="btn-delete-user" onClick={() => setConfirmacaoExclusao({ aberta: true, id: user.id, nome: user.nome })} title="Excluir">
                                 <Trash2 size={18} />
                             </button>
-                            <div className={`user-avatar-lg ${user.tipo === 'ADMINISTRADOR' ? 'avatar-admin' : 'avatar-tecnico'}`}>
-                                {getIniciais(user.nome)}
+                            <div className={`user-avatar-lg ${user.tipo === 'ADMINISTRADOR' ? 'avatar-admin' : 'avatar-tecnico'} ${user.fotoPerfil ? 'avatar-com-foto' : ''}`}>
+                                {user.fotoPerfil
+                                    ? <img src={user.fotoPerfil} alt={user.nome} className="user-avatar-photo" />
+                                    : getIniciais(user.nome)}
                             </div>
                             <div className="user-info-content">
                                 <h3>{user.nome}</h3>
@@ -441,11 +492,38 @@ const Administracao = () => {
             {/* MODAL CRIAR/EDITAR */}
             {modalAberta && (
                 <div className="modal-modern-overlay">
-                    <div className="modal-modern-content">
+                    <div className="modal-modern-content-admin">
                         <div className="modal-header-flex">
                             <h2 className="modal-title">{usuarioEmEdicao ? 'Editar Usuário' : 'Novo Usuário'}</h2>
                             <button onClick={fecharModal} className="btn-close-modal"><X size={24} /></button>
                         </div>
+                        {/* FOTO DE PERFIL */}
+                        <div className="foto-perfil-upload-area">
+                            <div className={`foto-perfil-preview ${formData.fotoPreview ? 'com-foto' : ''}`}>
+                                {formData.fotoPreview
+                                    ? <img src={formData.fotoPreview} alt="Preview" className="foto-perfil-img" />
+                                    : <span className="foto-perfil-iniciais">
+                                        {formData.nome ? getIniciais(formData.nome) : <Camera size={26} color="#94a3b8" />}
+                                      </span>
+                                }
+                                <label htmlFor="upload-foto-usuario" className="foto-perfil-overlay" title="Alterar foto">
+                                    <Camera size={18} color="white" />
+                                </label>
+                            </div>
+                            <input type="file" accept="image/*" id="upload-foto-usuario" onChange={handleFotoChange} style={{ display: 'none' }} />
+                            <div className="foto-perfil-acoes">
+                                <label htmlFor="upload-foto-usuario" className="foto-perfil-link">
+                                    {formData.fotoPreview ? 'Alterar foto' : 'Adicionar foto de perfil'}
+                                </label>
+                                {formData.fotoPreview && (
+                                    <button type="button" className="foto-perfil-remover"
+                                        onClick={() => setFormData(f => ({ ...f, fotoPreview: null }))}>
+                                        Remover
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
                         <div className="form-group">
                             <label className="form-label">Nome</label>
                             <input className="form-input" placeholder="Nome completo do colaborador" value={formData.nome} onChange={(e) => setFormData({...formData, nome: e.target.value})} />
@@ -460,6 +538,39 @@ const Administracao = () => {
                                 {Object.entries(TIPOS_USUARIO).map(([key, label]) => (<option key={key} value={key}>{label}</option>))}
                             </select>
                         </div>
+                        <div className="form-group">
+                            <label className="form-label">Senha</label>
+                            <input className="form-input" placeholder="Senha do usuário" type={mostrarSenha ? "text" : "password"} value={formData.senha} onChange={(e) => setFormData({...formData, senha: e.target.value})} required />
+                            <button
+                            type="button"
+                            className="btn-toggle-password-one"
+                            onClick={() => setMostrarSenha(!mostrarSenha)}
+                        >
+                            {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                        
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Confirmar Senha</label>
+                            <input className="form-input" placeholder="Confirme a senha do usuário" type={mostrarConfirmarSenha ? "text" : "password"} value={formData.confirmarSenha} onChange={(e) => setFormData({...formData, confirmarSenha: e.target.value})} required />
+                            <button
+                                type="button"
+                                className="btn-toggle-password-two"
+                                onClick={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}
+                            >
+                                {mostrarConfirmarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        
+                        </div>
+                        
+                        <div className="requisitos-container">
+                            <p className="requisitos-titulo">Segurança da Senha:</p>
+                            <RequisitoSenha valido={temTamanho} texto="Mínimo de 8 caracteres" />
+                            <RequisitoSenha valido={temMaiuscula} texto="Uma letra maiúscula" />
+                            <RequisitoSenha valido={temMinuscula} texto="Uma letra minúscula" />
+                            <RequisitoSenha valido={temNumero} texto="Pelo menos um número" />
+                            <RequisitoSenha valido={temEspecial} texto="Símbolo especial (@ # $ %)" />
+                        </div>
                         <div className="modal-footer">
                             <button className="btn-outline" onClick={fecharModal}>Cancelar</button>
                             <button className="botao-ver" onClick={handleSalvar}>Salvar</button>
@@ -472,9 +583,35 @@ const Administracao = () => {
             {modalCodigo && (
                 <div className="modal-modern-overlay">
                     <div className="modal-modern-content code-modal">
-                        <h2 className="modal-title">Código para {usuarioNomeCodigo}</h2>
+                        <div className="code-modal-icon">
+                            <Key size={28} color="#eab308" />
+                        </div>
+                        <h2 className="modal-title" style={{ marginBottom: '6px' }}>Código de Recuperação</h2>
+                        <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '20px' }}>
+                            Passe este código para <strong>{usuarioNomeCodigo}</strong> usar na tela de login.
+                        </p>
+
                         <div className="generated-code-display">{codigoGerado}</div>
-                        <button className="botao-ver" onClick={() => setModalCodigo(false)}>Fechar</button>
+
+                        <button
+                            className={`btn-copiar-codigo ${copiado ? 'copiado' : ''}`}
+                            onClick={() => {
+                                navigator.clipboard.writeText(codigoGerado);
+                                setCopiado(true);
+                                setTimeout(() => setCopiado(false), 2500);
+                            }}
+                        >
+                            {copiado ? <><ClipboardCheck size={16} /> Copiado!</> : <><Copy size={16} /> Copiar código</>}
+                        </button>
+
+                        <p className="code-modal-aviso">
+                            Este código é válido para uma única redefinição de senha.
+                        </p>
+
+                        <button className="btn-outline" style={{ width: '100%', padding: '11px', borderRadius: '12px', marginTop: '4px' }}
+                            onClick={() => { setModalCodigo(false); setCopiado(false); }}>
+                            Fechar
+                        </button>
                     </div>
                 </div>
             )}

@@ -3,6 +3,10 @@ package br.com.cultiva.cultivamais.service;
 import java.util.List;
 import java.util.UUID;
 
+import br.com.cultiva.cultivamais.model.UsuarioTenant;
+import br.com.cultiva.cultivamais.multitenant.TenantContext;
+import br.com.cultiva.cultivamais.multitenant.TenantIdentifierResolver;
+import br.com.cultiva.cultivamais.repository.UsuarioTenantRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,13 +21,18 @@ import io.micrometer.common.lang.NonNull;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final UsuarioTenantRepository usuarioTenantRepository;
     private final LogService logService;
     private final PasswordEncoder passwordEncoder;
     private final NotificacaoService notificacaoService;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, LogService logService,
-                          PasswordEncoder passwordEncoder, NotificacaoService notificacaoService) {
+    public UsuarioService(UsuarioRepository usuarioRepository,
+                          UsuarioTenantRepository usuarioTenantRepository,
+                          LogService logService,
+                          PasswordEncoder passwordEncoder,
+                          NotificacaoService notificacaoService) {
         this.usuarioRepository = usuarioRepository;
+        this.usuarioTenantRepository = usuarioTenantRepository;
         this.logService = logService;
         this.passwordEncoder = passwordEncoder;
         this.notificacaoService = notificacaoService;
@@ -46,6 +55,12 @@ public class UsuarioService {
             }
 
             Usuario usuarioSalvo = usuarioRepository.save(novoUsuario);
+
+            // Registra o mapeamento email → schema no schema público (SQL schema-qualified)
+            String tenantAtual = TenantContext.getCurrentTenant();
+            String schema = (tenantAtual != null && !tenantAtual.isBlank())
+                    ? tenantAtual : TenantIdentifierResolver.DEFAULT_TENANT;
+            usuarioTenantRepository.save(new UsuarioTenant(usuarioSalvo.getEmail(), schema));
 
             logService.registrarLog("SISTEMA", "Criou novo usuário: " + usuarioSalvo.getNomeUsuario());
 
@@ -100,6 +115,9 @@ public class UsuarioService {
             usuario.setSenha(passwordEncoder.encode(dadosAtualizados.getSenha()));
             senhaAlterada = true;
         }
+        if (dadosAtualizados.getFotoPerfil() != null) {
+            usuario.setFotoPerfil(dadosAtualizados.getFotoPerfil());
+        }
 
         Usuario salvo = usuarioRepository.save(usuario);
 
@@ -122,10 +140,17 @@ public class UsuarioService {
 
     // AUTENTICAR USUÁRIO
     public Usuario autenticar(String email, String senhaPlana) {
+        // Descobre em qual schema o usuário está antes de buscar os dados completos
+        UsuarioTenant mapeamento = usuarioTenantRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        TenantContext.setCurrentTenant(mapeamento.getTenantSchema());
+        // TenantContext é limpo pelo SecurityFilter no finally após a requisição completa
+
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        if (usuario != null && passwordEncoder.matches(senhaPlana, usuario.getSenha())) {
+        if (passwordEncoder.matches(senhaPlana, usuario.getSenha())) {
             if (Boolean.TRUE.equals(usuario.getAtivo())) {
                 logService.registrarLog(usuario.getNomeUsuario(), "Realizou Login");
                 return usuario;
@@ -140,28 +165,27 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        if (usuario != null) {
-            String codigo = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-            usuario.setCodigoRecuperacao(codigo);
-            usuarioRepository.save(usuario);
-            return codigo;
-        }
-        return null;
+        String codigo = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        usuario.setCodigoRecuperacao(codigo);
+        usuarioRepository.save(usuario);
+        return codigo;
     }
 
     // REDEFINIR SENHA
     @Transactional
     public boolean redefinirSenhaComCodigo(String email, String codigoInput, String novaSenha) {
+        // Resolve o schema do tenant via tabela pública antes de buscar o usuário
+        // (necessário quando chamado sem autenticação, ex: tela de Login)
+        usuarioTenantRepository.findByEmail(email).ifPresent(m ->
+                TenantContext.setCurrentTenant(m.getTenantSchema()));
+
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        if (usuario != null && usuario.getCodigoRecuperacao() != null
-                && usuario.getCodigoRecuperacao().equals(codigoInput)) {
-
+        if (usuario.getCodigoRecuperacao() != null && usuario.getCodigoRecuperacao().equals(codigoInput)) {
             usuario.setSenha(passwordEncoder.encode(novaSenha));
             usuario.setCodigoRecuperacao(null);
             usuarioRepository.save(usuario);
-
             logService.registrarLog(email, "Redefiniu a senha com sucesso via código.");
             return true;
         }

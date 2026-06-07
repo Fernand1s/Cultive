@@ -4,7 +4,7 @@ import { authService, userService } from "../services/api";
 import { LogIn, Key, ArrowLeft, Check, Eye, EyeOff } from 'lucide-react';
 import { useNotify } from "../context/NotificationContext";
 import '../css/Login.css';
-import CultiveLogo from '../assets/CultiveLogo.png';
+import CultiveLogo from '../assets/logo2.png';
 
 export function Login() {
     const navigate = useNavigate();
@@ -111,10 +111,10 @@ export function Login() {
 
                 <div className="login-branding">
                     <img src={CultiveLogo} alt="Cultiva+ Logo" className="login-logo-img" />
-                    <div className="branding-text">
+                    {/*<div className="branding-text">
                         <h2>Cultive+</h2>
-                        {/*<p>Gestão Agrícola Inteligente</p>*/}
-                    </div>
+                        <p>Gestão Agrícola Inteligente</p>
+                    </div> */}
                 </div>
 
                 <div className="login-card">

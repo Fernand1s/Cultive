@@ -2,6 +2,7 @@ package br.com.cultiva.cultivamais.dto;
 
 import br.com.cultiva.cultivamais.model.EstadoPlanta;
 import br.com.cultiva.cultivamais.model.StatusCultivo;
+import br.com.cultiva.cultivamais.model.TipoCiclo;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
@@ -12,6 +13,9 @@ public class CultivoRequestDTO {
 
     @NotNull(message = "O ID da área é obrigatório")
     private Long idArea;
+
+    private TipoCiclo tipoCiclo;
+    private String unidadeMedida;
 
     @Positive(message = "A quantidade deve ser maior que zero")
     private Double quantidadePlantada;
@@ -106,11 +110,11 @@ public class CultivoRequestDTO {
         this.quantidadeColhida = quantidadeColhida;
     }
 
-    public LocalDate getDataColheitaFinal() {
-        return dataColheitaFinal;
-    }
+    public LocalDate getDataColheitaFinal() { return dataColheitaFinal; }
+    public void setDataColheitaFinal(LocalDate dataColheitaFinal) { this.dataColheitaFinal = dataColheitaFinal; }
 
-    public void setDataColheitaFinal(LocalDate dataColheitaFinal) {
-        this.dataColheitaFinal = dataColheitaFinal;
-    }
+    public TipoCiclo getTipoCiclo() { return tipoCiclo; }
+    public void setTipoCiclo(TipoCiclo tipoCiclo) { this.tipoCiclo = tipoCiclo; }
+    public String getUnidadeMedida() { return unidadeMedida; }
+    public void setUnidadeMedida(String unidadeMedida) { this.unidadeMedida = unidadeMedida; }
 }

@@ -1,7 +1,9 @@
 package br.com.cultiva.cultivamais.dto;
 
 import br.com.cultiva.cultivamais.model.QuantidadeLuz;
+import br.com.cultiva.cultivamais.model.StatusArea;
 import br.com.cultiva.cultivamais.model.TipoSolo;
+import br.com.cultiva.cultivamais.model.Topografia;
 import jakarta.validation.constraints.*;
 
 public class AreaCultivoDTO {
@@ -10,6 +12,7 @@ public class AreaCultivoDTO {
 
     @NotBlank(message = "O nome da área é obrigatório")
     private String nomeArea;
+
     private String localizacaoArea;
 
     @Min(value = -90) @Max(value = 90)
@@ -23,15 +26,19 @@ public class AreaCultivoDTO {
 
     @NotNull(message = "O tipo de solo deve ser informado")
     private TipoSolo tipoSolo;
+
     private QuantidadeLuz quantidadeLuz;
+    private Topografia topografia;
+    private StatusArea statusArea;
+    private String culturaAnterior;
     private String observacaoArea;
 
-    public AreaCultivoDTO() {
-    }
+    public AreaCultivoDTO() {}
 
     public AreaCultivoDTO(Long idArea, String nomeArea, String localizacaoArea, double latitudeArea,
                           double longitudeArea, double tamanhoArea, TipoSolo tipoSolo,
-                          QuantidadeLuz quantidadeLuz, String observacaoArea) {
+                          QuantidadeLuz quantidadeLuz, String observacaoArea,
+                          Topografia topografia, StatusArea statusArea, String culturaAnterior) {
         this.idArea = idArea;
         this.nomeArea = nomeArea;
         this.localizacaoArea = localizacaoArea;
@@ -41,77 +48,44 @@ public class AreaCultivoDTO {
         this.tipoSolo = tipoSolo;
         this.quantidadeLuz = quantidadeLuz;
         this.observacaoArea = observacaoArea;
+        this.topografia = topografia;
+        this.statusArea = statusArea;
+        this.culturaAnterior = culturaAnterior;
     }
 
-    public Long getIdArea() {
-        return idArea;
-    }
+    public Long getIdArea() { return idArea; }
+    public void setIdArea(Long idArea) { this.idArea = idArea; }
 
-    public void setIdArea(Long idArea) {
-        this.idArea = idArea;
-    }
+    public String getNomeArea() { return nomeArea; }
+    public void setNomeArea(String nomeArea) { this.nomeArea = nomeArea; }
 
-    public String getNomeArea() {
-        return nomeArea;
-    }
+    public String getLocalizacaoArea() { return localizacaoArea; }
+    public void setLocalizacaoArea(String localizacaoArea) { this.localizacaoArea = localizacaoArea; }
 
-    public void setNomeArea(String nomeArea) {
-        this.nomeArea = nomeArea;
-    }
+    public double getLatitudeArea() { return latitudeArea; }
+    public void setLatitudeArea(double latitudeArea) { this.latitudeArea = latitudeArea; }
 
-    public String getLocalizacaoArea() {
-        return localizacaoArea;
-    }
+    public double getLongitudeArea() { return longitudeArea; }
+    public void setLongitudeArea(double longitudeArea) { this.longitudeArea = longitudeArea; }
 
-    public void setLocalizacaoArea(String localizacaoArea) {
-        this.localizacaoArea = localizacaoArea;
-    }
+    public double getTamanhoArea() { return tamanhoArea; }
+    public void setTamanhoArea(double tamanhoArea) { this.tamanhoArea = tamanhoArea; }
 
-    public double getLatitudeArea() {
-        return latitudeArea;
-    }
+    public TipoSolo getTipoSolo() { return tipoSolo; }
+    public void setTipoSolo(TipoSolo tipoSolo) { this.tipoSolo = tipoSolo; }
 
-    public void setLatitudeArea(double latitudeArea) {
-        this.latitudeArea = latitudeArea;
-    }
+    public QuantidadeLuz getQuantidadeLuz() { return quantidadeLuz; }
+    public void setQuantidadeLuz(QuantidadeLuz quantidadeLuz) { this.quantidadeLuz = quantidadeLuz; }
 
-    public double getLongitudeArea() {
-        return longitudeArea;
-    }
+    public Topografia getTopografia() { return topografia; }
+    public void setTopografia(Topografia topografia) { this.topografia = topografia; }
 
-    public void setLongitudeArea(double longitudeArea) {
-        this.longitudeArea = longitudeArea;
-    }
+    public StatusArea getStatusArea() { return statusArea; }
+    public void setStatusArea(StatusArea statusArea) { this.statusArea = statusArea; }
 
-    public double getTamanhoArea() {
-        return tamanhoArea;
-    }
+    public String getCulturaAnterior() { return culturaAnterior; }
+    public void setCulturaAnterior(String culturaAnterior) { this.culturaAnterior = culturaAnterior; }
 
-    public void setTamanhoArea(double tamanhoArea) {
-        this.tamanhoArea = tamanhoArea;
-    }
-
-    public TipoSolo getTipoSolo() {
-        return tipoSolo;
-    }
-
-    public void setTipoSolo(TipoSolo tipoSolo) {
-        this.tipoSolo = tipoSolo;
-    }
-
-    public QuantidadeLuz getQuantidadeLuz() {
-        return quantidadeLuz;
-    }
-
-    public void setQuantidadeLuz(QuantidadeLuz quantidadeLuz) {
-        this.quantidadeLuz = quantidadeLuz;
-    }
-
-    public String getObservacaoArea() {
-        return observacaoArea;
-    }
-
-    public void setObservacaoArea(String observacaoArea) {
-        this.observacaoArea = observacaoArea;
-    }
+    public String getObservacaoArea() { return observacaoArea; }
+    public void setObservacaoArea(String observacaoArea) { this.observacaoArea = observacaoArea; }
 }

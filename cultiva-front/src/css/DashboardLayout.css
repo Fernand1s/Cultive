@@ -51,7 +51,17 @@
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: none;
+    gap: 10px;
 }
+
+.nav-section{
+    display: flex;
+    //justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+
+}
+
 .sidebar-nav::-webkit-scrollbar { display: none; }
 
 .nav-link-premium {
@@ -284,6 +294,15 @@
     display: flex; align-items: center; justify-content: center;
     color: white; font-weight: 800;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.u-avatar-foto {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    display: block;
 }
 
 .menu-item {

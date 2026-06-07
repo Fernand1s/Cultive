@@ -1,5 +1,6 @@
 package br.com.cultiva.cultivamais.controller;
 
+import br.com.cultiva.cultivamais.dto.ConclusaoTarefaDTO;
 import br.com.cultiva.cultivamais.dto.TarefaDTO;
 import br.com.cultiva.cultivamais.security.SecurityUtils;
 import br.com.cultiva.cultivamais.service.LogService;
@@ -8,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tarefas")
@@ -48,12 +48,18 @@ public class TarefaController {
         return ResponseEntity.ok(tarefaService.atualizarTarefa(id, dto, idUsuarioLogado));
     }
 
-    // CONCLUIR OU REABRIR TAREFA
+    // CONCLUIR, COLOCAR EM OBSERVAÇÃO OU REABRIR TAREFA
     @PatchMapping("/{id}/concluir")
-    public ResponseEntity<TarefaDTO> concluir(@PathVariable Long id, @RequestBody(required = false) Map<String, String> payload) {
+    public ResponseEntity<TarefaDTO> concluir(@PathVariable Long id, @RequestBody(required = false) ConclusaoTarefaDTO payload) {
         Long idUsuarioLogado = securityUtils.getIdUsuarioLogado();
-        String obs = (payload != null) ? payload.get("observacao") : "";
-        return ResponseEntity.ok(tarefaService.concluirTarefa(id, idUsuarioLogado, obs));
+        return ResponseEntity.ok(tarefaService.concluirTarefa(id, idUsuarioLogado, payload));
+    }
+
+    // ATUALIZAR OBSERVAÇÃO (mantém em observação)
+    @PatchMapping("/{id}/atualizar-observacao")
+    public ResponseEntity<TarefaDTO> atualizarObservacao(@PathVariable Long id, @RequestBody(required = false) ConclusaoTarefaDTO payload) {
+        Long idUsuarioLogado = securityUtils.getIdUsuarioLogado();
+        return ResponseEntity.ok(tarefaService.atualizarObservacaoTarefa(id, idUsuarioLogado, payload));
     }
 
     // CANCELAR TAREFA

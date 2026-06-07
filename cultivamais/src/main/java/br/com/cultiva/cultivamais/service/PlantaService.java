@@ -79,6 +79,7 @@ public class PlantaService {
         entity.setTipoPlanta(dto.getTipoPlanta());
         entity.setCicloMedioDias(dto.getCicloMedioDias());
         entity.setDescricaoPlanta(dto.getDescricaoPlanta());
+        entity.setFotoPlanta(dto.getFotoPlanta());
         entity.setLuzRecomendada(dto.getLuzRecomendada());
         entity.setAguaRecomendada(dto.getAguaRecomendada());
         entity.setSolosRecomendados(dto.getSolosRecomendados());
@@ -86,7 +87,7 @@ public class PlantaService {
 
     // CONVERTER ENTITY PARA DTO
     private PlantaDTO converterParaDTO(Planta p) {
-        return new PlantaDTO(
+        PlantaDTO dto = new PlantaDTO(
                 p.getIdPlanta(),
                 p.getNomePopular(),
                 p.getNomeCientifico(),
@@ -97,5 +98,7 @@ public class PlantaService {
                 p.getAguaRecomendada(),
                 p.getSolosRecomendados()
         );
+        dto.setFotoPlanta(p.getFotoPlanta());
+        return dto;
     }
 }

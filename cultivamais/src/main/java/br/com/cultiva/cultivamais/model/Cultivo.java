@@ -47,6 +47,11 @@ public class Cultivo {
 
     @Enumerated(EnumType.STRING)
     private StatusCultivo statusCultivo;
+
+    @Enumerated(EnumType.STRING)
+    private TipoCiclo tipoCiclo = TipoCiclo.UNICO;
+
+    private String unidadeMedida;
     private String observacaoCultivo;
     private double quantidadePlantada;
     private double quantidadeColhida;
@@ -108,12 +113,10 @@ public class Cultivo {
     public double getQuantidadePlantada(){
         return this.quantidadePlantada;
     }
-    public double getQuantidadeColhida(){
-        return this.quantidadeColhida;
-    }
-    public List<Evento> getEventosRegistrados() {
-        return this.eventosRegistrados;
-    }
+    public double getQuantidadeColhida(){ return this.quantidadeColhida; }
+    public TipoCiclo getTipoCiclo() { return tipoCiclo; }
+    public String getUnidadeMedida() { return unidadeMedida; }
+    public List<Evento> getEventosRegistrados() { return this.eventosRegistrados; }
 
     //Setters
     public void setIdCultivo(Long idCultivo) {
@@ -148,12 +151,10 @@ public class Cultivo {
     public void setQuantidadePlantada(double quantidadePlantada) {
         this.quantidadePlantada = quantidadePlantada;
     }
-    public void setQuantidadeColhida(double quantidadeColhida) {
-        this.quantidadeColhida = quantidadeColhida;
-    }
-    public void setEventosRegistrados(List<Evento> eventosRegistrados){
-        this.eventosRegistrados = eventosRegistrados;
-    }
+    public void setQuantidadeColhida(double quantidadeColhida) { this.quantidadeColhida = quantidadeColhida; }
+    public void setTipoCiclo(TipoCiclo tipoCiclo) { this.tipoCiclo = tipoCiclo; }
+    public void setUnidadeMedida(String unidadeMedida) { this.unidadeMedida = unidadeMedida; }
+    public void setEventosRegistrados(List<Evento> eventosRegistrados) { this.eventosRegistrados = eventosRegistrados; }
     @JsonFormat(pattern = "yyyy-MM-dd")
     public void setPrevisaoColheita(LocalDate previsaoColheita) {
         this.previsaoColheita = previsaoColheita;

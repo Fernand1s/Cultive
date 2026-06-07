@@ -5,6 +5,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import jakarta.persistence.Column;
 
 @Entity
 public class AreaCultivo {
@@ -23,6 +24,16 @@ public class AreaCultivo {
 
     @Enumerated(EnumType.STRING)
     private TipoSolo tipoSolo;
+
+    @Enumerated(EnumType.STRING)
+    private Topografia topografia;
+
+    @Enumerated(EnumType.STRING)
+    private StatusArea statusArea;
+
+    @Column(columnDefinition = "TEXT")
+    private String culturaAnterior;
+
     private String observacaoArea;
 
     @ManyToMany
@@ -62,6 +73,9 @@ public class AreaCultivo {
     public Double getLongitudeArea(){ return this.longitudeArea; }
     public Double getTamanhoArea(){ return this.tamanhoArea; }
     public TipoSolo getTipoSolo(){ return this.tipoSolo; }
+    public Topografia getTopografia() { return this.topografia; }
+    public StatusArea getStatusArea() { return this.statusArea; }
+    public String getCulturaAnterior() { return this.culturaAnterior; }
     public String getObservacaoArea(){ return this.observacaoArea; }
     public List<Cultivo> getCultivos(){ return this.cultivos; }
     public QuantidadeLuz getQuantidadeLuz() { return this.quantidadeLuz; }
@@ -75,6 +89,9 @@ public class AreaCultivo {
     public void setLatitudeArea(Double latitudeArea){ this.latitudeArea = latitudeArea; }
     public void setTamanhoArea(Double tamanhoArea){ this.tamanhoArea = tamanhoArea; }
     public void setTipoSolo(TipoSolo tipoSolo){ this.tipoSolo = tipoSolo; }
+    public void setTopografia(Topografia topografia) { this.topografia = topografia; }
+    public void setStatusArea(StatusArea statusArea) { this.statusArea = statusArea; }
+    public void setCulturaAnterior(String culturaAnterior) { this.culturaAnterior = culturaAnterior; }
     public void setObservacaoArea(String observacaoArea) { this.observacaoArea = observacaoArea; }
     public void setQuantidadeLuz(QuantidadeLuz quantidadeLuz) { this.quantidadeLuz = quantidadeLuz; }
     public void setUsuariosResponsaveis(List<Usuario> usuariosResponsaveis) { this.usuariosResponsaveis = usuariosResponsaveis; }

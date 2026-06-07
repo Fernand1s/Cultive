@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { authService, notificationService } from '../services/api';
+import { authService, notificationService, userService } from '../services/api';
 import '../css/DashboardLayout.css';
 import {
     Home, MapPin, Sprout, Wheat, BarChart3, Warehouse,
     CheckSquare, Shield, LogOut, Bell, User,
-    ChevronLeft, ChevronRight, Trash2, MailOpen, Mail, CheckCircle2
+    ChevronLeft, ChevronRight, Trash2, MailOpen, Mail, CheckCircle2, Mail as MailIcon, HelpCircle
 } from 'lucide-react';
 
 export const DashboardLayout = ({ children }) => {
@@ -20,8 +20,24 @@ export const DashboardLayout = ({ children }) => {
     const [notificacoes, setNotificacoes] = useState([]);
     const [totalNaoLidas, setTotalNaoLidas] = useState(0);
     const [confirmExclusao, setConfirmExclusao] = useState({ show: false, id: null });
+    const [fotoPerfil, setFotoPerfil] = useState(null);
 
     const usuario = authService.obterUsuarioLogado();
+
+    // Carrega foto de perfil: do localStorage (novo login) ou do servidor (sessão existente)
+    useEffect(() => {
+        const foto = usuario?.fotoPerfil;
+        if (foto) {
+            setFotoPerfil(foto);
+        } else {
+            const id = usuario?.idUsuario || usuario?.id;
+            if (id) {
+                userService.obterPorId(id)
+                    .then(dados => { if (dados.fotoPerfil) setFotoPerfil(dados.fotoPerfil); })
+                    .catch(() => {});
+            }
+        }
+    }, []);
 
     // Efeito para fechar menus ao clicar fora
     useEffect(() => {
@@ -143,7 +159,7 @@ export const DashboardLayout = ({ children }) => {
                 </div>
 
                 <nav className="sidebar-nav">
-                    <div onClick={closeSidebarMobile}>
+                    <div onClick={closeSidebarMobile} className="nav-section">
                         <NavItem to="/dashboard" icon={<Home size={20}/>} label="Dashboard" active={isActive('/dashboard')} open={isSidebarOpen} />
                         <NavItem to="/areas" icon={<MapPin size={20}/>} label="Áreas" active={isActive('/areas')} open={isSidebarOpen} />
                         <NavItem to="/plantas" icon={<Sprout size={20}/>} label="Plantas" active={isActive('/plantas')} open={isSidebarOpen} />
@@ -161,6 +177,10 @@ export const DashboardLayout = ({ children }) => {
                             <NavItem to="/admin" icon={<Shield size={20}/>} label="Painel de Controle" active={isActive('/admin')} open={isSidebarOpen} />
                         </>
                     )}
+
+                     <div onClick={closeSidebarMobile}>
+                        <NavItem to="/suporte" icon={<HelpCircle size={20}/>} label="Suporte" active={isActive('/suporte')} open={isSidebarOpen} />
+                    </div>
                 </nav>
             </aside>
 
@@ -270,7 +290,12 @@ export const DashboardLayout = ({ children }) => {
                             <span className="u-name">{usuario?.nomeUsuario || 'Usuário'}</span>
                             <span className="u-role">{usuario?.funcao}</span>
                         </div>
-                        <div className="u-avatar-premium">{usuario?.nomeUsuario?.charAt(0) || <User size={18}/>}</div>
+                        <div className="u-avatar-premium">
+                            {fotoPerfil
+                                ? <img src={fotoPerfil} alt="" className="u-avatar-foto" />
+                                : (usuario?.nomeUsuario?.charAt(0) || <User size={18}/>)
+                            }
+                        </div>
 
                         {showUserMenu && (
                             <div className="user-menu-dropdown">

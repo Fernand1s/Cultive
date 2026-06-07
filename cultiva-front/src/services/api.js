@@ -1,4 +1,5 @@
 const API_ROOT = "http://localhost:8090/api";
+const ENDPOINT_ESTOQUE = `${API_ROOT}/estoque`;
 
 // --- ENDPOINTS ---
 const ENDPOINT_USUARIOS = `${API_ROOT}/usuarios`;
@@ -98,7 +99,8 @@ export const userService = {
     atualizar: (id, dados) => request(`${ENDPOINT_USUARIOS}/${id}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) }),
     excluir: (id) => request(`${ENDPOINT_USUARIOS}/${id}`, { method: "DELETE", headers: getHeaders() }),
     gerarCodigo: (email) => request(`${ENDPOINT_USUARIOS}/gerar-codigo`, { method: "POST", headers: getHeaders(), body: JSON.stringify({ email }) }),
-    redefinirSenha: (dados) => request(`${ENDPOINT_USUARIOS}/redefinir-senha`, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) })
+    redefinirSenha: (dados) => request(`${ENDPOINT_USUARIOS}/redefinir-senha`, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
+    logoutGlobal: () => request(`${ENDPOINT_USUARIOS}/logout-global`, { method: "POST", headers: getHeaders() })
 };
 
 // --- SERVIÇO DE TAREFAS ---
@@ -120,6 +122,7 @@ export const tarefaService = {
 
     atualizar: (id, idUsuarioLogado, dados) => request(`${ENDPOINT_TAREFAS}/${id}?idUsuarioLogado=${idUsuarioLogado}`, {method: "PUT", headers: getHeaders(), body: JSON.stringify(dados)}),
     concluir: (id, idUsuarioLogado, dados) => request(`${ENDPOINT_TAREFAS}/${id}/concluir?idUsuarioLogado=${idUsuarioLogado}`, { method: "PATCH",  headers: getHeaders(),  body: JSON.stringify(dados) }),
+    atualizarObservacao: (id, idUsuarioLogado, dados) => request(`${ENDPOINT_TAREFAS}/${id}/atualizar-observacao?idUsuarioLogado=${idUsuarioLogado}`, { method: "PATCH", headers: getHeaders(), body: JSON.stringify(dados) }),
     cancelar: (id, idUsuarioLogado) => request(`${ENDPOINT_TAREFAS}/${id}/cancelar?idUsuarioLogado=${idUsuarioLogado}`, {method: "PUT", headers: getHeaders() }),
     excluir: (id, idUsuarioLogado) => request(`${ENDPOINT_TAREFAS}/${id}?idUsuarioLogado=${idUsuarioLogado}`, {method: "DELETE", headers: getHeaders() }),
 };
@@ -157,7 +160,10 @@ export const cultivoService = {
     listar: () => request(ENDPOINT_CULTIVOS, { headers: getHeaders() }),
     criar: (dados) => request(ENDPOINT_CULTIVOS, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
     atualizar: (id, dados) => request(`${ENDPOINT_CULTIVOS}/${id}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) }),
-    excluir: (id) => request(`${ENDPOINT_CULTIVOS}/${id}`, { method: "DELETE", headers: getHeaders() })
+    excluir: (id) => request(`${ENDPOINT_CULTIVOS}/${id}`, { method: "DELETE", headers: getHeaders() }),
+    registrarColheita: (id, dados) => request(`${ENDPOINT_CULTIVOS}/${id}/colheita`, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
+    listarColheitas: (id) => request(`${ENDPOINT_CULTIVOS}/${id}/colheitas`, { headers: getHeaders() }),
+    encerrar: (id, dados) => request(`${ENDPOINT_CULTIVOS}/${id}/encerrar`, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
 };
 
 // --- SERVIÇO DE EVENTOS (IRRIGAÇÃO E PRAGAS) ---
@@ -176,10 +182,42 @@ export const eventoService = {
     }
 };
 
+// --- SERVIÇO DE ESTOQUE ---
+export const estoqueService = {
+    listar: () => request(ENDPOINT_ESTOQUE, { headers: getHeaders() }),
+    criar: (dados) => request(ENDPOINT_ESTOQUE, { method: "POST", headers: getHeaders(), body: JSON.stringify(dados) }),
+    atualizar: (id, dados) => request(`${ENDPOINT_ESTOQUE}/${id}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(dados) }),
+    excluir: (id) => request(`${ENDPOINT_ESTOQUE}/${id}`, { method: "DELETE", headers: getHeaders() })
+};
+
 // --- SERVIÇO DE RELATÓRIOS ---
 export const relatorioService = {
-    consumoAgua: (idCultivo) => request(`${ENDPOINT_RELATORIOS}/agua/${idCultivo}`, { headers: getHeaders() }),
-    colheitaPorArea: (idArea) => request(`${ENDPOINT_RELATORIOS}/colheita/${idArea}`, { headers: getHeaders() }),
-    compatibilidade: (idPlanta, idArea) => request(`${ENDPOINT_RELATORIOS}/compatibilidade/${idPlanta}/${idArea}`, { headers: getHeaders() }),
-    historicoPragas: (idCultivo) => request(`${ENDPOINT_RELATORIOS}/pragas/${idCultivo}`, { headers: getHeaders() })
+    // Produção e Safra
+    produtividade: (idArea) => {
+        const url = idArea ? `${ENDPOINT_RELATORIOS}/produtividade?idArea=${idArea}` : `${ENDPOINT_RELATORIOS}/produtividade`;
+        return request(url, { headers: getHeaders() });
+    },
+    cadernoCampo: (idCultivo) => request(`${ENDPOINT_RELATORIOS}/caderno-campo/${idCultivo}`, { headers: getHeaders() }),
+
+    // Fitossanitário
+    incidenciaPragas: (idArea, idPlanta) => {
+        const params = new URLSearchParams();
+        if (idArea) params.append('idArea', idArea);
+        if (idPlanta) params.append('idPlanta', idPlanta);
+        const query = params.toString() ? `?${params.toString()}` : '';
+        return request(`${ENDPOINT_RELATORIOS}/incidencia-pragas${query}`, { headers: getHeaders() });
+    },
+
+    // Estoque e Consumo
+    alertasEstoque: () => request(`${ENDPOINT_RELATORIOS}/alertas-estoque`, { headers: getHeaders() }),
+
+    // Ocupação e Solo
+    rotacaoCulturas: (idArea) => {
+        const url = idArea ? `${ENDPOINT_RELATORIOS}/rotacao-culturas?idArea=${idArea}` : `${ENDPOINT_RELATORIOS}/rotacao-culturas`;
+        return request(url, { headers: getHeaders() });
+    },
+    ocupacaoAreas: () => request(`${ENDPOINT_RELATORIOS}/ocupacao-areas`, { headers: getHeaders() }),
+
+    // Equipe e Operações
+    desempenhoEquipe: () => request(`${ENDPOINT_RELATORIOS}/desempenho-equipe`, { headers: getHeaders() }),
 };

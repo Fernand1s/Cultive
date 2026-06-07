@@ -21,6 +21,9 @@ public class Usuario {
     @Column(name = "codigo_recuperacao")
     private String codigoRecuperacao;
 
+    @Column(columnDefinition = "TEXT")
+    private String fotoPerfil;
+
     @Enumerated(EnumType.STRING)
     private FuncaoUsuario funcao;
 
@@ -69,6 +72,9 @@ public class Usuario {
 
     public String getCodigoRecuperacao() { return codigoRecuperacao; }
     public void setCodigoRecuperacao(String codigoRecuperacao) { this.codigoRecuperacao = codigoRecuperacao; }
+
+    public String getFotoPerfil() { return fotoPerfil; }
+    public void setFotoPerfil(String fotoPerfil) { this.fotoPerfil = fotoPerfil; }
 
     public List<Tarefa> getTarefasAtribuidas() { return tarefasAtribuidas; }
     public void setTarefasAtribuidas(List<Tarefa> tarefasAtribuidas) { this.tarefasAtribuidas = tarefasAtribuidas; }

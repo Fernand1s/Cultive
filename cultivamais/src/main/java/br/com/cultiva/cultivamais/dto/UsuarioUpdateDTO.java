@@ -18,6 +18,11 @@ public class UsuarioUpdateDTO {
     @NotNull(message = "O status ativo deve ser informado")
     private Boolean ativo;
 
+    // Opcionais — só alteram se preenchidos
+    private String senhaAtual;
+    private String senha;
+    private String fotoPerfil;
+
     public UsuarioUpdateDTO() {
     }
 
@@ -58,5 +63,29 @@ public class UsuarioUpdateDTO {
 
     public void setAtivo(Boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public String getSenhaAtual() {
+        return senhaAtual;
+    }
+
+    public void setSenhaAtual(String senhaAtual) {
+        this.senhaAtual = senhaAtual;
+    }
+
+    public String getSenha() {
+        return senha;
+    }
+
+    public void setSenha(String senha) {
+        this.senha = senha;
+    }
+
+    public String getFotoPerfil() {
+        return fotoPerfil;
+    }
+
+    public void setFotoPerfil(String fotoPerfil) {
+        this.fotoPerfil = fotoPerfil;
     }
 }
