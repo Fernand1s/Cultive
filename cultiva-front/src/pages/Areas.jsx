@@ -42,7 +42,7 @@ const TOPOGRAFIA_CONFIG = {
 const CATEGORIAS_SOLO = {
     "Textura e Composição":           ["ARGILOSO","ARENOSO","SILTOSO","HUMOSO","CALCARIO"],
     "Classificação Técnica (Embrapa)":["LATOSSOLO","ARGISSOLO","CHERNOSSOLO","NEOSSOLO","CAMBISSOLO","GLEISSOLO","NITOSSOLO"],
-    "Tipos Regionais / Outros":       ["TERRA_ROXA","MASSAPE","VARZEA","MISTO","OUTRO"],
+    "Tipos Regionais / Outros":       ["TERRA_ROXA","MASSAPE","MISTO","OUTRO"],
 };
 
 const Areas = () => {

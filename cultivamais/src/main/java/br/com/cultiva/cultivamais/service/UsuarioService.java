@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.cultiva.cultivamais.exception.ResourceNotFoundException;
 import br.com.cultiva.cultivamais.model.Usuario;
+import br.com.cultiva.cultivamais.repository.NotificacaoRepository;
+import br.com.cultiva.cultivamais.repository.TarefaRepository;
 import br.com.cultiva.cultivamais.repository.UsuarioRepository;
 import io.micrometer.common.lang.NonNull;
 
@@ -25,17 +27,23 @@ public class UsuarioService {
     private final LogService logService;
     private final PasswordEncoder passwordEncoder;
     private final NotificacaoService notificacaoService;
+    private final NotificacaoRepository notificacaoRepository;
+    private final TarefaRepository tarefaRepository;
 
     public UsuarioService(UsuarioRepository usuarioRepository,
                           UsuarioTenantRepository usuarioTenantRepository,
                           LogService logService,
                           PasswordEncoder passwordEncoder,
-                          NotificacaoService notificacaoService) {
+                          NotificacaoService notificacaoService,
+                          NotificacaoRepository notificacaoRepository,
+                          TarefaRepository tarefaRepository) {
         this.usuarioRepository = usuarioRepository;
         this.usuarioTenantRepository = usuarioTenantRepository;
         this.logService = logService;
         this.passwordEncoder = passwordEncoder;
         this.notificacaoService = notificacaoService;
+        this.notificacaoRepository = notificacaoRepository;
+        this.tarefaRepository = tarefaRepository;
     }
 
     // BUSCAR POR ID
@@ -132,10 +140,23 @@ public class UsuarioService {
     // EXCLUIR USUÁRIO
     @Transactional
     public void excluirUsuario(@NonNull Long id) {
-        if (!usuarioRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Usuário não encontrado com ID: " + id);
-        }
-        usuarioRepository.deleteById(id);
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com ID: " + id));
+
+        // 1. Remove as notificações do usuário (são pessoais)
+        notificacaoRepository.deleteByUsuarioId(id);
+
+        // 2. Preserva as tarefas que ele criou, apenas desvinculando o criador
+        tarefaRepository.desvincularCriador(id);
+
+        // 3. Remove o mapeamento email→schema no schema público
+        usuarioTenantRepository.findByEmail(usuario.getEmail())
+                .ifPresent(usuarioTenantRepository::delete);
+
+        // 4. Remove o usuário (cascade ALL apaga as tarefas atribuídas a ele)
+        usuarioRepository.delete(usuario);
+
+        logService.registrarLog("SISTEMA", "Excluiu o usuário: " + usuario.getNomeUsuario());
     }
 
     // AUTENTICAR USUÁRIO

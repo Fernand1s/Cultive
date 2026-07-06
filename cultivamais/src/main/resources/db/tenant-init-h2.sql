@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS planta (
     descricao_planta VARCHAR(4096),
     excluido BOOLEAN NOT NULL DEFAULT FALSE,
     luz_recomendada VARCHAR(50),
-    agua_recomendada VARCHAR(50)
+    agua_recomendada VARCHAR(50),
+    foto_planta CLOB
 );
 
 CREATE TABLE IF NOT EXISTS planta_solos_recomendados (
@@ -39,7 +40,10 @@ CREATE TABLE IF NOT EXISTS area_cultivo (
     tamanho_area DOUBLE,
     quantidade_luz VARCHAR(50),
     tipo_solo VARCHAR(50),
-    observacao_area VARCHAR(4096)
+    observacao_area VARCHAR(4096),
+    topografia VARCHAR(50),
+    status_area VARCHAR(50),
+    cultura_anterior CLOB
 );
 
 CREATE TABLE IF NOT EXISTS area_usuario_responsavel (
@@ -62,6 +66,8 @@ CREATE TABLE IF NOT EXISTS cultivo (
     observacao_cultivo VARCHAR(4096),
     quantidade_plantada DOUBLE NOT NULL DEFAULT 0,
     quantidade_colhida DOUBLE NOT NULL DEFAULT 0,
+    tipo_ciclo VARCHAR(20) DEFAULT 'UNICO',
+    unidade_medida VARCHAR(50),
     CONSTRAINT fk_cultivo_planta FOREIGN KEY (planta_id) REFERENCES planta(id_planta),
     CONSTRAINT fk_cultivo_area FOREIGN KEY (area_cultivo_id) REFERENCES area_cultivo(id_area)
 );
@@ -79,6 +85,10 @@ CREATE TABLE IF NOT EXISTS evento (
     nivel_afetacao VARCHAR(50),
     tipo_adubo VARCHAR(255),
     quantidade_adubo DOUBLE,
+    quantidade_colhida DOUBLE,
+    unidade_medida VARCHAR(50),
+    foto_colheita CLOB,
+    insumos_usados_json CLOB,
     CONSTRAINT fk_evento_cultivo FOREIGN KEY (cultivo_id) REFERENCES cultivo(id_cultivo)
 );
 
@@ -96,8 +106,17 @@ CREATE TABLE IF NOT EXISTS tarefa (
     data_conclusao TIMESTAMP,
     responsavel_id BIGINT,
     criador_id BIGINT,
+    subcategoria VARCHAR(255),
+    informacoes_extras CLOB,
+    em_observacao BOOLEAN NOT NULL DEFAULT FALSE,
+    foto_conclusao CLOB,
+    insumos_usados_json CLOB,
+    area_cultivo_id BIGINT,
+    cultivo_id BIGINT,
     CONSTRAINT fk_tarefa_responsavel FOREIGN KEY (responsavel_id) REFERENCES usuario(id_usuario),
-    CONSTRAINT fk_tarefa_criador FOREIGN KEY (criador_id) REFERENCES usuario(id_usuario)
+    CONSTRAINT fk_tarefa_criador FOREIGN KEY (criador_id) REFERENCES usuario(id_usuario),
+    CONSTRAINT fk_tarefa_area FOREIGN KEY (area_cultivo_id) REFERENCES area_cultivo(id_area),
+    CONSTRAINT fk_tarefa_cultivo FOREIGN KEY (cultivo_id) REFERENCES cultivo(id_cultivo)
 );
 
 CREATE TABLE IF NOT EXISTS notificacao (

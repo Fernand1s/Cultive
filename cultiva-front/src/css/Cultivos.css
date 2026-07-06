@@ -257,6 +257,7 @@
 .event-modal-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
     margin-bottom: 1.25rem;
     padding-bottom: 1rem;
@@ -507,4 +508,23 @@
 .bg-red-light {
     background: #fee2e2;
     color: #dc2626;
+}
+
+
+.btn-close-modal-sm-cultivo{
+    background: #f1f5f9;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-close-modal-sm-cultivo:hover {
+    background: #fee2e2;
+    color: #ef4444;
 }

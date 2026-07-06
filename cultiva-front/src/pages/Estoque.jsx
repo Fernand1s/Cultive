@@ -548,9 +548,7 @@ const Estoque = () => {
                             <div className="modal-header-premium-estoque">
                                 <h2>Detalhes do Item</h2>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button className="btn-icon-sm" title="Editar" onClick={(e) => { setModalDetalhes(false); abrirModal(item, e); }}>
-                                        <Edit2 size={16} />
-                                    </button>
+                                    
                                     <button className="btn-close-modal-estoque" onClick={() => setModalDetalhes(false)}><X size={20} /></button>
                                 </div>
                             </div>
@@ -627,7 +625,7 @@ const Estoque = () => {
                             </div>
 
                             <div className="modal-footer-estoque">
-                                <button type="button" className="btn-icon-sm danger" style={{ padding: '8px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+                                <button type="button" className="btn-icon-sm-estoque" style={{ padding: '8px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
                                     onClick={(e) => excluirItem(item.idEstoque, e)}>
                                     <Trash2 size={15} /> Excluir Item
                                 </button>

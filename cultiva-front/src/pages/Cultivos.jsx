@@ -629,7 +629,8 @@ const Cultivos = () => {
                     <div className="modal-modern-content" style={{maxWidth:'600px', padding:'1.5rem'}}>
                         <div className="modal-header-flex" style={{marginBottom:'1rem'}}>
                             <h2 className="modal-title">{editandoId ? 'Editar Cultivo' : 'Novo Cultivo'}</h2>
-                            <X size={20} onClick={fecharModal} style={{cursor:'pointer'}}/>
+                            {/*<X size={20} className="btn-close-modal-sm-cultivo" onClick={fecharModal} style={{cursor:'pointer'}}/>*/}
+                            <button className="btn-close-modal-sm-cultivo" onClick={fecharModal}><X size={20} /></button>
                         </div>
                         <form onSubmit={salvarCultivo}>
                             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px'}}>
@@ -745,16 +746,23 @@ const Cultivos = () => {
                 <div className="modal-modern-overlay" style={{zIndex:10002}}>
                     <div className="modal-modern-content" style={{maxWidth:'450px', padding:'1.5rem'}}>
                         <div className="event-modal-header">
-                            <div className={`icon-circle-event ${acaoEvento.tipo === 'IRRIGACAO' ? 'bg-water-soft' : 'bg-pest-soft'}`}>
-                                {acaoEvento.tipo === 'IRRIGACAO' ? <Droplets size={20}/> : <Bug size={20}/>}
-                            </div>
-                            <div>
-                                <h3 style={{margin:0,fontSize:'1.1rem',fontWeight:700}}>
+                            
+                            <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                                <div className={`icon-circle-event ${acaoEvento.tipo === 'IRRIGACAO' ? 'bg-water-soft' : 'bg-pest-soft'}`}>
+                                    {acaoEvento.tipo === 'IRRIGACAO' ? <Droplets size={20}/> : <Bug size={20}/>}
+                                </div>
+                                <div>
+
+                                    <h3 style={{margin:0,fontSize:'1.1rem',fontWeight:700}}>
                                     {acaoEvento.tipo === 'IRRIGACAO' ? 'Registrar Irrigação' : 'Ocorrência de Praga'}
                                 </h3>
                                 <p style={{margin:0,fontSize:'0.85rem',color:'#64748b'}}>{acaoEvento.nomePlanta}</p>
+
+                                </div>
+                                
                             </div>
-                            <X size={20} onClick={() => setModalEventoAberto(false)} style={{marginLeft:'auto',cursor:'pointer',color:'#94a3b8'}}/>
+                            <X size={20} onClick={() => setModalEventoAberto(false)} style={{marginLeft:'auto',cursor:'pointer',color:'#94a3b8', display:'none'}}/>
+                            <button className="btn-close-modal-sm-cultivo" onClick={() => setModalEventoAberto(false)}><X size={20} /></button>
                         </div>
 
                         <form onSubmit={salvarEvento}>
@@ -836,7 +844,9 @@ const Cultivos = () => {
                                     {cultivoColhendo.plantaCultivada?.nomePopular} · {cultivoColhendo.areaCultivo?.nomeArea}
                                 </p>
                             </div>
-                            <X size={20} onClick={() => setModalColheitaAberto(false)} style={{cursor:'pointer'}}/>
+                            <X size={20} onClick={() => setModalColheitaAberto(false)} style={{cursor:'pointer', display:'none'}}/>
+                            <button className="btn-close-modal-sm-cultivo" onClick={() => setModalColheitaAberto(false)}><X size={20} /></button>
+                        
                         </div>
 
                         {cultivoColhendo.tipoCiclo === 'CONTINUO' && (
@@ -975,7 +985,8 @@ const Cultivos = () => {
                                     {cultivoSelecionado?.plantaCultivada?.nomePopular} · {cultivoSelecionado?.areaCultivo?.nomeArea}
                                 </p>
                             </div>
-                            <X size={20} onClick={() => setModalHistoricoAberto(false)} style={{cursor:'pointer'}}/>
+                            <X size={20} onClick={() => setModalHistoricoAberto(false)} style={{cursor:'pointer', display:'none'}}/>
+                            <button className="btn-close-modal-sm-cultivo" onClick={() => setModalHistoricoAberto(false)}><X size={20} /></button>
                         </div>
 
                         <div className="modal-historico-body" style={{flex:1}}>

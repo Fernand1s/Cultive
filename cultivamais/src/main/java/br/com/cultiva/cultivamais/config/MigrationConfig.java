@@ -52,6 +52,17 @@ public class MigrationConfig {
     @Order(200)
     CommandLineRunner migrarSchemasExistentes(TenantRepository tenantRepository, DataSource dataSource) {
         return args -> {
+            // A migração incremental usa sintaxe específica do PostgreSQL (SET search_path).
+            // No H2 (perfil dev) as colunas já vêm completas do script tenant-init-h2.sql,
+            // então pulamos a migração silenciosamente para não poluir o console com erros.
+            try (Connection conn = dataSource.getConnection()) {
+                String dbUrl = conn.getMetaData().getURL().toLowerCase();
+                if (dbUrl.contains("h2")) {
+                    System.out.println(">>> [Migration] Banco H2 detectado — migração incremental ignorada (schema já completo via script).");
+                    return;
+                }
+            }
+
             List<Tenant> tenants = tenantRepository.findAll();
             for (Tenant tenant : tenants) {
                 String schema = tenant.getSchemaName();
