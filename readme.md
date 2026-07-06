@@ -1,7 +1,10 @@
-# 🌿 Cultiva+ API
+# 🌿 Cultive+ API
+
+Link para o Cultive+ Mobile: https://github.com/Fernand1s/Cultive-Mobile.git
+
 **Plataforma de Gestão Agrícola Inteligente**
 
-O **Cultiva+** é uma solução robusta para o monitoramento de ciclos produtivos, automação de tarefas e análise de dados agrícolas. Desenvolvida com foco em escalabilidade e segurança, a API atende desde o manejo familiar até operações complexas de agronegócio.
+O **Cultive+** é uma solução robusta para o monitoramento de ciclos produtivos, automação de tarefas e análise de dados agrícolas. Desenvolvida com foco em escalabilidade e segurança, a API atende desde o manejo familiar até operações complexas de agronegócio.
 
 ---
 
