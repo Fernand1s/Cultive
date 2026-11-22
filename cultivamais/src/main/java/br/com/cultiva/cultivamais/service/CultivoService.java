@@ -225,9 +225,11 @@ public class CultivoService {
         if (!cultivoRepository.existsById(id)) {
             throw new ResourceNotFoundException("Cultivo não encontrado para exclusão.");
         }
-        // Liberar área quando excluir cultivo ativo
+        // Liberar área quando excluir cultivo ativo ou em preparo
         Cultivo c = cultivoRepository.findById(id).get();
-        if (c.getStatusCultivo() == StatusCultivo.ATIVO || c.getStatusCultivo() == StatusCultivo.EM_PRODUCAO) {
+        if (c.getStatusCultivo() == StatusCultivo.ATIVO
+                || c.getStatusCultivo() == StatusCultivo.EM_PRODUCAO
+                || c.getStatusCultivo() == StatusCultivo.EM_PREPARO) {
             liberarArea(c.getAreaCultivo());
         }
         cultivoRepository.deleteById(id);

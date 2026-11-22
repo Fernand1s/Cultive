@@ -27,10 +27,11 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 // ─── Configurações de status da área ─────────────────────────────
 const STATUS_CONFIG = {
-    EM_POUSIO:          { label: 'Em Pousio',            cor: '#64748b', bg: '#f1f5f9', borda: '#cbd5e1', Icone: Clock },
-    EM_PREPARO:         { label: 'Em Preparo',           cor: '#d97706', bg: '#fef3c7', borda: '#fde68a', Icone: Tractor },
-    PRONTO_PARA_PLANTIO:{ label: 'Pronto p/ Plantio',    cor: '#2563eb', bg: '#eff6ff', borda: '#bfdbfe', Icone: CheckCircle2 },
-    EM_CULTIVO:         { label: 'Em Cultivo',           cor: '#16a34a', bg: '#f0fdf4', borda: '#bbf7d0', Icone: Sprout },
+    EM_POUSIO:           { label: 'Em Pousio',          cor: '#64748b', bg: '#f1f5f9', borda: '#cbd5e1', Icone: Clock },
+    EM_PREPARO:          { label: 'Em Preparo',         cor: '#d97706', bg: '#fef3c7', borda: '#fde68a', Icone: Tractor },
+    PRONTO_PARA_PLANTIO: { label: 'Pronto p/ Plantio',  cor: '#2563eb', bg: '#eff6ff', borda: '#bfdbfe', Icone: CheckCircle2 },
+    EM_CULTIVO:          { label: 'Em Cultivo',         cor: '#16a34a', bg: '#f0fdf4', borda: '#bbf7d0', Icone: Sprout },
+    ENCERRADA:           { label: 'Encerrada',          cor: '#991b1b', bg: '#fef2f2', borda: '#fecaca', Icone: AlertCircle },
 };
 
 const TOPOGRAFIA_CONFIG = {
@@ -395,6 +396,7 @@ const Areas = () => {
                                                 <option value="EM_PREPARO">Em Preparo</option>
                                                 <option value="PRONTO_PARA_PLANTIO">Pronto para Plantio</option>
                                                 <option value="EM_CULTIVO">Em Cultivo</option>
+                                                <option value="ENCERRADA">Encerrada</option>
                                             </select>
                                         </div>
                                     </div>

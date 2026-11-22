@@ -233,7 +233,7 @@ public class TarefaService {
         return converterParaDTO(tarefaRepository.save(t));
     }
 
-    // ATUALIZAR OBSERVAÇÃO (mantém em observação com novo registro)
+    // ATUALIZAR OBSERVAÇÃO (primeira gravação OU atualizações seguintes)
     @Transactional
     public TarefaDTO atualizarObservacaoTarefa(Long id, Long idUsuarioLogado, ConclusaoTarefaDTO payload) {
         Tarefa t = tarefaRepository.findById(id)
@@ -241,9 +241,11 @@ public class TarefaService {
         Usuario u = usuarioRepository.findById(idUsuarioLogado)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
 
-        if (!t.isEmObservacao()) {
-            throw new RuntimeException("Tarefa não está em estado de observação.");
+        if (t.isConcluida() || t.isCancelada()) {
+            throw new RuntimeException("Tarefa já está concluída ou cancelada.");
         }
+
+        boolean primeiroRegistro = !t.isEmObservacao();
 
         if (payload != null && payload.getObservacao() != null && !payload.getObservacao().isBlank()) {
             t.setObservacaoConclusao(payload.getObservacao());
@@ -252,7 +254,16 @@ public class TarefaService {
             t.setFotoConclusao(payload.getFotoConclusao());
         }
 
-        logService.registrarLog(u.getNomeUsuario(), "Atualizou observação da tarefa: " + t.getTitulo());
+        t.setEmObservacao(true);
+        t.setConcluida(false);
+        if (primeiroRegistro) {
+            t.setDataConclusao(LocalDateTime.now());
+        }
+
+        String acao = primeiroRegistro
+                ? "Registrou tarefa em observação: "
+                : "Atualizou observação da tarefa: ";
+        logService.registrarLog(u.getNomeUsuario(), acao + t.getTitulo());
 
         notificacaoService.criarNotificacao(t.getCriador().getIdUsuario(),
                 "Atualização de Observação",
